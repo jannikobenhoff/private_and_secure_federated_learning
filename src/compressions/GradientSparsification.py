@@ -1,5 +1,6 @@
 import tensorflow as tf
 from keras.optimizers.optimizer_experimental import optimizer
+from tensorflow import Tensor
 
 
 class GradientSparsification(optimizer.Optimizer):
@@ -27,9 +28,41 @@ class GradientSparsification(optimizer.Optimizer):
             )
         self._built = True
 
-    def _update_step(self, gradient, variable):
+    def _update_step(self, gradient: Tensor, variable):
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
         variable.assign_add(-tf.sign(gradient) * lr)
+
+        # Function to calculate p0i
+        def p0i(g, P, κ):
+            min_vals = [0] * len(g)
+
+            for i in range(len(g)):
+                if (g[i] / P[i]) > 0:
+                    min_vals[i] = κ * (g[i] / P[i])
+                else:
+                    min_vals[i] = 1
+
+            return min_vals
+
+        # declaring the inputs
+        g = [10, -20, 11]
+        P = [15, 9, 10]
+        κ = 0.5
+
+        p0 = p0i(g, P, κ)
+
+        j = 0
+
+        # Algorithm 3 Greedy algorithm starts from here
+        # repeat
+        while (j < P.length - 1):
+            # Set
+            for i in range(len(g)):
+                # Calculate
+                pj_i = min(κ * (g[i] / P[i]), 1)
+
+            # Increment
+            j = j + 1
 
     def get_config(self):
         config = super().get_config()

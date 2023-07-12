@@ -3,8 +3,8 @@ from keras.optimizers.optimizer_experimental import optimizer
 from tensorflow import Tensor
 
 
-class FetchSGD(optimizer.Optimizer):
-    def __init__(self, learning_rate, momentum, name="FetchSGD"):
+class vqSGD(optimizer.Optimizer):
+    def __init__(self, learning_rate, momentum, name="vqSGD"):
         super().__init__(name=name)
         self._learning_rate = self._build_learning_rate(learning_rate)
         self.momentum = momentum
@@ -12,10 +12,10 @@ class FetchSGD(optimizer.Optimizer):
     def build(self, var_list):
         """Initialize optimizer variables.
 
-        FetchSGD optimizer has one variable `quantization error`
+        vqSGD optimizer has one variable `quantization error`
 
         Args:
-          var_list: list of model variables to build FetchSGD variables on.
+          var_list: list of model variables to build vqSGD variables on.
         """
         super().build(var_list)
         if hasattr(self, "_built") and self._built:

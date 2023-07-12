@@ -10,6 +10,8 @@ from models.LeNet import LeNet
 from sklearn.model_selection import KFold
 from keras import models, layers, regularizers
 
+from src.compressions.EFsignSGD import EFsignSGD
+from src.compressions.MemSGD import MemSGD
 from src.compressions.NaturalCompression import NaturalCompression
 from src.compressions.OneBitSGD import OneBitSGD
 from src.compressions.SparseGradient import SparseGradient
@@ -46,8 +48,10 @@ if __name__ == "__main__":
     # opt = TernGrad(learning_rate=0.05)
     # opt = NaturalCompression(learning_rate=0.001)
     # opt = SparseGradient(learning_rate=0.01, drop_rate=0.99)
-    opt = OneBitSGD(learning_rate=0.02)
-    #opt = CustomSGD(learning_rate=0.01)
+    # opt = OneBitSGD(learning_rate=0.02)
+    opt = MemSGD(learning_rate=0.02, momentum=0.2)
+    # opt = EFsignSGD(learning_rate=0.001)
+    # opt = CustomSGD(learning_rate=0.01)
 
     model.compile(optimizer=opt,
                   loss='sparse_categorical_crossentropy',

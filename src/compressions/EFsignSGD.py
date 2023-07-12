@@ -23,23 +23,24 @@ class EFsignSGD(optimizer.Optimizer):
         self.error = {}
         for var in var_list:
             self.error[var.ref()] = self.add_variable_from_reference(
-                model_variable=var, variable_name="error"
+                model_variable=var, variable_name="error",
+                initial_value=tf.zeros(shape=tf.shape(var))
             )
         self._built = True
 
     def _update_step(self, gradient: Tensor, variable):
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
 
-        p_t = lr * e_t
-        delta_t = np.sign(p_t) * ()
-        x_t_next = x_t - delta_t
-        e_t_next = p_t - delta_t
+        d = variable.shape.as_list()[0]
 
-        gradient = gradient + self.error[variable.ref()]
-        error = gradient - tf.sign(gradient)
-        self.error[variable.ref()].assign(error)
+        p_t = lr * gradient + self.error[variable.ref()]
+        delta_t = (tf.norm(p_t, ord=1)/d) * tf.sign(p_t)
 
-        variable.assign_add(-tf.sign(gradient) * lr)
+        # update residual error
+        self.error[variable.ref()].assign(p_t - delta_t)
+
+        # update iterate
+        variable.assign_add(-delta_t)
 
     def get_config(self):
         config = super().get_config()
