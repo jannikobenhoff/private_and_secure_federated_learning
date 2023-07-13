@@ -49,7 +49,7 @@ if __name__ == "__main__":
     # opt = NaturalCompression(learning_rate=0.001)
     # opt = SparseGradient(learning_rate=0.01, drop_rate=0.99)
     # opt = OneBitSGD(learning_rate=0.02)
-    opt = MemSGD(learning_rate=0.05, momentum=0.2, rand_k=50)
+    opt = MemSGD(learning_rate=0.05, momentum=0.5, rand_k=10)
     # opt = EFsignSGD(learning_rate=0.001)
     # opt = CustomSGD(learning_rate=0.01)
 

@@ -14,7 +14,7 @@ class MemSGD(optimizer.Optimizer):
             raise "Please select a sparsification method, top-k or random-k."
         self.top_k = top_k
         self.rand_k = rand_k
-
+        # TODO momentum drin oder nicht?
         self.momentum = momentum
         if isinstance(momentum, (int, float)) and (
             momentum < 0 or momentum > 1

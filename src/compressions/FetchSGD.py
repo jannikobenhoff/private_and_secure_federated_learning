@@ -49,6 +49,21 @@ class FetchSGD(optimizer.Optimizer):
         )
         return config
 
+    @staticmethod
+    def count_sketch(input_tensor: Tensor, num_hash_functions: int, num_counters: int) -> Tensor:
+        """
+        Args:
+          input_tensor: The tensor to be counted.
+          num_hash_functions: The number of hash functions to use.
+          num_counters: The number of counters to use.
+
+        Returns:
+          A TensorFlow tensor that contains the estimated frequencies of the data.
+        """
+
+        hashes = tf.random.uniform([num_hash_functions], minval=0, maxval=num_counters, dtype=tf.int32)
+        counts = tf.reduce_min(tf.gather(input_tensor, hashes), axis=0)
+        return counts
 
 
 
