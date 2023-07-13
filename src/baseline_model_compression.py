@@ -25,7 +25,7 @@ if __name__ == "__main__":
     img_train = img_train.reshape(-1, 28, 28, 1).astype('float32') / 255.0
     img_test = img_test.reshape(-1, 28, 28, 1).astype('float32') / 255.0
 
-    # validation set
+    # setup validation set
     img_val = img_train[-10000:]
     label_val = label_train[-10000:]
     img_train = img_train[:-10000]
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     # opt = NaturalCompression(learning_rate=0.001)
     # opt = SparseGradient(learning_rate=0.01, drop_rate=0.99)
     # opt = OneBitSGD(learning_rate=0.02)
-    opt = MemSGD(learning_rate=0.02, momentum=0.2)
+    opt = MemSGD(learning_rate=0.05, momentum=0.2, rand_k=50)
     # opt = EFsignSGD(learning_rate=0.001)
     # opt = CustomSGD(learning_rate=0.01)
 
