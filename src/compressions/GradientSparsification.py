@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 from keras.optimizers.optimizer_experimental import optimizer
 from tensorflow import Tensor
@@ -30,39 +31,36 @@ class GradientSparsification(optimizer.Optimizer):
 
     def _update_step(self, gradient: Tensor, variable):
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
-        variable.assign_add(-tf.sign(gradient) * lr)
+        probabilities = self.greedy_algorithm(input_tensor=gradient, max_iter=2, k=0.001)
+        selectors = np.random.randint(2, size=probabilities.shape)
+        gradient_spars = selectors * gradient / probabilities
+        variable.assign_add(- gradient_spars * lr)
 
-        # Function to calculate p0i
-        def p0i(g, P, κ):
-            min_vals = [0] * len(g)
+    @staticmethod
+    def greedy_algorithm(input_tensor: Tensor, k: float, max_iter: int) -> Tensor:
+        """
+        Finds the optimal probability vector p in max_iter iterations.
 
-            for i in range(len(g)):
-                if (g[i] / P[i]) > 0:
-                    min_vals[i] = κ * (g[i] / P[i])
-                else:
-                    min_vals[i] = 1
-
-            return min_vals
-
-        # declaring the inputs
-        g = [10, -20, 11]
-        P = [15, 9, 10]
-        κ = 0.5
-
-        p0 = p0i(g, P, κ)
-
+        Returns:
+          The optimal probability vector p.
+        """
         j = 0
+        p = tf.ones_like(input_tensor)
+        d = input_tensor.shape[0]
 
-        # Algorithm 3 Greedy algorithm starts from here
-        # repeat
-        while (j < P.length - 1):
-            # Set
-            for i in range(len(g)):
-                # Calculate
-                pj_i = min(κ * (g[i] / P[i]), 1)
-
-            # Increment
-            j = j + 1
+        comp = k*d*tf.abs(input_tensor)/tf.reduce_sum(input_tensor).numpy()
+        p = tf.where(comp < 1,
+                     comp, p)
+        c = 2
+        while j < max_iter and c > 1:
+            active_set = tf.where(p != 1, p, 0)
+            cardinality = tf.reduce_sum(tf.where(active_set != 0, 1, 0)).numpy()
+            c = (k*d-d+cardinality)/tf.reduce_sum(active_set).numpy()
+            cp = tf.math.multiply(c, p)
+            p = tf.where(cp < 1,
+                         cp, 1)
+            j += 1
+        return p
 
     def get_config(self):
         config = super().get_config()

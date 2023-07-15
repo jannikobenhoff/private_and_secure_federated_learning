@@ -11,6 +11,7 @@ from sklearn.model_selection import KFold
 from keras import models, layers, regularizers
 
 from src.compressions.EFsignSGD import EFsignSGD
+from src.compressions.GradientSparsification import GradientSparsification
 from src.compressions.MemSGD import MemSGD
 from src.compressions.NaturalCompression import NaturalCompression
 from src.compressions.OneBitSGD import OneBitSGD
@@ -45,9 +46,10 @@ if __name__ == "__main__":
     model.add(layers.Dense(84, activation='tanh', kernel_regularizer=regularizers.l2(chosen_lambda)))
     model.add(layers.Dense(10, activation='softmax'))
 
-    opt = TernGrad(learning_rate=0.05, c=2.5)
+    # opt = TernGrad(learning_rate=0.05, c=2.5)
     # opt = NaturalCompression(learning_rate=0.001)
     # opt = SparseGradient(learning_rate=0.01, drop_rate=0.99)
+    opt = GradientSparsification(learning_rate=0.01)
     # opt = OneBitSGD(learning_rate=0.02)
     # opt = MemSGD(learning_rate=0.05, momentum=0.5, rand_k=10)
     # opt = EFsignSGD(learning_rate=0.001)
