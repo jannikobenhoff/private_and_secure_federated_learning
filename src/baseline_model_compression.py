@@ -45,11 +45,11 @@ if __name__ == "__main__":
     model.add(layers.Dense(84, activation='tanh', kernel_regularizer=regularizers.l2(chosen_lambda)))
     model.add(layers.Dense(10, activation='softmax'))
 
-    # opt = TernGrad(learning_rate=0.05)
+    opt = TernGrad(learning_rate=0.05, c=2.5)
     # opt = NaturalCompression(learning_rate=0.001)
     # opt = SparseGradient(learning_rate=0.01, drop_rate=0.99)
     # opt = OneBitSGD(learning_rate=0.02)
-    opt = MemSGD(learning_rate=0.05, momentum=0.5, rand_k=10)
+    # opt = MemSGD(learning_rate=0.05, momentum=0.5, rand_k=10)
     # opt = EFsignSGD(learning_rate=0.001)
     # opt = CustomSGD(learning_rate=0.01)
 

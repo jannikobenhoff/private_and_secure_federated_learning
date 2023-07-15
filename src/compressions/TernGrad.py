@@ -4,9 +4,10 @@ from tensorflow import Tensor
 
 
 class TernGrad(optimizer.Optimizer):
-    def __init__(self, learning_rate, name="TernGrad"):
+    def __init__(self, learning_rate, c: float, name="TernGrad"):
         super().__init__(name=name)
         self._learning_rate = self._build_learning_rate(learning_rate)
+        self.c = c
 
     def build(self, var_list):
         """Initialize optimizer variables.
@@ -21,7 +22,9 @@ class TernGrad(optimizer.Optimizer):
     def _update_step(self, gradient: Tensor, variable):
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
         gradient_tern = self.ternarize(gradient)
-        variable.assign_add(-gradient_tern * lr)
+        gradient_clip = self.gradient_clipping(gradient_tern, self.c)
+
+        variable.assign_add(-gradient_clip * lr)
 
     def get_config(self):
         config = super().get_config()
@@ -38,16 +41,47 @@ class TernGrad(optimizer.Optimizer):
     @staticmethod
     def ternarize(input_tensor: Tensor) -> Tensor:
         """
+        Layer-wise ternarize
+
         g_t_i_tern = s_t * sign(g_t_i) o b_t
         s_t = max(abs(g_t_i)) = ||g_t_i||∞ (max norm)
         o : Hadamard product
         """
-        input_shape = input_tensor.shape
-        g_t_i = tf.reshape(input_tensor, [-1])
-        s_t = tf.reduce_max(tf.abs(g_t_i), 0)
-        b_t = tf.where(tf.abs(g_t_i) / s_t >= 0.5, tf.ones_like(g_t_i), tf.zeros_like(g_t_i))
-        g_t_i_tern = s_t * tf.sign(g_t_i) * b_t
-        return tf.reshape(g_t_i_tern, input_shape)
+        if len(input_tensor.shape) == 1:
+            abs_input = tf.abs(input_tensor)
+            s_t = tf.reduce_max(abs_input, axis=0, keepdims=True)
+            b_t = tf.cast(abs_input / s_t >= 0.5, input_tensor.dtype)
+            return s_t * tf.sign(input_tensor) * b_t
+        abs_input = tf.abs(input_tensor)
+        s_t = tf.reduce_max(abs_input, axis=1, keepdims=True)
+        b_t = tf.cast(abs_input / s_t >= 0.5, input_tensor.dtype)
+        return s_t * tf.sign(input_tensor) * b_t
+
+        # output_list = []
+        # for layer in range(input_tensor.shape[0]):
+        #     g_t_i = input_tensor[layer]
+        #     s_t = tf.math.reduce_max(tf.abs(g_t_i))
+        #     b_t = tf.where(tf.abs(g_t_i) / s_t >= 0.5, tf.ones_like(g_t_i), tf.zeros_like(g_t_i))
+        #     output_list.append(s_t * tf.sign(g_t_i) * b_t)
+        # input_shape = input_tensor.shape
+        # g_t_i = tf.reshape(input_tensor, [-1])
+        # s_t = tf.reduce_max(tf.abs(g_t_i), 0)
+        # b_t = tf.where(tf.abs(g_t_i) / s_t >= 0.5, tf.ones_like(g_t_i), tf.zeros_like(g_t_i))
+        # g_t_i_tern = s_t * tf.sign(g_t_i) * b_t
+        # return tf.stack(output_list) #tf.reshape(g_t_i_tern, input_shape)
+
+    @staticmethod
+    def gradient_clipping(input_tensor: Tensor, c) -> Tensor:
+        """
+        Clips the gradient tensor.
+        Sigma is the standard deviation of the gradient vector
+        c is a constant
+        """
+        sigma = tf.math.reduce_std(input_tensor)
+        abs_input = tf.abs(input_tensor)
+        clipped_gradient = tf.where(
+            abs_input <= c * sigma, input_tensor, tf.sign(input_tensor) * c * sigma)
+        return clipped_gradient
 
     def step(self, z_t_i):
         """
