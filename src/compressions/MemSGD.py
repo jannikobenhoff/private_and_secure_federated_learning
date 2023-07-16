@@ -4,7 +4,7 @@ from tensorflow import Tensor
 
 
 class MemSGD(optimizer.Optimizer):
-    def __init__(self, learning_rate, momentum, top_k: int = None, rand_k: int= None, name="MemSGD"):
+    def __init__(self, learning_rate, top_k: int = None, rand_k: int= None, name="MemSGD"):
         super().__init__(name=name)
         self._learning_rate = self._build_learning_rate(learning_rate)
 
@@ -14,12 +14,7 @@ class MemSGD(optimizer.Optimizer):
             raise "Please select a sparsification method, top-k or random-k."
         self.top_k = top_k
         self.rand_k = rand_k
-        # TODO momentum drin oder nicht?
-        self.momentum = momentum
-        if isinstance(momentum, (int, float)) and (
-            momentum < 0 or momentum > 1
-        ):
-            raise ValueError("`momentum` must be between [0, 1].")
+
 
     def build(self, var_list):
         """Initialize optimizer variables.
@@ -32,9 +27,9 @@ class MemSGD(optimizer.Optimizer):
         super().build(var_list)
         if hasattr(self, "_built") and self._built:
             return
-        self.momentums = []
+        self.memory = []
         for var in var_list:
-            self.momentums.append(
+            self.memory.append(
                 self.add_variable_from_reference(
                     model_variable=var, variable_name="m", initial_value=tf.zeros(shape=var.shape)
                 )
@@ -44,18 +39,16 @@ class MemSGD(optimizer.Optimizer):
     def _update_step(self, gradient: Tensor, variable):
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
         var_key = self._var_key(variable)
-        momentum = tf.cast(self.momentum, variable.dtype)
-        m = self.momentums[self._index_dict[var_key]]
+        m = self.memory[self._index_dict[var_key]]
 
         if self.top_k is None:
-            g = self.rand_k_sparsification(input_tensor=momentum * m + lr * gradient,
+            g = self.rand_k_sparsification(input_tensor=m + lr * gradient,
                                            k=self.rand_k)
-
         else:
-            g = self.top_k_sparsification(input_tensor=momentum * m + lr * gradient,
+            g = self.top_k_sparsification(input_tensor=m + lr * gradient,
                                           k=self.top_k)
 
-        m.assign(m+lr*gradient-g)
+        self.memory[self._index_dict[var_key]].assign(m+lr*gradient-g)
         variable.assign_add(-g)
 
     def get_config(self):

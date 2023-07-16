@@ -6,6 +6,7 @@ class OneBitSGD(optimizer.Optimizer):
     def __init__(self, learning_rate, name="OneBitSGD"):
         super().__init__(name=name)
         self._learning_rate = self._build_learning_rate(learning_rate)
+        self.quantization_threshold = 0
 
     def build(self, var_list):
         """Initialize optimizer variables.
@@ -28,11 +29,16 @@ class OneBitSGD(optimizer.Optimizer):
     def _update_step(self, gradient: Tensor, variable):
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
 
-        gradient = gradient + self.error[variable.ref()]
-        error = gradient - tf.sign(gradient)
+        gradient_quantized = tf.sign(gradient + self.error[variable.ref()])
+        error = gradient - self.unquantize(gradient_quantized)
+
         self.error[variable.ref()].assign(error)
 
-        variable.assign_add(-tf.sign(gradient) * lr)
+        variable.assign_add(-gradient_quantized * lr)
+
+    @staticmethod
+    def unquantize(gradients):
+        pass
 
     def get_config(self):
         config = super().get_config()

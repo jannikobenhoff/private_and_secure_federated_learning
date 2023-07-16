@@ -13,7 +13,7 @@ class SparseGradient(optimizer.Optimizer):
     def build(self, var_list):
         """Initialize optimizer variables.
 
-        SparseGradient optimizer has two variables: `drop_rate` and `residuals`.
+        SparseGradient optimizer has one variable:`residuals`.
 
         Args:
           var_list: list of model variables to build SparseGradient variables on.
@@ -65,6 +65,6 @@ class SparseGradient(optimizer.Optimizer):
         Updates by removing drop_rate % of the smallest gradients by absolute value
         """
         threshold = tfp.stats.percentile(tf.abs(gradient), drop_rate)
-        gradient_dropped = tf.where(tf.abs(gradient) >= threshold, gradient, 0)
+        gradient_dropped = tf.where(tf.abs(gradient) > threshold, gradient, 0)
         return gradient_dropped
 

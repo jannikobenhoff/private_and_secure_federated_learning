@@ -66,5 +66,5 @@ if __name__ == "__main__":
     Lambda: 0.0016932133792534388 - val_accuracy: 0.9819166660308838 - iter: 50, epochs: 30 - 1e-6 - 0.1
     Lambda: 0.0017854750244078188 - val_accuracy: 0.9819999933242798 - iter: 100, epochs: 30 - 1e-6 - 0.01
     Lambda: 0.0001952415460342464 - val_accuracy: 0.9900000095367432 - iter: 100, epochs: 25 - 1e-6 - 0.1
-    Lambda: 2.001382315994955e-06 - val_accuracy: 0.9900000095367432 - iter: 100, epochs: 25 - 1e-6 - 0.001
+    Lambda: 2.001382315994955e-06 - val_accuracy: 0.9900000095367432 - iter: 125, epochs: 25 - 1e-6 - 0.001
     """

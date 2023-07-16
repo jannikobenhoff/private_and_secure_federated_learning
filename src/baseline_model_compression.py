@@ -10,6 +10,7 @@ from models.LeNet import LeNet
 from sklearn.model_selection import KFold
 from keras import models, layers, regularizers
 
+from src.compressions.Atomo import Atomo
 from src.compressions.EFsignSGD import EFsignSGD
 from src.compressions.GradientSparsification import GradientSparsification
 from src.compressions.MemSGD import MemSGD
@@ -49,10 +50,11 @@ if __name__ == "__main__":
     # opt = TernGrad(learning_rate=0.05, c=2.5)
     # opt = NaturalCompression(learning_rate=0.001)
     # opt = SparseGradient(learning_rate=0.01, drop_rate=0.99)
-    opt = GradientSparsification(learning_rate=0.01)
+    # opt = GradientSparsification(learning_rate=0.01, max_iter=2, k=0.004)
     # opt = OneBitSGD(learning_rate=0.02)
-    # opt = MemSGD(learning_rate=0.05, momentum=0.5, rand_k=10)
-    # opt = EFsignSGD(learning_rate=0.001)
+    # opt = MemSGD(learning_rate=0.05, rand_k=10)
+    # opt = Atomo(learning_rate=0.05, sparsity_budget=2)
+    opt = EFsignSGD(learning_rate=0.001)
     # opt = CustomSGD(learning_rate=0.01)
 
     model.compile(optimizer=opt,

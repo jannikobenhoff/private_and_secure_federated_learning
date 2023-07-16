@@ -5,9 +5,11 @@ from tensorflow import Tensor
 
 
 class GradientSparsification(optimizer.Optimizer):
-    def __init__(self, learning_rate, name="GradientSparsification"):
+    def __init__(self, learning_rate, k: float, max_iter: int, name="GradientSparsification"):
         super().__init__(name=name)
         self._learning_rate = self._build_learning_rate(learning_rate)
+        self.k = k
+        self.max_iter = max_iter
 
     def build(self, var_list):
         """Initialize optimizer variables.
@@ -31,8 +33,9 @@ class GradientSparsification(optimizer.Optimizer):
 
     def _update_step(self, gradient: Tensor, variable):
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
-        probabilities = self.greedy_algorithm(input_tensor=gradient, max_iter=2, k=0.001)
-        selectors = np.random.randint(2, size=probabilities.shape)
+        probabilities = self.greedy_algorithm(input_tensor=gradient, max_iter=self.max_iter, k=self.k)
+        # selectors = np.random.randint(2, size=probabilities.shape)
+        selectors = tf.where(probabilities >= 0.5, 1.0, 0.0)
         gradient_spars = selectors * gradient / probabilities
         variable.assign_add(- gradient_spars * lr)
 
