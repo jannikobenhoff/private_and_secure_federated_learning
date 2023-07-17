@@ -37,7 +37,7 @@ if __name__ == "__main__":
     chosen_lambda = 0.0001952415460342464
 
     model = models.Sequential()
-    model.add(layers.Conv2D(6, kernel_size=(5, 5),activation='tanh', input_shape=input_shape,
+    model.add(layers.Conv2D(6, kernel_size=(5, 5), activation='tanh', input_shape=input_shape,
                             kernel_regularizer=regularizers.l2(chosen_lambda)))
     model.add(layers.AveragePooling2D(2, strides=2))
     model.add(layers.Conv2D(16, kernel_size=(5, 5), activation='tanh', kernel_regularizer=regularizers.l2(chosen_lambda)))
@@ -47,14 +47,14 @@ if __name__ == "__main__":
     model.add(layers.Dense(84, activation='tanh', kernel_regularizer=regularizers.l2(chosen_lambda)))
     model.add(layers.Dense(10, activation='softmax'))
 
-    # opt = TernGrad(learning_rate=0.05, c=2.5)
+    opt = TernGrad(learning_rate=0.05, c=2.5)
     # opt = NaturalCompression(learning_rate=0.001)
     # opt = SparseGradient(learning_rate=0.01, drop_rate=0.99)
     # opt = GradientSparsification(learning_rate=0.01, max_iter=2, k=0.004)
     # opt = OneBitSGD(learning_rate=0.02)
     # opt = MemSGD(learning_rate=0.05, rand_k=10)
     # opt = Atomo(learning_rate=0.05, sparsity_budget=2)
-    opt = EFsignSGD(learning_rate=0.001)
+    # opt = EFsignSGD(learning_rate=0.001)
     # opt = CustomSGD(learning_rate=0.01)
 
     model.compile(optimizer=opt,

@@ -21,10 +21,10 @@ class TernGrad(optimizer.Optimizer):
 
     def _update_step(self, gradient: Tensor, variable):
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
-        gradient_tern = self.ternarize(gradient)
-        gradient_clip = self.gradient_clipping(gradient_tern, self.c)
+        gradient_clip = self.gradient_clipping(gradient, self.c)
+        gradient_tern = self.ternarize(gradient_clip)
 
-        variable.assign_add(-gradient_clip * lr)
+        variable.assign_add(-gradient_tern * lr)
 
     def get_config(self):
         config = super().get_config()

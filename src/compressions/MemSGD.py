@@ -15,7 +15,6 @@ class MemSGD(optimizer.Optimizer):
         self.top_k = top_k
         self.rand_k = rand_k
 
-
     def build(self, var_list):
         """Initialize optimizer variables.
 

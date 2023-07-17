@@ -3,6 +3,7 @@ from keras.optimizers.optimizer_experimental import optimizer
 from tensorflow import Tensor
 import tensorflow_probability as tfp
 
+
 class Atomo(optimizer.Optimizer):
     def __init__(self, learning_rate, sparsity_budget: int, name="Atomo"):
         super().__init__(name=name)
