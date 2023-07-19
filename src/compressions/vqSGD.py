@@ -1,12 +1,12 @@
 import tensorflow as tf
-from keras.optimizers.optimizer_experimental import optimizer
 from tensorflow import Tensor
 
+from src.compressions.Compression import Compression
 
-class vqSGD(optimizer.Optimizer):
-    def __init__(self, learning_rate, momentum, name="vqSGD"):
+
+class vqSGD(Compression):
+    def __init__(self, momentum, name="vqSGD"):
         super().__init__(name=name)
-        self._learning_rate = self._build_learning_rate(learning_rate)
         self.momentum = momentum
 
     def build(self, var_list):
@@ -17,7 +17,6 @@ class vqSGD(optimizer.Optimizer):
         Args:
           var_list: list of model variables to build vqSGD variables on.
         """
-        super().build(var_list)
         if hasattr(self, "_built") and self._built:
             return
         self.error = {}
@@ -28,27 +27,11 @@ class vqSGD(optimizer.Optimizer):
             )
         self._built = True
 
-    def _update_step(self, gradient: Tensor, variable):
-        lr = tf.cast(self.lr, variable.dtype.base_dtype)
+    def compress(self, gradient: Tensor, variable) -> Tensor:
 
         # update residual error
         self.error[variable.ref()].assign()
 
         # update iterate
         variable.assign_add()
-
-    def get_config(self):
-        config = super().get_config()
-
-        config.update(
-            {
-                "learning_rate": self._serialize_hyperparameter(
-                    self._learning_rate
-                )
-            }
-        )
-        return config
-
-
-
-
+        return  gradient

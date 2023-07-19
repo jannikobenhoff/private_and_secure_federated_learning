@@ -23,7 +23,8 @@ if __name__ == "__main__":
     img_test = img_test.reshape(-1, 28, 28, 1).astype('float32') / 255.0
 
     print("Training on", len(img_train), "images")
-    baselineModel = LeNet()
+    baselineModel = LeNet(chosen_lambda=None, input_shape=None, num_classes=None,
+                          search=True)
 
     early_stopping = keras.callbacks.EarlyStopping(
                                      monitor='val_loss',
@@ -39,32 +40,35 @@ if __name__ == "__main__":
         y_train, y_val = label_train[train_index], label_train[val_index]
 
         tuner = BayesianOptimization(
-            baselineModel.build_model,
+            baselineModel.search_model,
             objective="val_accuracy",
-            max_trials=125,
+            max_trials=10,
             directory='results/tuner_results',
-            project_name='l2_regularization_11'
+            project_name='l2_regularization_sgd_2'
         )
 
         tuner.search(x_train, y_train,
                      validation_data=(x_val, y_val),
                      batch_size=32,
-                     epochs=40,
+                     epochs=50,
                      callbacks=[early_stopping, tensorboard_callback])
 
     # Get the best lambda value
     best_hp = tuner.get_best_hyperparameters(num_trials=1)[0]
     best_lambda = best_hp.get('lambda')
     print("Best Lambda:", best_lambda)
-
     tb = program.TensorBoard()
     tb.configure(argv=[None, '--logdir', os.path.abspath(logdir)])
     tb.main()
 
     """
+    ADAM:
     Best lambdas so far:
     Lambda: 0.0016932133792534388 - val_accuracy: 0.9819166660308838 - iter: 50, epochs: 30 - 1e-6 - 0.1
     Lambda: 0.0017854750244078188 - val_accuracy: 0.9819999933242798 - iter: 100, epochs: 30 - 1e-6 - 0.01
     Lambda: 0.0001952415460342464 - val_accuracy: 0.9900000095367432 - iter: 100, epochs: 25 - 1e-6 - 0.1
     Lambda: 2.001382315994955e-06 - val_accuracy: 0.9900000095367432 - iter: 125, epochs: 25 - 1e-6 - 0.001
+    
+    SGD
+    Lambda: 5.692074948724322e-05 - val_accuracy:0.9673333168029785 - iter: 125, epochs: 40 - 1e-6 - 0.001
     """

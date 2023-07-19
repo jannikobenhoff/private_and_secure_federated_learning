@@ -1,69 +1,115 @@
+import numpy as np
 import tensorflow as tf
-from keras.optimizers.optimizer_experimental import optimizer
 from tensorflow import Tensor
 import tensorflow_probability as tfp
 
+from src.compressions.Compression import Compression
 
-class Atomo(optimizer.Optimizer):
-    def __init__(self, learning_rate, sparsity_budget: int, name="Atomo"):
+
+class Atomo(Compression):
+    def __init__(self, sparsity_budget: int, name="Atomo"):
         super().__init__(name=name)
-        self._learning_rate = self._build_learning_rate(learning_rate)
         self.sparsity_budget = sparsity_budget
 
     def build(self, var_list):
         """Initialize optimizer variables.
-
-        Atomo optimizer has one variable `quantization error`
+        TernGrad optimizer has no additional variables.
 
         Args:
-          var_list: list of model variables to build Atomo variables on.
+          var_list: list of model variables to build OneBitSGD variables on.
         """
-        super().build(var_list)
         if hasattr(self, "_built") and self._built:
             return
-        self.error = {}
-        for var in var_list:
-            self.error[var.ref()] = self.add_variable_from_reference(
-                model_variable=var, variable_name="error",
-                initial_value=tf.zeros(shape=tf.shape(var))
-            )
         self._built = True
 
-    def _update_step(self, gradient: Tensor, variable):
-        lr = tf.cast(self.lr, variable.dtype.base_dtype)
-        gradient_estimator = self.atomic_sparsification(gradient, s=self.sparsity_budget)
+    def compress(self, gradient: Tensor, variable) -> Tensor:
+        # if gradient.ndim != 2:
+        #    gradient = self._resize_to_2d(gradient)
+        # s, u, v = tf.linalg.svd(gradient, full_matrices=False)
+        gradient_sparse = self.atomic_sparsification(gradient, self.sparsity_budget)
+        # print(s.shape, gradient.ndim)
+        # i, pi = self.atomic_sparsification(gradient, s=self.sparsity_budget)
+        #
+        # print(i, pi)
+        return gradient_sparse
 
-        variable.assign_add(-gradient_estimator*lr)
-
-    @staticmethod
-    def atomic_sparsification(gradient: Tensor, s: int) -> Tensor:
+    def atomic_sparsification(self, gradient: Tensor, s: int):
         """
         Basic implementation of entry-wise decomposition: lambda_i = gradient_i
         """
-        i = 0
-        n = gradient.shape[0]
-        p = tf.ones_like(gradient, dtype=gradient.dtype)
+        input_shape = gradient.shape
+        gradient = tf.reshape(gradient, [-1]).numpy()
+        # i = 0
+        # n = gradient.shape[0]
+        # p = tf.ones_like(gradient, dtype=gradient.dtype)
+        #
+        # while i <= n:
+        #     if False:
+        #         i = n + 1
+        #     else:
+        #         i += 1
+        #         s -= 1
+        #
+        probs = gradient / gradient[0] if s == 0 else s * gradient / tf.reduce_sum(gradient)
+        probs = probs.numpy()
+        for i, p in enumerate(probs):
+            if p > 1:
+                probs[i] = 1
+        # sampled_idx = []
+        # sample_probs = []
+        # for i, p in enumerate(probs):
+        #     # if np.random.rand() < p:
+        #     # random sampling from bernulli distribution
+        #     if np.random.binomial(1, p):
+        #         sampled_idx += [i]
+        #         sample_probs += [p]
+        # rank_hat = len(sampled_idx)
+        # if rank_hat == 0:  # or (rank != 0 and np.abs(rank_hat - rank) >= 3):
+        #     return self.atomic_sparsification(gradient, s=s)
+        # return np.array(sampled_idx, dtype=int), np.array(sample_probs)
 
-        while i <= n:
-            if False:
-                i = n + 1
-            else:
-                i += 1
-                s -= 1
+        t = tfp.distributions.Bernoulli(probs=probs, dtype=gradient.dtype).sample()
 
-        t = tfp.distributions.Bernoulli(probs=p, dtype=gradient.dtype).sample()
-
-        gradient_estimator = gradient * t / p
+        gradient_estimator = gradient * t / probs
+        gradient_estimator = tf.reshape(gradient_estimator, input_shape)
         return gradient_estimator
 
-    def get_config(self):
-        config = super().get_config()
+    @staticmethod
+    def _resize_to_2d(x: Tensor):
+        """
+        x.shape > 2
+        If x.shape = (a, b, *c), assumed that each one of (a, b) pairs has relevant information in c.
+        """
+        shape = tf.shape(x)
+        if x.ndim == 1:
+            n = shape[0]
+            return tf.reshape(x, (n // 2, 2))
+        print([s == 1 for s in shape[2:]])
+        print(shape[2:], shape.numpy())
+        if tf.reduce_all([s == 1 for s in shape[2:]]):
+            return tf.reshape(x, (shape[0], shape[1]))
+        x = tf.reshape(x, (shape[0], shape[1], -1))
+        x_tmp = tf.reshape(x, (shape[0] * shape[1], -1))
+        tmp_shape = tf.shape(x_tmp)
+        print(tmp_shape.numpy())
+        return x_tmp  # tf.reshape(x_tmp, (tmp_shape[0] // 2, tmp_shape[1] * 2))
 
-        config.update(
-            {
-                "learning_rate": self._serialize_hyperparameter(
-                    self._learning_rate
-                )
-            }
-        )
-        return config
+    def _sample_svd(self, s, rank=0):
+        if s[0] < 1e-6:
+            return [0], np.array([1.0])
+        probs = s / s[0] if rank == 0 else rank * s / s.sum()
+        for i, p in enumerate(probs):
+            if p > 1:
+                probs[i] = 1
+        sampled_idx = []
+        sample_probs = []
+        for i, p in enumerate(probs):
+            # if np.random.rand() < p:
+            # random sampling from bernulli distribution
+            if np.random.binomial(1, p):
+                sampled_idx += [i]
+                sample_probs += [p]
+        rank_hat = len(sampled_idx)
+        if rank_hat == 0:  # or (rank != 0 and np.abs(rank_hat - rank) >= 3):
+            return self._sample_svd(s, rank=rank)
+        return np.array(sampled_idx, dtype=int), np.array(sample_probs)

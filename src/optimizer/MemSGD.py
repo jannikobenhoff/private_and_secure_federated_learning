@@ -8,6 +8,7 @@ class MemSGD(optimizer.Optimizer):
         super().__init__(name=name)
         self._learning_rate = self._build_learning_rate(learning_rate)
 
+
         if rand_k is not None and top_k is not None:
             raise "Please only select top-k or random-k sparsification."
         elif rand_k is None and top_k is None:
@@ -37,6 +38,7 @@ class MemSGD(optimizer.Optimizer):
 
     def _update_step(self, gradient: Tensor, variable):
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
+
         var_key = self._var_key(variable)
         m = self.memory[self._index_dict[var_key]]
 
@@ -49,18 +51,6 @@ class MemSGD(optimizer.Optimizer):
 
         self.memory[self._index_dict[var_key]].assign(m+lr*gradient-g)
         variable.assign_add(-g)
-
-    def get_config(self):
-        config = super().get_config()
-
-        config.update(
-            {
-                "learning_rate": self._serialize_hyperparameter(
-                    self._learning_rate
-                )
-            }
-        )
-        return config
 
     @staticmethod
     def top_k_sparsification(input_tensor: Tensor, k: int) -> Tensor:
@@ -102,3 +92,15 @@ class MemSGD(optimizer.Optimizer):
         spars_tensor = tf.reshape(spars_tensor, input_shape)
 
         return spars_tensor
+
+    def get_config(self):
+        config = super().get_config()
+
+        config.update(
+            {
+                "learning_rate": self._serialize_hyperparameter(
+                    self._learning_rate
+                )
+            }
+        )
+        return config

@@ -1,4 +1,3 @@
-import numpy as np
 import tensorflow as tf
 from keras.optimizers.optimizer_experimental import optimizer
 from tensorflow import Tensor
@@ -23,22 +22,23 @@ class EFsignSGD(optimizer.Optimizer):
         self.error = {}
         for var in var_list:
             self.error[var.ref()] = self.add_variable_from_reference(
-                model_variable=var, variable_name="error",
-                initial_value=tf.zeros(shape=tf.shape(var))
+                model_variable=var, variable_name="error"
             )
         self._built = True
 
     def _update_step(self, gradient: Tensor, variable):
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
+        error = self.error[variable.ref()]
 
         d = variable.shape.as_list()[0]
+        p_t = lr * gradient + error
 
-        p_t = lr * gradient + self.error[variable.ref()]
-        delta_t = (tf.norm(p_t, ord=1)/d) * tf.sign(p_t)
+        norm = tf.norm(p_t, ord=1, axis=0, keepdims=True)/d
+        # delta_t = (tf.norm(p_t, ord=1, keepdims=True, axis=1)/d) * tf.sign(p_t)
+        delta_t = tf.multiply(norm, tf.sign(p_t))
 
         # update residual error
-        self.error[variable.ref()].assign(p_t - delta_t)
-
+        self.error[variable.ref()].assign(p_t-delta_t)
         # update iterate
         variable.assign_add(-delta_t)
 
@@ -53,7 +53,3 @@ class EFsignSGD(optimizer.Optimizer):
             }
         )
         return config
-
-
-
-
