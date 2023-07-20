@@ -15,7 +15,7 @@ class TestSparseGradient(unittest.TestCase):
                         tf.math.reduce_all(tf.equal(calc.shape, expect.shape)), "Not equal.")
 
     def test_gradDrop2d(self):
-        sg = SparseGradient()
+        sg = SparseGradient(drop_rate=50)
         calc = sg.gradDrop(tf.constant([[0.3, -1.2, 0.9, 0.2], [0.3, 2, 0.9, 0.2]],
                                        dtype=tf.float32), 50)
         print(calc)

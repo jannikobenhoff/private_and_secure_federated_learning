@@ -1,11 +1,11 @@
 import unittest
 import numpy as np
-from src.compressions.MemSGD import *
+from src.optimizer.MemSGD import *
 
 
 class TestMemSGD(unittest.TestCase):
     def test_top_k(self):
-        nc = MemSGD(learning_rate=0.01, momentum=1, top_k=2)
+        nc = MemSGD(learning_rate=0.01, top_k=2)
         spars = nc.top_k_sparsification(input_tensor=tf.constant([1, -2.75, 2.75],
                                                                  dtype=tf.float32), k=2)
         print(spars)
@@ -14,7 +14,7 @@ class TestMemSGD(unittest.TestCase):
                         "Not equal.")
 
     def test_top_k_2d(self):
-        nc = MemSGD(learning_rate=0.01, momentum=1, top_k=2)
+        nc = MemSGD(learning_rate=0.01, top_k=2)
         spars = nc.top_k_sparsification(input_tensor=tf.constant([[1, -2.75, 2.75], [100, 0, 5]],
                                                                  dtype=tf.float32), k=4)
         print(spars)
@@ -24,11 +24,13 @@ class TestMemSGD(unittest.TestCase):
                         "Not equal.")
 
     def test_rand_k(self):
-        nc = MemSGD(learning_rate=0.01, momentum=1, top_k=2)
+        nc = MemSGD(learning_rate=0.01, top_k=2)
         spars = nc.rand_k_sparsification(input_tensor=tf.constant([1, -2.75, 2.75],
-                                                                 dtype=tf.float32), k=2)
+                                                                  dtype=tf.float32), k=2)
         print(spars)
-        self.assertTrue(spars.shape == (3, ),
+        self.assertTrue(spars.shape == (3,),
                         "Not equal.")
+
+
 if __name__ == '__main__':
     unittest.main()
