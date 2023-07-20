@@ -1,3 +1,4 @@
+import numpy as np
 from tensorflow import Tensor
 import tensorflow as tf
 from src.compressions.Compression import Compression
@@ -27,12 +28,13 @@ class Strategy:
         if self.compression is None:
             self.optimizer.apply_gradients(zip(gradient, variables))
         else:
-            gradient_uncompressed = gradient
+            gradient_compressed = []
             for i, grad in enumerate(gradient):
-                gradient[i] = self.compression.compress(grad, variables[i])
-                self.compression_ratio[self.iter].append(get_compression_rate(gradient_uncompressed[i], gradient[i]))
-            self.optimizer.apply_gradients(zip(gradient, variables))
-        # print("Avg. compression ratio:", sum(self.compression_ratio[self.iter])/len(self.compression_ratio[self.iter]))
+                gradient_compressed.append(self.compression.compress(grad, variables[i]))
+                # self.compression_ratio[self.iter].append(get_compression_rate(gradient_uncompressed[i], gradient[i]))
+            # print("compression ratio:", (get_compression_rate(gradient[1], gradient_compressed[1])))
+
+            self.optimizer.apply_gradients(zip(gradient_compressed, variables))
 
         self.iter += 1
 
@@ -42,4 +44,7 @@ class Strategy:
         else:
             print(f"---\nOptimizer: {self.optimizer.name}\nCompression: {self.compression.name}\n---")
 
-
+    def get_plot_title(self):
+        return "{} - {} - {:.4f}".format(self.optimizer.name,
+                                         self.compression.name,
+                                         self.optimizer.learning_rate.numpy())

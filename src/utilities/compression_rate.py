@@ -9,7 +9,7 @@ def get_compression_rate(uncompressed: Tensor, compressed: Tensor):
 
     #print("Un:", len(bytearray(uncompressed.numpy())))
     #print("Co:", len(bytearray(compressed.numpy())))
-
+    print(uncompressed.dtype.size,  compressed.dtype.size)
     compressed = tf.sparse.from_dense(compressed).values
     original_size = np.prod(uncompressed.shape.as_list()) * uncompressed.dtype.size
     compressed_size = np.prod(compressed.shape.as_list()) * compressed.dtype.size
