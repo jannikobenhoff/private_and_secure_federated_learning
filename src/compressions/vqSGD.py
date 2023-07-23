@@ -34,4 +34,4 @@ class vqSGD(Compression):
 
         # update iterate
         variable.assign_add()
-        return  gradient
+        return gradient
