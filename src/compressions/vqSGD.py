@@ -5,9 +5,8 @@ from src.compressions.Compression import Compression
 
 
 class vqSGD(Compression):
-    def __init__(self, momentum, name="vqSGD"):
+    def __init__(self, name="vqSGD"):
         super().__init__(name=name)
-        self.momentum = momentum
 
     def build(self, var_list):
         """Initialize optimizer variables.
@@ -35,3 +34,6 @@ class vqSGD(Compression):
         # update iterate
         variable.assign_add()
         return gradient
+
+    def probabilities(self, input_tensor: Tensor) -> Tensor:
+        a = tf.zeros_like(input_tensor)

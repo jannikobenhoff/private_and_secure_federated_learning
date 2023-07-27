@@ -44,7 +44,7 @@ if __name__ == "__main__":
                   input_shape=input_shape,
                   chosen_lambda=chosen_lambda)
 
-    strategy = Strategy(optimizer=keras.optimizers.SGD(learning_rate=0.01),
+    strategy = Strategy(optimizer=keras.optimizers.Adam(learning_rate=0.01),
                         compression=OneBitSGD())
 
     model.compile(optimizer=strategy.optimizer,

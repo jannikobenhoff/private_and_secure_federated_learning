@@ -27,7 +27,7 @@ class LeNet(tf.keras.Model):
 
     def search_model(self, hp):
         input_shape = (28, 28, 1)
-        lambda_start = 1e-6
+        lambda_start = 1e-7
         lambda_end = 0.1
         self.model = models.Sequential()
         self.model.add(layers.Conv2D(6, kernel_size=(5, 5),

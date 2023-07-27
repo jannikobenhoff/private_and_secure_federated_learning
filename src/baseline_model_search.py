@@ -35,26 +35,28 @@ if __name__ == "__main__":
 
     kf = KFold(n_splits=10, shuffle=True)
 
+    tuner = BayesianOptimization(
+        baselineModel.search_model,
+        objective="val_accuracy",
+        max_trials=10,
+        directory='results/tuner_results',
+        project_name='l2_regularization_sgd_2'
+    )
+
     for train_index, val_index in kf.split(img_train):
         x_train, x_val = img_train[train_index], img_train[val_index]
         y_train, y_val = label_train[train_index], label_train[val_index]
-
-        tuner = BayesianOptimization(
-            baselineModel.search_model,
-            objective="val_accuracy",
-            max_trials=10,
-            directory='results/tuner_results',
-            project_name='l2_regularization_sgd_2'
-        )
+# ins objective rein die for schleife
 
         tuner.search(x_train, y_train,
                      validation_data=(x_val, y_val),
                      batch_size=32,
-                     epochs=50,
+                     epochs=10,
                      callbacks=[early_stopping, tensorboard_callback])
 
     # Get the best lambda value
     best_hp = tuner.get_best_hyperparameters(num_trials=1)[0]
+    print(tuner.optimizer_results_list)
     best_lambda = best_hp.get('lambda')
     print("Best Lambda:", best_lambda)
     tb = program.TensorBoard()

@@ -32,7 +32,7 @@ class Strategy:
             gradient_compressed = []
             for i, grad in enumerate(gradient):
                 gradient_compressed.append(self.compression.compress(grad, variables[i]))
-                # self.compression_ratio[self.iter].append(get_compression_rate(gradient_uncompressed[i], gradient[i]))
+                self.compression_ratio[self.iter].append(get_compression_rate(gradient[i], gradient_compressed[i]))
             # print("compression ratio:", (get_compression_rate(gradient[1], gradient_compressed[1])))
             count_tensor_values(gradient_compressed[0])
             self.optimizer.apply_gradients(zip(gradient_compressed, variables))
