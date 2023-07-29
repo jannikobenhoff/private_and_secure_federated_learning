@@ -41,6 +41,8 @@ class MemSGD(optimizer.Optimizer):
 
         var_key = self._var_key(variable)
         m = self.memory[self._index_dict[var_key]]
+        if gradient.dtype != variable.dtype:
+            gradient = tf.cast(gradient, dtype=variable.dtype)
 
         if self.top_k is None:
             g = self.rand_k_sparsification(input_tensor=m + lr * gradient,

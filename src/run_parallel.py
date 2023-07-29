@@ -20,24 +20,20 @@ from compressions.NaturalCompression import NaturalCompression
 from compressions.OneBitSGD import OneBitSGD
 from compressions.SparseGradient import SparseGradient
 from compressions.TernGrad import TernGrad
+from src.optimizer.FetchSGD import FetchSGD
 from utilities.strategy import Strategy
 
 strategies = [
     Strategy(optimizer=keras.optimizers.SGD(learning_rate=0.01),
-             compression=
-             TernGrad(clip=2.5)),
+             compression=TernGrad(clip=2.5)),
     Strategy(optimizer=keras.optimizers.SGD(learning_rate=0.01),
-             compression=
-             NaturalCompression()),
+             compression=NaturalCompression()),
     Strategy(optimizer=keras.optimizers.SGD(learning_rate=0.01),
-             compression=
-             SparseGradient(drop_rate=0.99)),
+             compression=SparseGradient(drop_rate=0.99)),
     Strategy(optimizer=keras.optimizers.SGD(learning_rate=0.01),
-             compression=
-             GradientSparsification(max_iter=2, k=0.004)),
+             compression=GradientSparsification(max_iter=2, k=0.004)),
     Strategy(optimizer=keras.optimizers.SGD(learning_rate=0.01),
-             compression=
-             OneBitSGD()),
+             compression=OneBitSGD()),
     Strategy(optimizer=keras.optimizers.SGD(learning_rate=0.01),
              compression=
              TopK(k=10)),
@@ -45,6 +41,8 @@ strategies = [
     #          compression=
     #          Atomo(sparsity_budget=2)),
     Strategy(optimizer=EFsignSGD(learning_rate=0.001),
+             compression=None),
+    Strategy(optimizer=FetchSGD(learning_rate=0.001, c=10000, r=1),
              compression=None),
     # Strategy(optimizer=MemSGD(learning_rate=0.05, rand_k=10),
     #          compression=None),
@@ -61,9 +59,6 @@ def train_model(strategy):
     label_val = label_train[-10000:]
     img_train = img_train[:-10000]
     label_train = label_train[:-10000]
-
-    input_shape = (28, 28, 1)
-    chosen_lambda = 0.0001952415460342464
 
     input_shape = (28, 28, 1)
     chosen_lambda = 0.0001952415460342464

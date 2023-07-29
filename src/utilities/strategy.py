@@ -32,20 +32,24 @@ class Strategy:
             gradient_compressed = []
             for i, grad in enumerate(gradient):
                 gradient_compressed.append(self.compression.compress(grad, variables[i]))
-                self.compression_ratio[self.iter].append(get_compression_rate(gradient[i], gradient_compressed[i]))
+                # self.compression_ratio[self.iter].append(get_compression_rate(gradient[i], gradient_compressed[i]))
             # print("compression ratio:", (get_compression_rate(gradient[1], gradient_compressed[1])))
             count_tensor_values(gradient_compressed[0])
             self.optimizer.apply_gradients(zip(gradient_compressed, variables))
 
         self.iter += 1
 
-    def summary(self):
+    def summary(self, add: str = ""):
         if self.compression is None:
-            print(f"---\nOptimizer: {self.optimizer.name}\nCompression: None\n---")
+            print(f"---\nOptimizer: {self.optimizer.name}\nCompression: None\n--- {add}")
         else:
-            print(f"---\nOptimizer: {self.optimizer.name}\nCompression: {self.compression.name}\n---")
+            print(f"---\nOptimizer: {self.optimizer.name}\nCompression: {self.compression.name}\n--- {add}")
 
     def get_plot_title(self):
-        return "{} - {} - {:.4f}".format(self.optimizer.name,
-                                         self.compression.name,
-                                         self.optimizer.learning_rate.numpy())
+        if self.compression is None:
+            return "{} - {:.4f}".format(self.optimizer.name,
+                                        self.optimizer.learning_rate.numpy())
+        else:
+            return "{} - {} - {:.4f}".format(self.optimizer.name,
+                                             self.compression.name,
+                                             self.optimizer.learning_rate.numpy())

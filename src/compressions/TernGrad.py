@@ -3,7 +3,6 @@ from keras.optimizers.optimizer_experimental import optimizer
 from tensorflow import Tensor
 
 from src.compressions.Compression import Compression
-from src.utilities.compression_rate import get_compression_rate
 
 
 class TernGrad(Compression):

@@ -4,13 +4,13 @@ from src.utilities.compression_rate import get_compression_rate
 
 
 class TestvqSGD(unittest.TestCase):
-    def test_probabilites(self):
+    def test_compress(self):
         vq = vqSGD()
-        grad = tf.constant([[[2, 4, 6, 5], [2, 4, 6, 5]]],
-                           shape=[4, 2, 1],
+        grad = tf.constant([[[2, 4], [-1, 3]]],
+                           shape=[2, 2, 1],
                            dtype=tf.float32)
 
-        calc = vq.probabilities(grad)
+        calc = vq.compress(grad, grad)
         print(calc)
         # get_compression_rate(grad, tf.cast(tf.sign(grad), dtype=tf.int8))
 

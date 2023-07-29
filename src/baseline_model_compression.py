@@ -13,6 +13,7 @@ from sklearn.model_selection import KFold
 from keras import models, layers, regularizers
 
 from src.compressions.Atomo import Atomo
+from src.compressions.vqSGD import vqSGD
 from src.optimizer.FetchSGD import FetchSGD
 from src.optimizer.EFsignSGD import EFsignSGD
 from src.compressions.GradientSparsification import GradientSparsification
@@ -25,6 +26,7 @@ from src.compressions.TopK import TopK
 from src.optimizer.SGD import SGD
 from src.plots.plot_training_result import plot_training_result
 from src.utilities.strategy import Strategy
+
 
 if __name__ == "__main__":
     (img_train, label_train), (img_test, label_test) = keras.datasets.mnist.load_data()
@@ -42,17 +44,17 @@ if __name__ == "__main__":
 
     model = LeNet(num_classes=10,
                   input_shape=input_shape,
-                  chosen_lambda=chosen_lambda)
+                  chosen_lambda=chosen_lambda).model
 
-    strategy = Strategy(optimizer=keras.optimizers.Adam(learning_rate=0.01),
-                        compression=OneBitSGD())
+    strategy = Strategy(optimizer=FetchSGD(learning_rate=0.05, c=1000, r=1),
+                        compression=None)#OneBitSGD())
 
     model.compile(optimizer=strategy.optimizer,
                   loss='sparse_categorical_crossentropy',
                   metrics=['accuracy'],
                   )
 
-    loss_fn = keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+    loss_fn = keras.losses.SparseCategoricalCrossentropy()
     train_acc_metric = keras.metrics.SparseCategoricalAccuracy()
     val_acc_metric = keras.metrics.SparseCategoricalAccuracy()
 
@@ -76,7 +78,9 @@ if __name__ == "__main__":
         start_time = time.time()
 
         training_losses = []
+        print("Steps:", len(training_data))
         for step, (x_batch_train, y_batch_train) in enumerate(training_data):
+            # print("Step: ", step)
             with tf.GradientTape() as tape:
                 logits = model(x_batch_train, training=True)
 
@@ -122,9 +126,6 @@ if __name__ == "__main__":
         print("Validation loss: %.4f" % (float(average_validation_loss),))
 
         print("Time taken: %.2fs" % (time.time() - start_time))
-
-    plot_training_result(training_acc_per_epoch, training_losses_per_epoch,
-                         validation_acc_per_epoch, validation_losses_per_epoch, strategy)
 
     file = open("results/compression/{}_{}_{}.json".format(strategy.optimizer.name, strategy.compression.name,
                                                         datetime.now().strftime("%Y%m%d-%H%M%S")), "w")

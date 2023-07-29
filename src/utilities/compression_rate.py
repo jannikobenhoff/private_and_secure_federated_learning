@@ -5,7 +5,7 @@ import numpy as np
 
 def get_compression_rate(uncompressed: Tensor, compressed: Tensor):
     # PSNR = 10 * log10(max_value ^ 2 / mean_squared_error)
-    print(np.sqrt(np.sum(np.power(compressed.numpy(), 2))), np.sqrt(np.sum(np.power(uncompressed.numpy(), 2))))
+    #print(np.sqrt(np.sum(np.power(compressed.numpy(), 2))), np.sqrt(np.sum(np.power(uncompressed.numpy(), 2))))
     compressed = tf.sparse.from_dense(compressed).values
 
     #print("Un:", len(bytearray(uncompressed.numpy())))
