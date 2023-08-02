@@ -3,7 +3,7 @@ import tensorflow as tf
 from tensorflow import Tensor
 import tensorflow_probability as tfp
 
-from src.compressions.Compression import Compression
+from .Compression import Compression
 
 
 class Atomo(Compression):

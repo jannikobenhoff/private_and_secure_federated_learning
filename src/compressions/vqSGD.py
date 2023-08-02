@@ -3,13 +3,15 @@ import tensorflow as tf
 from scipy.optimize import nnls
 from tensorflow import Tensor
 
-from src.compressions.Compression import Compression
+from .Compression import Compression
+# from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
 
 
 class vqSGD(Compression):
-    def __init__(self, repetition: int, name="vqSGD"):
+    def __init__(self, repetition: int = 1, name="vqSGD"):
         super().__init__(name=name)
         self.s = repetition
+        self.compression_rates = []
 
     def build(self, var_list):
         """Initialize optimizer variables.
@@ -25,39 +27,49 @@ class vqSGD(Compression):
 
     def compress(self, gradient: Tensor, variable) -> Tensor:
         """
+        Quantise gradient: Q(v) = c_i with probability a_i
+        c_i of 2*d point set {+- sqrt(d) e_i | i e [d]}
+        cp = tf.concat([ d_sqrt * tf.eye(d), - d_sqrt * tf.eye(d)], axis=1)
+
+        probability algorithm:
+        for i in range(2 * d):
+            if gradient[i % d] > 0 and i <= d - 1:
+                a[i] = gradient[i % d] / d_sqrt + gamma / (2 * d)
+            elif gradient[i % d] <= 0 and i > d - 1:
+                a[i] = -gradient[i % d] / d_sqrt + gamma / (2 * d)
+            else:
+                a[i] = gamma / (2 * d)
         """
         input_shape = gradient.shape
+
         l2 = tf.norm(gradient, ord=2)
         gradient = tf.reshape(gradient, [-1]) / l2
 
         d = gradient.shape[0]
         d_sqrt = np.sqrt(d)
 
-        cp_pos = d_sqrt * tf.eye(d)
-        cp = tf.concat([cp_pos, -cp_pos], axis=1)
-
-        a = np.zeros(cp.shape[1])
+        a = np.zeros(2*d)
 
         gamma = 1 - tf.norm(gradient, ord=1) / d_sqrt
-        # for i in range(2 * d):
-        #     if gradient[i % d] > 0 and i <= d - 1:
-        #         a[i] = gradient[i % d] / d_sqrt + gamma / (2 * d)
-        #     elif gradient[i % d] <= 0 and i > d - 1:
-        #         a[i] = -gradient[i % d] / d_sqrt + gamma / (2 * d)
-        #     else:
-        #         a[i] = gamma / (2 * d)
-        positive_part = tf.cast(gradient > 0, tf.float32) * ((gradient / d_sqrt) + (gamma / (2 * d)))
-        negative_part = tf.cast(gradient <= 0, tf.float32) * ((-gradient / d_sqrt) + (gamma / (2 * d)))
+        gamma_by_2d = gamma / (2 * d)
 
-        a[:d] = positive_part
+        a[:d] = tf.cast(gradient > 0, tf.float32) * ((gradient / d_sqrt) + gamma_by_2d)
+        a[d:] = tf.cast(gradient <= 0, tf.float32) * ((-gradient / d_sqrt) + gamma_by_2d)
 
-        a[d:] = negative_part
-        a = tf.where(a == 0, gamma / (2 * d), a)
-        a = tf.cast(a, gradient.dtype)
-        print(np.sum(a))
+        a = tf.where(a == 0, gamma_by_2d, a)
 
-        rand = tf.random.uniform(shape=a.shape)
-        a_select = tf.where(a > rand, a, 0)
-        compressed_gradient = tf.matmul(cp, tf.reshape(a_select, (-1, 1)))
+        a = a.numpy()
+        np.divide(a, a.sum(), out=a)
 
-        return tf.reshape(compressed_gradient, input_shape)
+        indices = np.random.choice(np.arange(2 * d), self.s, p=a)
+        compressed_gradient = np.zeros(d)
+
+        for index in indices:
+            if index >= d:
+                compressed_gradient[index-d] -= d_sqrt
+            else:
+                compressed_gradient[index] += d_sqrt
+
+        compressed_gradient = tf.reshape(compressed_gradient, input_shape) / self.s
+        # self.compression_rates.append((len(gradient)*32/get_sparse_tensor_size_in_bits(compressed_gradient)))
+        return compressed_gradient

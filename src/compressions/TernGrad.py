@@ -2,13 +2,14 @@ import tensorflow as tf
 from keras.optimizers.optimizer_experimental import optimizer
 from tensorflow import Tensor
 
-from src.compressions.Compression import Compression
+from .Compression import Compression
 
 
 class TernGrad(Compression):
     def __init__(self, clip: float = 2.5, name="TernGrad"):
         super().__init__(name=name)
         self.clip = clip
+        self.compression_rates = []
 
     def build(self, var_list):
         """Initialize optimizer variables.
@@ -20,6 +21,7 @@ class TernGrad(Compression):
         """
         if hasattr(self, "_built") and self._built:
             return
+        self.compression_rates.append(var_list[0].dtype.size*8/2)
         self._built = True
 
     def compress(self, gradient: Tensor, variable):

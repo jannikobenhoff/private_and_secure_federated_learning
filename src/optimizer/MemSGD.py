@@ -40,6 +40,7 @@ class MemSGD(optimizer.Optimizer):
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
 
         var_key = self._var_key(variable)
+
         m = self.memory[self._index_dict[var_key]]
         if gradient.dtype != variable.dtype:
             gradient = tf.cast(gradient, dtype=variable.dtype)

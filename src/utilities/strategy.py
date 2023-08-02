@@ -1,13 +1,10 @@
 import numpy as np
 from tensorflow import Tensor
 import tensorflow as tf
-from src.compressions.Compression import Compression
-from src.utilities.compression_rate import get_compression_rate
-from src.utilities.huffman import count_tensor_values
 
 
 class Strategy:
-    def __init__(self, optimizer, compression: Compression = None):
+    def __init__(self, optimizer, compression = None):
         self.optimizer = optimizer
         self.compression = compression
         self.compression_ratio = []
@@ -34,7 +31,7 @@ class Strategy:
                 gradient_compressed.append(self.compression.compress(grad, variables[i]))
                 # self.compression_ratio[self.iter].append(get_compression_rate(gradient[i], gradient_compressed[i]))
             # print("compression ratio:", (get_compression_rate(gradient[1], gradient_compressed[1])))
-            count_tensor_values(gradient_compressed[0])
+            # count_tensor_values(gradient_compressed[0])
             self.optimizer.apply_gradients(zip(gradient_compressed, variables))
 
         self.iter += 1
@@ -53,3 +50,11 @@ class Strategy:
             return "{} - {} - {:.4f}".format(self.optimizer.name,
                                              self.compression.name,
                                              self.optimizer.learning_rate.numpy())
+
+    def get_file_name(self):
+        if self.compression is None:
+            return "{}".format(self.optimizer.name)
+        else:
+            return "{}_{}".format(self.optimizer.name,
+                                             self.compression.name)
+

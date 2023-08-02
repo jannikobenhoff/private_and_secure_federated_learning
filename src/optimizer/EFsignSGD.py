@@ -19,16 +19,20 @@ class EFsignSGD(optimizer.Optimizer):
         super().build(var_list)
         if hasattr(self, "_built") and self._built:
             return
-        self.error = {}
+        self.errors = []
         for var in var_list:
-            self.error[var.ref()] = self.add_variable_from_reference(
-                model_variable=var, variable_name="error"
+            self.errors.append(
+                self.add_variable_from_reference(
+                    model_variable=var, variable_name="error"
+                )
             )
         self._built = True
 
     def _update_step(self, gradient: Tensor, variable):
+        var_key = self._var_key(variable)
+
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
-        error = self.error[variable.ref()]
+        error = self.errors[self._index_dict[var_key]]
 
         d = variable.shape.as_list()[0]
         p_t = lr * gradient + error
@@ -38,7 +42,7 @@ class EFsignSGD(optimizer.Optimizer):
         delta_t = tf.multiply(norm, tf.sign(p_t))
 
         # update residual error
-        self.error[variable.ref()].assign(p_t-delta_t)
+        error.assign(p_t-delta_t)
         # update iterate
         variable.assign_add(-delta_t)
 

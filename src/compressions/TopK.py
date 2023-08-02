@@ -1,13 +1,16 @@
+import numpy as np
 import tensorflow as tf
 from tensorflow import Tensor
 
-from src.compressions.Compression import Compression
+from .Compression import Compression
+# from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
 
 
 class TopK(Compression):
     def __init__(self, k, name="TopK"):
         super().__init__(name=name)
         self.k = k
+        self.compression_rates = []
 
     def build(self, var_list):
         """Initialize optimizer variables.
@@ -23,6 +26,9 @@ class TopK(Compression):
 
     def compress(self, gradient: Tensor, variable) -> Tensor:
         sparse_gradient = self.top_k_sparsification(gradient, self.k)
+        # self.compression_rates.append(
+        #     gradient.dtype.size * 8 * np.prod(gradient.shape.as_list()) / get_sparse_tensor_size_in_bits(
+        #         sparse_gradient))
         return sparse_gradient
 
     @staticmethod
@@ -44,7 +50,7 @@ class TopK(Compression):
         mask = tf.tensor_scatter_nd_update(mask, tf.expand_dims(indices, axis=1),
                                            tf.ones_like(indices, dtype=tf.float32))
 
-        spars_tensor = tf.math.multiply(flattened_tensor, mask)
+        spars_tensor = flattened_tensor * mask
         spars_tensor = tf.reshape(spars_tensor, input_shape)
 
         return spars_tensor

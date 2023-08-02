@@ -13,6 +13,7 @@ from sklearn.model_selection import KFold
 from keras import models, layers, regularizers
 
 from src.compressions.Atomo import Atomo
+from src.compressions.ScaleCom import ScaleCom
 from src.compressions.vqSGD import vqSGD
 from src.optimizer.FetchSGD import FetchSGD
 from src.optimizer.EFsignSGD import EFsignSGD
@@ -25,13 +26,12 @@ from src.compressions.TernGrad import TernGrad
 from src.compressions.TopK import TopK
 from src.optimizer.SGD import SGD
 from src.plots.plot_training_result import plot_training_result
+from src.utilities.datasets import load_dataset
 from src.utilities.strategy import Strategy
 
 
 if __name__ == "__main__":
-    (img_train, label_train), (img_test, label_test) = keras.datasets.mnist.load_data()
-    img_train = img_train.reshape(-1, 28, 28, 1).astype('float32') / 255.0
-    img_test = img_test.reshape(-1, 28, 28, 1).astype('float32') / 255.0
+    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("mnist")
 
     # setup validation set
     img_val = img_train[-10000:]
@@ -39,15 +39,14 @@ if __name__ == "__main__":
     img_train = img_train[:-10000]
     label_train = label_train[:-10000]
 
-    input_shape = (28, 28, 1)
     chosen_lambda = 0.0001952415460342464
 
     model = LeNet(num_classes=10,
                   input_shape=input_shape,
                   chosen_lambda=chosen_lambda).model
 
-    strategy = Strategy(optimizer=FetchSGD(learning_rate=0.05, c=1000, r=1),
-                        compression=None)#OneBitSGD())
+    strategy = Strategy(optimizer=SGD(learning_rate=0.01),
+                        compression=SparseGradient())
 
     model.compile(optimizer=strategy.optimizer,
                   loss='sparse_categorical_crossentropy',
@@ -60,8 +59,8 @@ if __name__ == "__main__":
 
     ds_train_batch = tf.data.Dataset.from_tensor_slices((img_train, label_train))
     training_data = ds_train_batch.batch(32)
-    ds_test_batch = tf.data.Dataset.from_tensor_slices((img_test, label_test))
-    testing_data = ds_test_batch.batch(32)
+    # ds_test_batch = tf.data.Dataset.from_tensor_slices((img_test, label_test))
+    # testing_data = ds_test_batch.batch(32)
     val_dataset = tf.data.Dataset.from_tensor_slices((img_val, label_val))
     val_dataset = val_dataset.batch(32)
 
@@ -92,8 +91,8 @@ if __name__ == "__main__":
 
             # Run one step of gradient descent by updating
             strategy.update_parameters(zip(grads, model.trainable_weights))
-
             training_losses.append(loss_value.numpy())
+            #print(np.mean(strategy.compression.compression_rates))
 
         average_training_loss = np.mean(training_losses)
         training_losses_per_epoch.append(average_training_loss)

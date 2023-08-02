@@ -4,7 +4,7 @@ from keras import layers, models, regularizers
 
 
 class LeNet(tf.keras.Model):
-    def __init__(self, input_shape, num_classes, chosen_lambda, search: bool = False):
+    def __init__(self, input_shape = None, num_classes=None, chosen_lambda= None, search: bool = False):
         super(LeNet, self).__init__()
         #self.model = None
         self.shape = input_shape

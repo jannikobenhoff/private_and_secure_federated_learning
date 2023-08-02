@@ -5,7 +5,7 @@ class Compression:
     def __init__(self, name: str):
         self.name = name
         self._variables = []
-
+        self.compression_rates = []
     @abc.abstractmethod
     def build(self, var_list):
         """Initialize the optimizer's variables, such as momemtum variables.
