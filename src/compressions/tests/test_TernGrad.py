@@ -6,10 +6,9 @@ from src.compressions.TernGrad import *
 class TestTernGrad(unittest.TestCase):
     def test_ternarize(self):
         tern = TernGrad(clip=2.5)
-        grad = tf.constant([0.3, -1.2, 0.9], dtype=tf.float32)
-        calc = tern.ternarize(grad)
-        print(calc)
-        get_compression_rate(grad, calc)
+        grad = tf.constant([4.3, -1.2, 1.9, 2, 3, 4, 5, 5], dtype=tf.float32)
+        calc = tern.compress(grad, grad)
+        print("calc:", calc)
 
         self.assertTrue(np.array_equal(calc,
                                        tf.constant([0, -1.2, 1.2], dtype=tf.float32)), "Not equal.")

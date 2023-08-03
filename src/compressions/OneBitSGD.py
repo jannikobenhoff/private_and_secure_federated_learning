@@ -3,6 +3,7 @@ from tensorflow import Tensor
 import numpy as np
 
 from .Compression import Compression
+from ..utilities.huffman import *
 
 
 class OneBitSGD(Compression):
@@ -36,6 +37,15 @@ class OneBitSGD(Compression):
         self.error[variable.ref()].assign(error)
         # get_compression_rate(gradient, gradient_quantized)
         # gradient_quantized = tf.cast(gradient_quantized, dtype=tf.int8)
+        # huffman
+        # rle = run_length_encoding(gradient_quantized)
+        # vc = count_tensor_values(rle)
+        # huf = generate_huffman(vc)
+        # enc = encode_huffman(rle, huf)
+        # print(enc, huf)
+        # print((len(tf.reshape(gradient_quantized, [-1])) *32) / (len("".join(enc))))# + len(huf) * 4))
+        #
+        # return enc, huf, gradient_quantized.shape
         return gradient_quantized
 
     @staticmethod

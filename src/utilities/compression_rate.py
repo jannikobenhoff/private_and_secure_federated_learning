@@ -4,25 +4,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def get_compression_rate(uncompressed: Tensor, compressed: Tensor):
-    # PSNR = 10 * log10(max_value ^ 2 / mean_squared_error)
-    # print(np.sqrt(np.sum(np.power(compressed.numpy(), 2))), np.sqrt(np.sum(np.power(uncompressed.numpy(), 2))))
-    compressed = tf.sparse.from_dense(compressed).values
-
-    # print("Un:", len(bytearray(uncompressed.numpy())))
-    # print("Co:", len(bytearray(compressed.numpy())))
-    # print(uncompressed.dtype.size,  compressed.dtype.size)
-    compressed = tf.sparse.from_dense(compressed).values
-    original_size = np.prod(uncompressed.shape.as_list()) * uncompressed.dtype.size
-    compressed_size = np.prod(compressed.shape.as_list()) * compressed.dtype.size
-    compression_ratio = np.divide(original_size, compressed_size)
-    # print("Compression Ratio:", compression_ratio)
-    return compression_ratio
-
-
 def get_sparse_tensor_size_in_bits(tensor):
     num_nonzero_entries = tf.math.count_nonzero(tensor)
-    num_index_bits = 32
+    num_index_bits = np.ceil(np.log2(len(tf.reshape(tensor, [-1]))))
     num_value_bits = tensor.dtype.size * 8
     return num_nonzero_entries.numpy() * (num_index_bits + num_value_bits) if num_nonzero_entries.numpy() * (
                 num_index_bits + num_value_bits) != 0 else 1
@@ -33,7 +17,7 @@ def plot_compression_rates(compression_dict):
 
     table_data = [[name, rate] for name, rate in compression_dict.items()]
     table = plt.table(cellText=table_data,
-                      colLabels=["Compression Method", "Compression Ratio"],
+                      colLabels=["Compression Method", "Compression Rate"],
                       cellLoc='center',
                       loc='center')
 
@@ -55,16 +39,19 @@ def plot_compression_rates(compression_dict):
 if __name__ == "__main__":
     compression_dict = {
         'SGD': 1,
-        'Gradient Sparsification (k=0.02)': 205,
+        'Gradient Sparsification (k=0.02)': 225,
         'Natural Compression': 4,
         '1-Bit SGD': 32,
-        'Sparse Gradient (R=90%)': 4.67,
+        'Sparse Gradient (R=90%)': 7.4,
         'TernGrad': 16,
-        'Top-K (k=10)': 222.15,
+        'Top-K (k=10)': 306.3,
         'vqSGD (s=200)': 7.7,
         'EFsignSGD': "-",
         'FetchSGD': "-",
-        'MemSGD (k=10)': 222.15,
+        'MemSGD (k=10)': 306.3
     }
 
-    plot_compression_rates(compression_dict)
+    # plot_compression_rates(compression_dict)
+    # print(get_sparse_tensor_size_in_bits(tf.constant([0,0,1,2,3,4], dtype=tf.float32)))
+    gpu = len(tf.config.list_physical_devices('GPU')) > 0
+    print("GPU is", "available" if gpu else "NOT AVAILABLE")

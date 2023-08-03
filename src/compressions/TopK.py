@@ -3,7 +3,8 @@ import tensorflow as tf
 from tensorflow import Tensor
 
 from .Compression import Compression
-# from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
+from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
+from ..utilities.huffman import run_length_encoding, generate_huffman, count_tensor_values, encode_huffman
 
 
 class TopK(Compression):
@@ -26,9 +27,17 @@ class TopK(Compression):
 
     def compress(self, gradient: Tensor, variable) -> Tensor:
         sparse_gradient = self.top_k_sparsification(gradient, self.k)
-        # self.compression_rates.append(
-        #     gradient.dtype.size * 8 * np.prod(gradient.shape.as_list()) / get_sparse_tensor_size_in_bits(
-        #         sparse_gradient))
+        self.compression_rates.append(
+            gradient.dtype.size * 8 * np.prod(gradient.shape.as_list()) / get_sparse_tensor_size_in_bits(
+                sparse_gradient))
+        # huffman
+        # rle = run_length_encoding(sparse_gradient)
+        # vc = count_tensor_values(rle)
+        # huf = generate_huffman(vc)
+        # enc = encode_huffman(rle, huf)
+        # print((len("".join(enc)) + len(huf)*40), get_sparse_tensor_size_in_bits(sparse_gradient))
+        #
+        # return enc, huf, sparse_gradient.shape
         return sparse_gradient
 
     @staticmethod
@@ -51,6 +60,7 @@ class TopK(Compression):
                                            tf.ones_like(indices, dtype=tf.float32))
 
         spars_tensor = flattened_tensor * mask
+
         spars_tensor = tf.reshape(spars_tensor, input_shape)
 
         return spars_tensor

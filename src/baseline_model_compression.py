@@ -1,4 +1,5 @@
 import json
+import platform
 import time
 from datetime import datetime
 
@@ -31,6 +32,20 @@ from src.utilities.strategy import Strategy
 
 
 if __name__ == "__main__":
+    print(f"Python Platform: {platform.platform()}")
+    print(f"Tensor Flow Version: {tf.__version__}")
+    print(f"Keras Version: {keras.__version__}")
+    gpus = tf.config.list_physical_devices('GPU')
+    if gpus:
+        # Restrict TensorFlow to only use the first GPU
+        try:
+            tf.config.set_visible_devices(gpus[0], 'GPU')
+            logical_gpus = tf.config.list_logical_devices('GPU')
+            print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPU")
+        except RuntimeError as e:
+            # Visible devices must be set before GPUs have been initialized
+            print(e)
+
     img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("mnist")
 
     # setup validation set
@@ -46,7 +61,7 @@ if __name__ == "__main__":
                   chosen_lambda=chosen_lambda).model
 
     strategy = Strategy(optimizer=SGD(learning_rate=0.01),
-                        compression=SparseGradient())
+                        compression=GradientSparsification())
 
     model.compile(optimizer=strategy.optimizer,
                   loss='sparse_categorical_crossentropy',
@@ -92,7 +107,8 @@ if __name__ == "__main__":
             # Run one step of gradient descent by updating
             strategy.update_parameters(zip(grads, model.trainable_weights))
             training_losses.append(loss_value.numpy())
-            #print(np.mean(strategy.compression.compression_rates))
+            # print(np.mean(strategy.compression.compression_rates), np.min(strategy.compression.compression_rates),
+            #       np.max(strategy.compression.compression_rates))
 
         average_training_loss = np.mean(training_losses)
         training_losses_per_epoch.append(average_training_loss)

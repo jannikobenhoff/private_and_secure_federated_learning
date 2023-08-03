@@ -2,6 +2,8 @@ import numpy as np
 from tensorflow import Tensor
 import tensorflow as tf
 
+from src.utilities.huffman import decode_rle, decode_huffman
+
 
 class Strategy:
     def __init__(self, optimizer, compression = None):
@@ -28,10 +30,14 @@ class Strategy:
         else:
             gradient_compressed = []
             for i, grad in enumerate(gradient):
-                gradient_compressed.append(self.compression.compress(grad, variables[i]))
-                # self.compression_ratio[self.iter].append(get_compression_rate(gradient[i], gradient_compressed[i]))
-            # print("compression ratio:", (get_compression_rate(gradient[1], gradient_compressed[1])))
-            # count_tensor_values(gradient_compressed[0])
+                if False:  # huffman
+                    enc, huf, shape = self.compression.compress(grad, variables[i])
+                    dec_huf = decode_huffman(enc, huf)
+                    dec = decode_rle(dec_huf)
+                    gradient_compressed.append(tf.reshape(dec, shape))
+                else:
+                    gradient_compressed.append(self.compression.compress(grad, variables[i]))
+
             self.optimizer.apply_gradients(zip(gradient_compressed, variables))
 
         self.iter += 1

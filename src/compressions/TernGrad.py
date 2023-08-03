@@ -3,6 +3,8 @@ from keras.optimizers.optimizer_experimental import optimizer
 from tensorflow import Tensor
 
 from .Compression import Compression
+from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
+from ..utilities.huffman import *
 
 
 class TernGrad(Compression):
@@ -27,6 +29,15 @@ class TernGrad(Compression):
     def compress(self, gradient: Tensor, variable):
         gradient_clip = self.gradient_clipping(gradient, self.clip)
         gradient_tern = self.ternarize(gradient_clip)
+        # huffman
+        # rle = run_length_encoding(gradient_tern)
+        # vc = count_tensor_values(rle)
+        # huf = generate_huffman(vc)
+        # enc = encode_huffman(rle, huf)
+        # print(enc, huf)
+        # print((32+len(tf.reshape(gradient_tern, [-1])) * 2) / (len("".join(enc)) + len(huf) * 4+32), 16)
+        #
+        # return enc, huf, gradient_tern.shape
         return gradient_tern
 
     @staticmethod

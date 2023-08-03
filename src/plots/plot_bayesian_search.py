@@ -5,7 +5,7 @@ from skopt.plots import plot_gaussian_process, plot_convergence
 
 
 if __name__ == "__main__":
-    result = load('../results/bayesian/bayesian_result_SGD_OneBitSGD.pkl')
+    result = load('../results/bayesian/bayesian_result_SGD_TopK.pkl')
     # metrics = load('../results/bayesian/bayesian_metrics_SGD_TopK_0108.pkl')
     metrics = result["metrics"]
     print(result)
@@ -53,5 +53,5 @@ if __name__ == "__main__":
 
     plt.suptitle(metrics["args"], fontsize=8)
     plt.tight_layout()
-    plt.show()
-    #plt.savefig("SGD_OneBitSGD.pdf")
+    # plt.show()
+    plt.savefig("SGD_TopK.pdf")

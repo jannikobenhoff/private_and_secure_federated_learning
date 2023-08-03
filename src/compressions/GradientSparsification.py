@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import Tensor
 
-#from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
+from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
 from .Compression import Compression
 
 
@@ -35,8 +35,8 @@ class GradientSparsification(Compression):
 
         gradient_spars = tf.multiply(selectors, gradient) / probabilities
 
-        # self.compression_rates.append(gradient.dtype.size * 8 * np.prod(gradient.shape.as_list()) /
-        #                               get_sparse_tensor_size_in_bits(gradient_spars))
+        self.compression_rates.append(gradient.dtype.size * 8 * np.prod(gradient.shape.as_list()) /
+                                      get_sparse_tensor_size_in_bits(gradient_spars))
 
         gradient_spars = tf.reshape(gradient_spars, input_shape)
         return gradient_spars
