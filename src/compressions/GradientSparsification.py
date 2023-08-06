@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import Tensor
 
-from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
+# from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
 from .Compression import Compression
 
 

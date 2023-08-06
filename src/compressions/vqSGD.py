@@ -72,4 +72,4 @@ class vqSGD(Compression):
 
         compressed_gradient = tf.reshape(compressed_gradient, input_shape) / self.s
         # self.compression_rates.append((len(gradient)*32/get_sparse_tensor_size_in_bits(compressed_gradient)))
-        return compressed_gradient
+        return compressed_gradient * l2

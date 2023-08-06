@@ -1,10 +1,10 @@
+import numpy as np
 import tensorflow as tf
-from keras.optimizers.optimizer_experimental import optimizer
 from tensorflow import Tensor
 
 from .Compression import Compression
-from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
-from ..utilities.huffman import *
+# from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
+# from ..utilities.huffman import *
 
 
 class TernGrad(Compression):
@@ -23,7 +23,7 @@ class TernGrad(Compression):
         """
         if hasattr(self, "_built") and self._built:
             return
-        self.compression_rates.append(var_list[0].dtype.size*8/2)
+        self.compression_rates.append(var_list[0].dtype.size*8/np.log2(3))
         self._built = True
 
     def compress(self, gradient: Tensor, variable):

@@ -5,43 +5,46 @@ from skopt.plots import plot_gaussian_process, plot_convergence
 
 
 if __name__ == "__main__":
-    result = load('../results/bayesian/bayesian_result_SGD_TopK.pkl')
+    result = load('../results/bayesian/bayesian_result_SGD_OneBitSGD_mnist.pkl')
     # metrics = load('../results/bayesian/bayesian_metrics_SGD_TopK_0108.pkl')
+    # metrics = {"val_acc":[0,0,0,0,0], "args":0}
     metrics = result["metrics"]
+
     print(result)
-
     print(metrics)
-
     xiter = [x[0] for x in result.x_iters]
 
     acc = np.array(metrics["val_acc"])
-    acc = acc.reshape(-1, len(xiter))
-    acc = acc.max(axis=0)
+    # acc = acc.reshape(-1, len(xiter))
+    # acc = acc.max(axis=0)
 
     print("lambda iterations:  ",   xiter)
-    print("validation accuracy:", acc)
-    print("validation loss:    ", result.func_vals)
+    print("validation accuracy:    ", result.func_vals)
 
-    fig, axs = plt.subplots(int(np.ceil(len(xiter)/3))+1, 3, figsize=(12, 10))
-    axs = axs.flatten()
-    plot_gaussian_process(result, ax=axs[0], show_acq_funcboolean=True, show_title=False)
-    axs[0].set_title("best lambda: {:.7f}, val_loss: {:.3f}".format(result.x[0], result.fun), fontsize=10)
-    axs[0].set_xlabel("")
-    axs[0].set_ylabel("")
-    axs[0].set_xscale('log')
+    # fig, axs = plt.subplots(int(np.ceil(len(xiter)/3))+1, 3, figsize=(12, 10))
+    fig, axs = plt.subplots(1, 1, figsize=(8, 6))
 
-    axs[-2].scatter(xiter, acc, marker="o", c="blue", s=12)
-    axs[-2].grid(color="grey")
-    axs[-2].set_title('validation accuracy, best: {:.4f}, mean: {:.4f}'.format(np.max(acc), np.mean(acc)), fontsize=10)
-    axs[-2].set_xscale('log')
-    axs[-2].set_ylim([min(acc) - 0.1, 1.02])
+    #axs = axs.flatten()
+    plot_gaussian_process(result, ax=axs, show_acq_funcboolean=True, show_title=False)
+    axs.set_title("best lambda: {:.7f}, val_acc: {:.3f}".format(result.x[0], -result.fun), fontsize=10)
+    axs.set_xlabel("")
+    axs.set_ylabel("")
+    #axs.set_xlim([0, 0.02])
+    axs.set_xscale('log')
 
-    plot_convergence(result, ax=axs[-1])
-    axs[-1].set_title('Convergence plot', fontsize=10)
+    # axs[-2].scatter(xiter, acc, marker="o", c="blue", s=12)
+    # axs[-2].grid(color="grey")
+    # axs[-2].set_title('validation accuracy, best: {:.4f}, mean: {:.4f}'.format(np.max(acc), np.mean(acc)), fontsize=10)
+    # axs[-2].set_xscale('log')
+    # axs[-2].set_ylim([min(acc) - 0.1, 1.02])
 
-    for n_iter in range(len(xiter)):
+    # plot_convergence(result, ax=axs[-1])
+    # axs[-1].set_title('Convergence plot', fontsize=10)
+
+    for n_iter in range(0):#len(result.models)):
         plot_gaussian_process(result, ax=axs[n_iter + 1], show_title=False, n_calls=n_iter,
                               show_legend=False, show_next_point=True, show_observations=True)
+
         axs[n_iter + 1].scatter([xiter[n_iter]], [result.func_vals[n_iter]], c="blue", s=25, marker="*")
 
         axs[n_iter + 1].set_ylabel("")
@@ -53,5 +56,5 @@ if __name__ == "__main__":
 
     plt.suptitle(metrics["args"], fontsize=8)
     plt.tight_layout()
-    # plt.show()
-    plt.savefig("SGD_TopK.pdf")
+    plt.show()
+    # plt.savefig("SGD_TopK.pdf")

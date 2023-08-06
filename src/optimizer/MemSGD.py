@@ -1,9 +1,9 @@
 import tensorflow as tf
-from keras.optimizers.optimizer_experimental import optimizer
+from keras.optimizers.optimizer import Optimizer
 from tensorflow import Tensor
 
 
-class MemSGD(optimizer.Optimizer):
+class MemSGD(Optimizer):
     def __init__(self, learning_rate, top_k: int = None, rand_k: int= None, name="MemSGD"):
         super().__init__(name=name)
         self._learning_rate = self._build_learning_rate(learning_rate)

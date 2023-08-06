@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from keras.optimizers.optimizer_experimental import optimizer
+from keras.optimizers.optimizer import Optimizer
 from tensorflow import Tensor
 
 import math
@@ -12,7 +12,7 @@ LARGEPRIME = 2 ** 61 - 1
 
 cache = {}
 
-class FetchSGD(optimizer.Optimizer):
+class FetchSGD(Optimizer):
     def __init__(self, learning_rate, r: int, c: int, momentum: float = 0.9, name="FetchSGD"):
         super().__init__(name=name)
         self.error = None
@@ -102,11 +102,6 @@ class FetchSGD(optimizer.Optimizer):
         )
         return config
 
-
-# import line_profiler
-# import atexit
-# profile = line_profiler.LineProfiler()
-# atexit.register(profile.print_stats)
 
 class CSVec(object):
     """ Count Sketch of a vector

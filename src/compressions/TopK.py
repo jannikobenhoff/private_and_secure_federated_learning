@@ -3,8 +3,8 @@ import tensorflow as tf
 from tensorflow import Tensor
 
 from .Compression import Compression
-from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
-from ..utilities.huffman import run_length_encoding, generate_huffman, count_tensor_values, encode_huffman
+# from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
+# from ..utilities.huffman import run_length_encoding, generate_huffman, count_tensor_values, encode_huffman
 
 
 class TopK(Compression):
@@ -28,7 +28,7 @@ class TopK(Compression):
     def compress(self, gradient: Tensor, variable) -> Tensor:
         sparse_gradient = self.top_k_sparsification(gradient, self.k)
         self.compression_rates.append(
-            gradient.dtype.size * 8 * np.prod(gradient.shape.as_list()) / get_sparse_tensor_size_in_bits(
+            gradient.dtype.size * 8 * np.prod(gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
                 sparse_gradient))
         # huffman
         # rle = run_length_encoding(sparse_gradient)
@@ -64,3 +64,11 @@ class TopK(Compression):
         spars_tensor = tf.reshape(spars_tensor, input_shape)
 
         return spars_tensor
+
+    @staticmethod
+    def get_sparse_tensor_size_in_bits(tensor):
+        num_nonzero_entries = tf.math.count_nonzero(tensor)
+        num_index_bits = np.ceil(np.log2(len(tf.reshape(tensor, [-1]))))
+        num_value_bits = tensor.dtype.size * 8
+        return num_nonzero_entries.numpy() * (num_index_bits + num_value_bits) if num_nonzero_entries.numpy() * (
+                    num_index_bits + num_value_bits) != 0 else 1

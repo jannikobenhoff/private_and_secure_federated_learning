@@ -1,9 +1,9 @@
 import tensorflow as tf
-from keras.optimizers.optimizer_experimental import optimizer
+from keras.optimizers.optimizer import Optimizer
 from tensorflow import Tensor
 
 
-class EFsignSGD(optimizer.Optimizer):
+class EFsignSGD(Optimizer):
     def __init__(self, learning_rate, name="EFsignSGD"):
         super().__init__(name=name)
         self._learning_rate = self._build_learning_rate(learning_rate)

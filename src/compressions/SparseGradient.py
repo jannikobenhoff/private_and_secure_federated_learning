@@ -4,8 +4,8 @@ import tensorflow_probability as tfp
 from tensorflow import Tensor
 
 from .Compression import Compression
-from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
-from ..utilities.huffman import *
+# from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
+# from ..utilities.huffman import *
 
 
 
@@ -47,7 +47,7 @@ class SparseGradient(Compression):
         gradient_dropped = self.gradDrop(gradient_with_residuals, self.drop_rate)
         self.residuals[variable.ref()].assign(gradient - gradient_dropped)
 
-        self.compression_rates.append(gradient.dtype.size*8*np.prod(gradient.shape.as_list())/get_sparse_tensor_size_in_bits(gradient_dropped))
+        # self.compression_rates.append(gradient.dtype.size*8*np.prod(gradient.shape.as_list())/get_sparse_tensor_size_in_bits(gradient_dropped))
 
         return gradient_dropped
 

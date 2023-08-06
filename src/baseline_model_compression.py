@@ -1,14 +1,13 @@
 import json
 import platform
+import sys
 import time
 from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-import os
-from tensorboard import program
-from keras_tuner.tuners import BayesianOptimization
+
 from models.LeNet import LeNet
 from sklearn.model_selection import KFold
 from keras import models, layers, regularizers
@@ -34,7 +33,8 @@ from src.utilities.strategy import Strategy
 if __name__ == "__main__":
     print(f"Python Platform: {platform.platform()}")
     print(f"Tensor Flow Version: {tf.__version__}")
-    print(f"Keras Version: {keras.__version__}")
+    print(f"Python {sys.version}")
+
     gpus = tf.config.list_physical_devices('GPU')
     if gpus:
         # Restrict TensorFlow to only use the first GPU
@@ -60,8 +60,8 @@ if __name__ == "__main__":
                   input_shape=input_shape,
                   chosen_lambda=chosen_lambda).model
 
-    strategy = Strategy(optimizer=SGD(learning_rate=0.01),
-                        compression=GradientSparsification())
+    strategy = Strategy(optimizer=tf.keras.optimizers.SGD(learning_rate=0.01),
+                        compression=TernGrad())
 
     model.compile(optimizer=strategy.optimizer,
                   loss='sparse_categorical_crossentropy',

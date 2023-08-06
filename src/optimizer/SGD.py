@@ -1,9 +1,9 @@
 import tensorflow as tf
-from keras.optimizers.optimizer_experimental import optimizer
+from keras.optimizers.optimizer import Optimizer
 from tensorflow import Tensor
 
 
-class SGD(optimizer.Optimizer):
+class SGD(Optimizer):
     def __init__(
         self,
         learning_rate=0.01,

@@ -3,7 +3,7 @@ from tensorflow import Tensor
 import numpy as np
 
 from .Compression import Compression
-from ..utilities.huffman import *
+# from ..utilities.huffman import *
 
 
 class OneBitSGD(Compression):

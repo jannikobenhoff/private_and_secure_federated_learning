@@ -19,11 +19,13 @@ dependencies:
     - flask
     - boto3
     - ipykernel
-    - keras-tuner
+    - keras
+    - scikit-optimize
+    - pytorch
     - pip:
         - tensorflow-macos
         - tensorflow-metal
         - bayesian-optimization
         - gym
-        - kaggle
         - tensorflow-probability
+        - scikeras

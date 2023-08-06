@@ -2,7 +2,20 @@ import numpy as np
 from tensorflow import Tensor
 import tensorflow as tf
 
-from src.utilities.huffman import decode_rle, decode_huffman
+# from ..compressions.TernGrad import TernGrad
+# from ..compressions.NaturalCompression import NaturalCompression
+# from ..optimizer.EFsignSGD import EFsignSGD
+# from ..optimizer.FetchSGD import FetchSGD
+# from ..optimizer.MemSGD import MemSGD
+# from ..compressions.GradientSparsification import GradientSparsification
+# from ..compressions.OneBitSGD import OneBitSGD
+# from ..compressions.SparseGradient import SparseGradient
+# from ..compressions.Atomo import Atomo
+# from ..compressions.TopK import TopK
+# from ..compressions.vqSGD import vqSGD
+#from ..optimizer.SGD import SGD
+
+# from .utilities.huffman import decode_rle, decode_huffman
 
 
 class Strategy:
@@ -44,23 +57,46 @@ class Strategy:
 
     def summary(self, add: str = ""):
         if self.compression is None:
-            print(f"---\nOptimizer: {self.optimizer.name}\nCompression: None\n--- {add}")
+            try:
+                print(f"---\nOptimizer: {self.optimizer.name}\nCompression: None\n--- {add}")
+            except AttributeError:
+                print(f"---\nOptimizer: {self.optimizer._name}\nCompression: None\n--- {add}")
+
         else:
-            print(f"---\nOptimizer: {self.optimizer.name}\nCompression: {self.compression.name}\n--- {add}")
+            try:
+                print(f"---\nOptimizer: {self.optimizer.name}\nCompression: {self.compression.name}\n--- {add}")
+            except AttributeError:
+                print(f"---\nOptimizer: {self.optimizer._name}\nCompression: {self.compression.name}\n--- {add}")
 
     def get_plot_title(self):
         if self.compression is None:
-            return "{} - {:.4f}".format(self.optimizer.name,
-                                        self.optimizer.learning_rate.numpy())
+            try:
+                return "{} - {:.4f}".format(self.optimizer.name,
+                                            self.optimizer.learning_rate.numpy())
+            except AttributeError:
+                return "{} - {:.4f}".format(self.optimizer._name,
+                                            self.optimizer.learning_rate.numpy())
+
         else:
-            return "{} - {} - {:.4f}".format(self.optimizer.name,
+            try:
+                return "{} - {} - {:.4f}".format(self.optimizer.name,
                                              self.compression.name,
                                              self.optimizer.learning_rate.numpy())
-
+            except AttributeError:
+                return "{} - {} - {:.4f}".format(self.optimizer._name,
+                                                 self.compression.name,
+                                                 self.optimizer.learning_rate.numpy())
     def get_file_name(self):
         if self.compression is None:
-            return "{}".format(self.optimizer.name)
-        else:
-            return "{}_{}".format(self.optimizer.name,
-                                             self.compression.name)
+            try:
+                return "{}".format(self.optimizer.name)
+            except AttributeError:
+                return "{}".format(self.optimizer._name)
 
+        else:
+            try:
+                return "{}_{}".format(self.optimizer.name,
+                                             self.compression.name)
+            except AttributeError:
+                return "{}_{}".format(self.optimizer._name,
+                                      self.compression.name)
