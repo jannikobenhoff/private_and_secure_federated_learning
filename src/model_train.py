@@ -290,14 +290,14 @@ def worker(args):
     else:
         print("Training")
 
-        training_losses_per_epoch = [[] for _ in range(args.k_fold)]
-        training_acc_per_epoch = [[] for _ in range(args.k_fold)]
-        validation_losses_per_epoch = [[] for _ in range(args.k_fold)]
-        validation_acc_per_epoch = [[] for _ in range(args.k_fold)]
-        compression_rates = [[] for _ in range(args.k_fold)]
-
         if args.k_fold > 1:
             kf = KFold(n_splits=args.k_fold, shuffle=True)
+
+            training_losses_per_epoch = [[] for _ in range(args.k_fold)]
+            training_acc_per_epoch = [[] for _ in range(args.k_fold)]
+            validation_losses_per_epoch = [[] for _ in range(args.k_fold)]
+            validation_acc_per_epoch = [[] for _ in range(args.k_fold)]
+            compression_rates = [[] for _ in range(args.k_fold)]
 
             k_step = -1
             for train_index, val_index in kf.split(img_train):
@@ -329,6 +329,12 @@ def worker(args):
                 validation_losses_per_epoch[k_step] = history.history['val_loss']
                 compression_rates[k_step].append(strategy.compression.compression_rates)
         else:
+            training_losses_per_epoch = []
+            training_acc_per_epoch = []
+            validation_losses_per_epoch = []
+            validation_acc_per_epoch = []
+            compression_rates = []
+
             model = model_factory(args.model.lower(), args.lambda_l2, input_shape, num_classes)
 
             strategy = strategy_factory(**strategy_params)
@@ -347,11 +353,12 @@ def worker(args):
                                 batch_size=32,
                                 validation_data=(img_test, label_test), verbose=args.log, callbacks=callbacks)
 
-            training_acc_per_epoch[0] = history.history['accuracy']
-            validation_acc_per_epoch[0] = history.history['val_accuracy']
-            training_losses_per_epoch[0] = history.history['loss']
-            validation_losses_per_epoch[0] = history.history['val_loss']
-            compression_rates[0].append(strategy.compression.compression_rates)
+            training_acc_per_epoch = history.history['accuracy']
+            validation_acc_per_epoch = history.history['val_accuracy']
+            training_losses_per_epoch = history.history['loss']
+            validation_losses_per_epoch = history.history['val_loss']
+            if strategy.compression is not None:
+                compression_rates = [np.mean(strategy.compression.compression_rates)]
         metrics = {
             "training_loss": str(training_losses_per_epoch),
             "training_acc": str(training_acc_per_epoch),
