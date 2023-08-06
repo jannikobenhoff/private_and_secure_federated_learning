@@ -2,8 +2,7 @@ import os
 import numpy as np
 import tensorflow as tf
 
-tf.config.set_visible_devices([], 'GPU')
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+#
 
 from keras.callbacks import EarlyStopping
 from matplotlib import pyplot as plt
@@ -16,70 +15,52 @@ from skopt.space import Real, Categorical, Integer
 from keras.utils import get_custom_objects
 
 from src.compressions.TopK import TopK
-from src.optimizer.SGD import SGD2
+from src.models.LeNet import LeNet
+from src.optimizer.SGD import SGD
 from src.utilities.datasets import load_dataset
 from src.utilities.strategy import Strategy
 
 if __name__ == "__main__":
-    tf.config.experimental_run_functions_eagerly(True)
+    tf.get_logger().setLevel('ERROR')
 
+    tf.config.set_visible_devices([], 'GPU')
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-    def strategy_optimizer_factory(opt=tf.keras.optimizers.SGD(learning_rate=0.01)):
-        return Strategy(optimizer=opt, compression=TopK(k=10))
+    # tf.data.experimental.enable_debug_mode()
+    tf.config.run_functions_eagerly(run_eagerly=True)
+    tf.data.experimental.enable_debug_mode()
 
-    #get_custom_objects().update({"strategy_optimizer_factory": strategy_optimizer_factory})
+    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("mnist", fullset=10)  # 10
+    get_custom_objects().update({"strategy": Strategy})
 
-    # get_custom_objects().update({"Strategy": Strategy(optimizer=tf.keras.optimizers.legacy.SGD(learning_rate=0.01),
-    #                                          compression=TopK(k=10)), "strategy": Strategy(optimizer=tf.keras.optimizers.legacy.SGD(learning_rate=0.01),
-    #                                          compression=TopK(k=10))})
-
-    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("mnist", fullset=1)  # 10
-
-    space = [Real(1e-7, 1e-1, "log-uniform", name='l2_reg')]  #
+    space = [Real(1e-7, 1e-1, "log-uniform", name='l2_reg')]
 
     @use_named_args(space)
     def objective(**params):
         print("Lambda: ", params["l2_reg"])
         validation_acc_list = []
         val_loss_list = []
-        # strategy =
+
         kfold = KFold(n_splits=5, shuffle=True)
         for train_index, val_index in kfold.split(img_train):
-            train_images, val_images = img_train[train_index], img_train[val_index]  # img_train, img_test  #
-            train_labels, val_labels = label_train[train_index], label_train[val_index]  # label_train, label_test  #
+            train_images, val_images = img_train[train_index], img_train[val_index]
+            train_labels, val_labels = label_train[train_index], label_train[val_index]
 
-            model = tf.keras.models.Sequential()
-            model.add(layers.Conv2D(6, kernel_size=(3, 3), activation='relu', input_shape=input_shape,
-                                    kernel_regularizer=regularizers.l2(params["l2_reg"])))
-            model.add(layers.MaxPooling2D())
-            model.add(layers.Conv2D(16, kernel_size=(3, 3), activation='relu',
-                                    kernel_regularizer=regularizers.l2(params["l2_reg"])))
-            model.add(layers.MaxPooling2D())
-            model.add(layers.Flatten())
-            model.add(layers.Dense(120, activation='relu', kernel_regularizer=regularizers.l2(params["l2_reg"])))
-            model.add(layers.Dense(84, activation='relu', kernel_regularizer=regularizers.l2(params["l2_reg"])))
-            model.add(layers.Dense(10, activation='softmax'))
+            model = LeNet(search=True).search_model(params["l2_reg"])
 
-            # def custom_loss(y_true, y_pred):
-            #     loss = tf.keras.losses.sparse_categorical_crossentropy(y_true, y_pred)
-            #     l2_loss = params["l2_reg"] * tf.reduce_sum([tf.reduce_sum(tf.square(w)) for w in model.trainable_weights])
-            #     return loss + l2_loss
-            # strategy = Strategy(optimizer=tf.keras.optimizers.legacy.SGD(learning_rate=0.1),compression=TopK(k=20))
-            custom_optimizer = tf.keras.optimizers.SGD(learning_rate=0.01)
-
-            model.compile(optimizer=MyMomentumOptimizer(),
-                          loss='sparse_categorical_crossentropy',  # custom_loss, #
+            opt = Strategy(compression=None, learning_rate=0.1)
+            model.compile(optimizer=opt,
+                          loss='sparse_categorical_crossentropy',
                           metrics=['accuracy'])
 
-            early_stopping = EarlyStopping(monitor='val_loss', patience=25, verbose=1)
+            early_stopping = EarlyStopping(monitor='val_loss', patience=6, verbose=1)
 
-            history = model.fit(train_images, train_labels, epochs=25,  # 250
+            history = model.fit(train_images, train_labels, epochs=50,
                                 batch_size=32,
-                                validation_data=(val_images, val_labels), verbose=0, callbacks=[early_stopping])
+                                validation_data=(val_images, val_labels), verbose=2, callbacks=[early_stopping])
 
             validation_acc = np.mean(history.history['val_accuracy'])
-            val_loss = np.mean(
-                history.history['val_loss'])  # np.min(history.history['val_loss'])  history.history['val_loss'][-1]
+            val_loss = np.mean(history.history['val_loss'])
             validation_acc_list.append(validation_acc)
             val_loss_list.append(val_loss)
 

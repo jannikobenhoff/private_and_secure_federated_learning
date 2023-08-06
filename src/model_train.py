@@ -3,6 +3,7 @@ import time
 from datetime import datetime
 import json
 
+from keras.callbacks import EarlyStopping
 from tensorflow import keras
 import numpy as np
 import tensorflow as tf
@@ -57,51 +58,53 @@ def model_factory(model_name, lambda_l2, input_shape, num_classes):
 
 
 def strategy_factory(**params) -> Strategy:
-    optimizer = None
-    if params["optimizer"].lower() == "sgd":
-        optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=params["learning_rate"])
-    elif params["optimizer"].lower() == "adam":
-        optimizer = tf.keras.optimizers.Adam(learning_rate=params["learning_rate"])
-    elif params["optimizer"].lower() == "efsignsgd":
-        optimizer = EFsignSGD(learning_rate=params["learning_rate"])
-    elif params["optimizer"].lower() == "fetchsgd":
-        optimizer = FetchSGD(learning_rate=params["learning_rate"], c=params["c"],
-                             r=params["r"])
-    elif params["optimizer"].lower() == "memsgd":
-        optimizer = MemSGD(learning_rate=params["learning_rate"], top_k=params["top_k"])
+    # optimizer = None
+    # if params["optimizer"].lower() == "sgd":
+    #     optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=params["learning_rate"])
+    # elif params["optimizer"].lower() == "adam":
+    #     optimizer = tf.keras.optimizers.Adam(learning_rate=params["learning_rate"])
+    # elif params["optimizer"].lower() == "efsignsgd":
+    #     optimizer = EFsignSGD(learning_rate=params["learning_rate"])
+    # elif params["optimizer"].lower() == "fetchsgd":
+    #     optimizer = FetchSGD(learning_rate=params["learning_rate"], c=params["c"],
+    #                          r=params["r"])
+    # elif params["optimizer"].lower() == "memsgd":
+    #     optimizer = MemSGD(learning_rate=params["learning_rate"], top_k=params["top_k"])
 
     if params["compression"].lower() == "terngrad":
-        return Strategy(optimizer=optimizer,
-                        compression=TernGrad(params["clip"]))
+        return Strategy(
+            compression=TernGrad(params["clip"]))
     elif params["compression"].lower() == "naturalcompression":
-        return Strategy(optimizer=optimizer,
-                        compression=NaturalCompression())
+        return Strategy(
+            compression=NaturalCompression())
     elif params["compression"].lower() == "gradientsparsification":
-        return Strategy(optimizer=optimizer,
-                        compression=GradientSparsification(max_iter=params["max_iter"], k=params["k"]))
+        return Strategy(
+            compression=GradientSparsification(max_iter=params["max_iter"], k=params["k"]))
     elif params["compression"].lower() == "onebitsgd":
-        return Strategy(optimizer=optimizer,
-                        compression=OneBitSGD())
+        return Strategy(
+            compression=OneBitSGD())
     elif params["compression"].lower() == "sparsegradient":
-        return Strategy(optimizer=optimizer,
-                        compression=SparseGradient(drop_rate=params["drop_rate"]))
+        return Strategy(
+            compression=SparseGradient(drop_rate=params["drop_rate"]))
     elif params["compression"].lower() == "topk":
-        return Strategy(optimizer=optimizer,
-                        compression=TopK(k=params["k"]))
+        return Strategy(
+            compression=TopK(k=params["k"]))
     elif params["compression"].lower() == "vqsgd":
-        return Strategy(optimizer=optimizer,
-                        compression=vqSGD(repetition=params["repetitions"]))
+        return Strategy(
+            compression=vqSGD(repetition=params["repetition"]))
     elif params["compression"].lower() == "atomo":
         # not working yet
-        return Strategy(optimizer=optimizer,
-                        compression=Atomo(sparsity_budget=params["sparsity_budget"]))
+        return Strategy(
+            compression=Atomo(sparsity_budget=params["sparsity_budget"]))
     elif params["compression"].lower() == "none":
-        return Strategy(optimizer=optimizer,
-                        compression=None)
+        return Strategy(
+            compression=None)
 
 
 def worker(args):
     tf.config.set_visible_devices([], 'GPU')
+    tf.config.run_functions_eagerly(run_eagerly=True)
+    tf.data.experimental.enable_debug_mode()
 
     img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset(args.dataset,
                                                                                           fullset=args.fullset)
@@ -112,11 +115,15 @@ def worker(args):
     kf = KFold(n_splits=args.k_fold, shuffle=True)
 
     if args.bayesian_search:
-
         print("Bayesian Search")
         search_space = [Real(1e-7, 1e-1, "log-uniform", name='lambda_l2')]
+        train_loss = []
+        val_loss = []
+        val_acc = []
+        train_acc = []
 
         n_iter_step = [0]
+
         strategy = strategy_factory(**strategy_params)
 
         @use_named_args(search_space)
@@ -124,146 +131,46 @@ def worker(args):
             print("Search step:", len(n_iter_step), "Lambda:", params["lambda_l2"])
             search_step_start_time = time.time()
 
-            training_losses_per_epoch = []
-            training_acc_per_epoch = []
-            validation_losses_per_epoch = []
-            validation_acc_per_epoch = []
+            training_losses_per_epoch = [[] for _ in range(args.k_fold)]
+            training_acc_per_epoch = [[] for _ in range(args.k_fold)]
+            validation_losses_per_epoch = [[] for _ in range(args.k_fold)]
+            validation_acc_per_epoch = [[] for _ in range(args.k_fold)]
 
             n_iter_step.append(1)
-            # k_step = 0
-            # for train_index, val_index in kf.split(img_train):
-            #     k_step += 1
-            #
-            #     train_images, val_images = img_train[train_index], img_train[val_index]
-            #     train_labels, val_labels = label_train[train_index], label_train[val_index]
-            #
-            #     model = model_factory(args.model.lower(), params["lambda_l2"], input_shape, num_classes)
-            #     model.compile(optimizer=strategy.optimizer,
-            #                   loss='sparse_categorical_crossentropy',
-            #                   metrics=['accuracy'])
-            #
-            #     early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=args.stop_patience,
-            #                                                       verbose=1)
-            #
-            #     history = model.fit(train_images, train_labels, epochs=args.epochs,
-            #                         validation_data=(val_images, val_labels), verbose=0,
-            #                         callbacks=[early_stopping])
-            #
-            #     training_losses_per_epoch.append(history.history['loss'])
-            #     validation_losses_per_epoch.append(history.history['val_loss'])
-            #     training_acc_per_epoch.append(history.history['accuracy'])
-            #     validation_acc_per_epoch.append(history.history['val_accuracy'])
-            #
-            #     average_training_loss = np.mean(history.history['loss'])
-            #     average_validation_loss = np.mean(history.history['val_loss'])
-            #     average_training_acc = np.mean(history.history['accuracy'])
-            #     average_validation_acc = np.mean(history.history['val_accuracy'])
-            #
-            #     if args.log == 1:
-            #         print("Epoch: {} of {}\nK-Step: {} of {}\nTrain acc: {:.4f}\nVal acc: {:.4f}\nTrain loss: {:.4f}\n"
-            #               "Val loss: {:.4f}\n{} {}\n---".format(args.epochs, args.epochs, k_step, args.k_fold,
-            #                                                     average_training_acc,
-            #                                                     average_validation_acc,
-            #                                                     average_training_loss, average_validation_loss,
-            #                                                     strategy.get_plot_title(), params["lambda_l2"]))
 
             all_scores = []
             k_step = -1
             for train_index, val_index in kf.split(img_train):
-                training_losses_per_epoch.append([])
-                training_acc_per_epoch.append([])
-                validation_losses_per_epoch.append([])
-                validation_acc_per_epoch.append([])
-
+                train_images, val_images = img_train[train_index], img_train[val_index]
+                train_labels, val_labels = label_train[train_index], label_train[val_index]
                 k_step += 1
 
-                # Early stopping
-                best_val_loss = float('inf')
-                epochs_no_improve = 0
-                patience = args.stop_patience
-
                 model = model_factory(args.model.lower(), params["lambda_l2"], input_shape, num_classes)
+                strategy = strategy_factory(**strategy_params)
 
-                x_train, x_val = img_train[train_index], img_train[val_index]
-                y_train, y_val = label_train[train_index], label_train[val_index]
+                model.compile(optimizer=strategy,
+                              loss='sparse_categorical_crossentropy',
+                              metrics=['accuracy'])
+                early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
 
-                ds_train_batch = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-                training_data = ds_train_batch.batch(32)
+                history = model.fit(train_images, train_labels, epochs=args.epochs,
+                                    batch_size=32,
+                                    validation_data=(val_images, val_labels), verbose=0, callbacks=[early_stopping])
 
-                val_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
-                val_dataset = val_dataset.batch(32)
+                training_acc_per_epoch[k_step].append(history.history['accuracy'])
+                validation_acc_per_epoch[k_step].append(history.history['val_accuracy'])
+                training_losses_per_epoch[k_step].append(history.history['loss'])
+                validation_losses_per_epoch[k_step].append(history.history['val_loss'])
 
-                loss_fn = keras.losses.SparseCategoricalCrossentropy()
-                train_acc_metric = keras.metrics.SparseCategoricalAccuracy()
-                val_acc_metric = keras.metrics.SparseCategoricalAccuracy()
+                all_scores.append(np.mean(history.history['val_accuracy']))
 
-                for epoch in range(args.epochs):
-                    start_time = time.time()
+            print("   Mean val accuracy:", np.mean(all_scores),
+                  "Time taken: {:.2f}".format(time.time() - search_step_start_time))
 
-                    training_losses = []
-                    for step, (x_batch_train, y_batch_train) in enumerate(training_data):
-                        with tf.GradientTape() as tape:
-                            # Minibatch gradient descent
-                            logits = model(x_batch_train, training=True)
-                            # main_loss = tf.reduce_mean(loss_fn(y_batch_train, logits))
-                            # loss_value = tf.add_n([main_loss] + model.losses)
-                            loss_value = loss_fn(y_batch_train, logits)
-                            l2_loss = params["lambda_l2"] * tf.reduce_sum(
-                                [tf.reduce_sum(tf.square(w)) for w in model.trainable_weights])
-                            loss_value += l2_loss
-
-                        grads = tape.gradient(loss_value, model.trainable_weights)
-                        train_acc_metric.update_state(y_batch_train, logits)
-
-                        strategy.update_parameters(zip(grads, model.trainable_weights))
-
-                        training_losses.append(loss_value.numpy())
-
-                    average_training_loss = np.mean(training_losses)
-                    training_losses_per_epoch[k_step].append(average_training_loss)
-
-                    train_acc = train_acc_metric.result()
-                    training_acc_per_epoch[k_step].append(train_acc.numpy())
-
-                    train_acc_metric.reset_states()
-
-                    validation_losses = []
-                    for x_batch_val, y_batch_val in val_dataset:
-                        val_logits = model(x_batch_val, training=False)
-                        val_loss = loss_fn(y_batch_val, val_logits)
-                        validation_losses.append(val_loss.numpy())
-                        val_acc_metric.update_state(y_batch_val, val_logits)
-
-                    val_acc = val_acc_metric.result()
-                    validation_acc_per_epoch[k_step].append(val_acc.numpy())
-                    val_acc_metric.reset_states()
-
-                    average_validation_loss = np.mean(validation_losses)
-                    validation_losses_per_epoch[k_step].append(average_validation_loss)
-
-                    # compression_rates.append(np.mean(strategy.compression.compression_rates))
-                    if args.log:
-                        print(
-                            "Epoch: {} of {}\nK-Step: {} of {}\nTrain acc: {:.4f}\nVal acc: {:.4f}\nTrain loss: {:.4f}\n"
-                            "Val loss: {:.4f}\n{} {}\nTime taken: {:.2f}\n---".format(epoch + 1, args.epochs, k_step+1,
-                                                                                       args.k_fold,
-                                                                                       float(train_acc),
-                                                                                       float(val_acc),
-                                                                                       float(average_training_loss),
-                                                                                       float(average_validation_loss),
-                                                                                       strategy.get_plot_title(),
-                                                                                       params["lambda_l2"],
-                                                                                       time.time() - start_time))
-                    if average_validation_loss < best_val_loss:
-                        best_val_loss = average_validation_loss
-                        epochs_no_improve = 0
-                    else:
-                        epochs_no_improve += 1
-                    if epochs_no_improve == patience:
-                        print(f'Early stopping at Epoch: {epoch}!', np.mean(validation_acc_per_epoch[k_step]), len(validation_acc_per_epoch[k_step]))
-                        break
-                all_scores.append(np.mean(validation_acc_per_epoch[k_step]))
-            print("   Mean val accuracy:", np.mean(all_scores), "Time taken: {:.2f}".format(time.time() - search_step_start_time))
+            train_acc.append(training_acc_per_epoch)
+            val_acc.append(validation_acc_per_epoch)
+            train_loss.append(training_losses_per_epoch)
+            val_loss.append(validation_losses_per_epoch)
             return - np.mean(all_scores)
 
         # @use_named_args(search_space)
@@ -358,23 +265,23 @@ def worker(args):
 
         # result = gp_minimize(objective, search_space, n_calls=args.n_calls,  x0=[[1e-7], [1e-4], [0.1]], #n_initial_points=0,
         #                      random_state=1)
-        result = gp_minimize(objective, search_space, n_calls=args.n_calls, acq_func='EI',  # kappa=1,
+        result = gp_minimize(objective, search_space, n_calls=args.n_calls, acq_func='EI',
                              # x0=[[1e-6], [1e-4], [1e-2]],
                              # n_random_starts=3,
-                             n_jobs=3,
+                             # n_jobs=3,
                              random_state=45
                              )
 
         print("Best lambda: {}".format(result.x))
         print("Best validation loss: {}".format(result.fun))
-        # metrics = {
-        #     "training_loss": training_losses_per_epoch,
-        #     "training_acc": training_acc_per_epoch,
-        #     "val_loss": validation_losses_per_epoch,
-        #     "val_acc": validation_acc_per_epoch,
-        #     "args": args
-        # }
-        # result["metrics"] = metrics
+        metrics = {
+            "training_loss": train_loss,
+            "training_acc": train_acc,
+            "val_loss": val_loss,
+            "val_acc": val_acc,
+            "args": args
+        }
+        result["metrics"] = metrics
         dump(result, f'results/bayesian/bayesian_result_{strategy.get_file_name()}_{args.dataset}.pkl',
              store_objective=False)
         print(f"Finished search for {strategy.get_plot_title()}")
@@ -382,139 +289,36 @@ def worker(args):
     else:
         print("Training")
 
-        training_losses_per_epoch = []
-        training_acc_per_epoch = []
-        validation_losses_per_epoch = []
-        validation_acc_per_epoch = []
-        compression_rates = []
-
-        strategy.summary()
+        training_losses_per_epoch = [[] for _ in range(args.k_fold)]
+        training_acc_per_epoch = [[] for _ in range(args.k_fold)]
+        validation_losses_per_epoch = [[] for _ in range(args.k_fold)]
+        validation_acc_per_epoch = [[] for _ in range(args.k_fold)]
+        compression_rates = [[] for _ in range(args.k_fold)]
 
         k_step = -1
         for train_index, val_index in kf.split(img_train):
-            training_losses_per_epoch.append([])
-            training_acc_per_epoch.append([])
-            validation_losses_per_epoch.append([])
-            validation_acc_per_epoch.append([])
-            compression_rates.append([])
-
+            train_images, val_images = img_train[train_index], img_train[val_index]
+            train_labels, val_labels = label_train[train_index], label_train[val_index]
             k_step += 1
 
-            # Early stopping
-            best_val_loss = float('inf')
-            epochs_no_improve = 0
-            patience = args.stop_patience
-
+            model = model_factory(args.model.lower(), args.lambda_l2, input_shape, num_classes)
             strategy = strategy_factory(**strategy_params)
 
-            model = model_factory(args.model.lower(), args.lambda_l2, input_shape, num_classes)
+            model.compile(optimizer=strategy,
+                          loss='sparse_categorical_crossentropy',
+                          metrics=['accuracy'])
 
-            x_train, x_val = img_train[train_index], img_train[val_index]
-            y_train, y_val = label_train[train_index], label_train[val_index]
+            early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
 
-            ds_train_batch = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-            training_data = ds_train_batch.batch(32)
+            history = model.fit(train_images, train_labels, epochs=args.epochs,
+                                batch_size=32,
+                                validation_data=(val_images, val_labels), verbose=0, callbacks=[early_stopping])
 
-            val_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
-            val_dataset = val_dataset.batch(32)
-
-            loss_fn = keras.losses.SparseCategoricalCrossentropy()
-            train_acc_metric = keras.metrics.SparseCategoricalAccuracy()
-            val_acc_metric = keras.metrics.SparseCategoricalAccuracy()
-
-            for epoch in range(args.epochs):
-                training_losses = []
-                for step, (x_batch_train, y_batch_train) in enumerate(training_data):
-                    with tf.GradientTape() as tape:
-                        # Minibatch gradient descent
-                        # Minibatch gradient descent
-                        logits = model(x_batch_train, training=True)
-                        main_loss = tf.reduce_mean(loss_fn(y_batch_train, logits))
-                        loss_value = tf.add_n([main_loss] + model.losses)
-
-                        # loss_value = loss_fn(y_batch_train, logits)
-                        # l2_loss = params["lambda_l2"] * tf.reduce_sum(
-                        #     [tf.reduce_sum(tf.square(w)) for w in model.trainable_weights])
-                        # loss_value += l2_loss
-
-                    grads = tape.gradient(loss_value, model.trainable_weights)
-                    train_acc_metric.update_state(y_batch_train, logits)
-
-                    strategy.update_parameters(zip(grads, model.trainable_weights))
-
-                    training_losses.append(loss_value.numpy())
-
-                average_training_loss = np.mean(training_losses)
-                training_losses_per_epoch[k_step].append(average_training_loss)
-
-                train_acc = train_acc_metric.result()
-                training_acc_per_epoch[k_step].append(train_acc.numpy())
-
-                train_acc_metric.reset_states()
-
-                validation_losses = []
-                for x_batch_val, y_batch_val in val_dataset:
-                    val_logits = model(x_batch_val, training=False)
-                    val_loss = loss_fn(y_batch_val, val_logits)
-                    validation_losses.append(val_loss.numpy())
-                    val_acc_metric.update_state(y_batch_val, val_logits)
-
-                val_acc = val_acc_metric.result()
-                validation_acc_per_epoch[k_step].append(val_acc.numpy())
-                val_acc_metric.reset_states()
-
-                average_validation_loss = np.mean(validation_losses)
-                validation_losses_per_epoch[k_step].append(average_validation_loss)
-
-                if strategy.compression is not None:
-                    compression_rates[k_step].append(np.mean(strategy.compression.compression_rates))
-
-                if args.log:
-                    print("Epoch: {} of {}\nK-Step: {} of {}\nTrain acc: {:.4f}\nVal acc: {:.4f}\nTrain loss: {:.4f}\n"
-                          "Val loss: {:.4f}\n{} {}\n---".format(epoch + 1, args.epochs, k_step + 1, args.k_fold,
-                                                                float(train_acc),
-                                                                float(val_acc), float(average_training_loss),
-                                                                float(average_validation_loss),
-                                                                strategy.get_plot_title(), args.lambda_l2))
-                if average_validation_loss < best_val_loss:
-                    best_val_loss = average_validation_loss
-                    epochs_no_improve = 0
-                else:
-                    epochs_no_improve += 1
-                if epochs_no_improve == patience:
-                    print('Early stopping!')
-                    break
-            # model = model_factory(args.model.lower(), args.lambda_l2, input_shape, num_classes)
-            # model.compile(optimizer=strategy.optimizer,
-            #               loss='sparse_categorical_crossentropy',
-            #               metrics=['accuracy'])
-            #
-            # early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=args.stop_patience,
-            #                                                   verbose=1)
-            #
-            # history = model.fit(train_images, train_labels, epochs=args.epochs,
-            #                     validation_data=(val_images, val_labels), verbose=0,
-            #                     callbacks=[early_stopping])
-            #
-            # training_losses_per_epoch.append(history.history['loss'])
-            # validation_losses_per_epoch.append(history.history['val_loss'])
-            # training_acc_per_epoch.append(history.history['accuracy'])
-            # validation_acc_per_epoch.append(history.history['val_accuracy'])
-            #
-            # average_training_loss = np.mean(history.history['loss'])
-            # average_validation_loss = np.mean(history.history['val_loss'])
-            # average_training_acc = np.mean(history.history['accuracy'])
-            # average_validation_acc = np.mean(history.history['val_accuracy'])
-            #
-            # compression_rates.append(strategy.compression.compression_rates)
-
-            # if args.log == 1:
-            #     print("Epoch: {} of {}\nK-Step: {} of {}\nTrain acc: {:.4f}\nVal acc: {:.4f}\nTrain loss: {:.4f}\n"
-            #           "Val loss: {:.4f}\n{} {}\n---".format(args.epochs, args.epochs, k_step, args.k_fold,
-            #                                                 average_training_acc,
-            #                                                 validation_acc_per_epoch,
-            #                                                 average_training_loss, average_validation_loss,
-            #                                                 strategy.get_plot_title(), args.lambda_l2))
+            training_acc_per_epoch[k_step].append(history.history['accuracy'])
+            validation_acc_per_epoch[k_step].append(history.history['val_accuracy'])
+            training_losses_per_epoch[k_step].append(history.history['loss'])
+            validation_losses_per_epoch[k_step].append(history.history['val_loss'])
+            compression_rates[k_step].append(strategy.compression.compression_rates)
 
         metrics = {
             "training_loss": str(training_losses_per_epoch),
@@ -522,7 +326,7 @@ def worker(args):
             "val_loss": str(validation_losses_per_epoch),
             "val_acc": str(validation_acc_per_epoch),
             "args": vars(args),
-            "compression_rates": compression_rates
+            "compression_rates": np.mean(compression_rates)
         }
 
         file = open('results/compression/training_{}_{}_'

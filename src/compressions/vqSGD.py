@@ -71,5 +71,15 @@ class vqSGD(Compression):
                 compressed_gradient[index] += d_sqrt
 
         compressed_gradient = tf.reshape(compressed_gradient, input_shape) / self.s
-        # self.compression_rates.append((len(gradient)*32/get_sparse_tensor_size_in_bits(compressed_gradient)))
+        compressed_gradient = tf.cast(compressed_gradient, dtype=variable.dtype)
+        self.compression_rates.append((len(gradient)*32/self.get_sparse_tensor_size_in_bits(compressed_gradient)))
         return compressed_gradient * l2
+
+    @staticmethod
+    def get_sparse_tensor_size_in_bits(tensor):
+        num_nonzero_entries = tf.math.count_nonzero(tensor)
+        num_index_bits = np.ceil(np.log2(len(tf.reshape(tensor, [-1]))))
+        num_value_bits = tensor.dtype.size * 8
+        return num_nonzero_entries.numpy() * (num_index_bits + num_value_bits) if num_nonzero_entries.numpy() * (
+                num_index_bits + num_value_bits) != 0 else 1
+

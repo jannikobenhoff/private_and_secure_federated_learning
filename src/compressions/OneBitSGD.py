@@ -52,13 +52,19 @@ class OneBitSGD(Compression):
     def unquantize(gradient_quantized: Tensor, gradient: Tensor):
         x = tf.reshape(gradient_quantized, [-1]).numpy()
         y = tf.reshape(gradient, [-1]).numpy()
-        indices_minus1 = np.where(x == -1)
-        indices_1 = np.where(x == 1)
+        indices_minus1 = np.where(x == -1.0)
+        indices_1 = np.where(x == 1.0)
 
         minus1_values = y[indices_minus1]
         values_1 = y[indices_1]
 
-        a = np.mean(minus1_values)
-        b = np.mean(values_1)
+        if len(minus1_values) < 1:
+            a = 0.0
+        else:
+            a = np.nanmean(minus1_values)
+        if len(values_1) < 1:
+            b = 0.0
+        else:
+            b = np.nanmean(values_1)
 
         return tf.where(gradient_quantized == -1, a, b)

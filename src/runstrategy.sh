@@ -100,27 +100,37 @@
 #      --log=1 \
 #      --strategy='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.01, "k": 10}'
 #
-
-
-python model_train.py --model LeNet --dataset mnist \
-      --epochs=250 \
-      --n_calls=10 \
-      --k_fold=5 \
-      --fullset=10 \
-      --stop_patience=25 \
-      --bayesian_search \
-      --log=1 \
-      --strategy='{"optimizer": "sgd", "compression": "none", "learning_rate": 0.01}'
-
-
+#
+#
 #python model_train.py --model LeNet --dataset mnist \
 #      --epochs=250 \
 #      --n_calls=10 \
 #      --k_fold=5 \
 #      --fullset=10 \
+#      --stop_patience=25 \
 #      --bayesian_search \
 #      --log=1 \
-#      --strategy='{"optimizer": "sgd", "compression": "naturalcompression", "learning_rate": 0.01}'
+#      --strategy='{"optimizer": "sgd", "compression": "none", "learning_rate": 0.01}'
+
+python model_train.py --model LeNet --dataset mnist \
+      --epochs=50 \
+      --n_calls=10 \
+      --k_fold=5 \
+      --fullset=10 \
+      --stop_patience=6 \
+      --bayesian_search \
+      --log=0 \
+      --strategy='{"optimizer": "sgd", "compression": "none", "learning_rate": 0.01}'
+
+
+
+#python model_train.py --model LeNet --dataset mnist \
+#      --epochs=50 \
+#      --k_fold=5 \
+#      --stop_patience=25 \
+#      --fullset=100 \
+#      --log=1 \
+#      --strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.01, "repetition": 200}'
 #
 #python model_train.py --model LeNet --dataset mnist \
 #      --epochs=250 \
