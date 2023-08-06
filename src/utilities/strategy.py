@@ -190,11 +190,11 @@ class Strategy(optimizer_v2.OptimizerV2):
             try:
                 return "SGD - {} - {:.4f}".format(
                                                  self.compression.name,
-                                                 self.optimizer.learning_rate.numpy())
+                                                 self.learning_rate.numpy())
             except AttributeError:
                 return "SGD - {} - {:.4f}".format(
                                                  self.compression.name,
-                                                 self.optimizer.learning_rate.numpy())
+                                                 self.learning_rate.numpy())
 
     def get_file_name(self):
         if self.compression is None:

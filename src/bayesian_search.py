@@ -30,7 +30,7 @@ if __name__ == "__main__":
     tf.config.run_functions_eagerly(run_eagerly=True)
     tf.data.experimental.enable_debug_mode()
 
-    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("mnist", fullset=10)  # 10
+    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("mnist", fullset=1)  # 10
     get_custom_objects().update({"strategy": Strategy})
 
     space = [Real(1e-7, 1e-1, "log-uniform", name='l2_reg')]
@@ -48,15 +48,15 @@ if __name__ == "__main__":
 
             model = LeNet(search=True).search_model(params["l2_reg"])
 
-            opt = Strategy(compression=None, learning_rate=0.1)
+            opt = Strategy(compression=None, learning_rate=0.01)
             model.compile(optimizer=opt,
                           loss='sparse_categorical_crossentropy',
                           metrics=['accuracy'])
 
-            early_stopping = EarlyStopping(monitor='val_loss', patience=6, verbose=1)
+            early_stopping = EarlyStopping(monitor='val_loss', patience=30, verbose=1)
 
-            history = model.fit(train_images, train_labels, epochs=50,
-                                batch_size=32,
+            history = model.fit(train_images, train_labels, epochs=200,
+                                #batch_size=32,
                                 validation_data=(val_images, val_labels), verbose=2, callbacks=[early_stopping])
 
             validation_acc = np.mean(history.history['val_accuracy'])

@@ -72,32 +72,32 @@ def strategy_factory(**params) -> Strategy:
     #     optimizer = MemSGD(learning_rate=params["learning_rate"], top_k=params["top_k"])
 
     if params["compression"].lower() == "terngrad":
-        return Strategy(
+        return Strategy(learning_rate=params["learning_rate"],
             compression=TernGrad(params["clip"]))
     elif params["compression"].lower() == "naturalcompression":
-        return Strategy(
+        return Strategy(learning_rate=params["learning_rate"],
             compression=NaturalCompression())
     elif params["compression"].lower() == "gradientsparsification":
-        return Strategy(
+        return Strategy(learning_rate=params["learning_rate"],
             compression=GradientSparsification(max_iter=params["max_iter"], k=params["k"]))
     elif params["compression"].lower() == "onebitsgd":
-        return Strategy(
+        return Strategy(learning_rate=params["learning_rate"],
             compression=OneBitSGD())
     elif params["compression"].lower() == "sparsegradient":
-        return Strategy(
+        return Strategy(learning_rate=params["learning_rate"],
             compression=SparseGradient(drop_rate=params["drop_rate"]))
     elif params["compression"].lower() == "topk":
-        return Strategy(
+        return Strategy(learning_rate=params["learning_rate"],
             compression=TopK(k=params["k"]))
     elif params["compression"].lower() == "vqsgd":
-        return Strategy(
+        return Strategy(learning_rate=params["learning_rate"],
             compression=vqSGD(repetition=params["repetition"]))
     elif params["compression"].lower() == "atomo":
         # not working yet
-        return Strategy(
+        return Strategy(learning_rate=params["learning_rate"],
             compression=Atomo(sparsity_budget=params["sparsity_budget"]))
     elif params["compression"].lower() == "none":
-        return Strategy(
+        return Strategy(learning_rate=params["learning_rate"],
             compression=None)
 
 
@@ -116,7 +116,7 @@ def worker(args):
 
     if args.bayesian_search:
         print("Bayesian Search")
-        search_space = [Real(1e-7, 1e-1, "log-uniform", name='lambda_l2')]
+        search_space = [Real(1e-5, 1e-1, "log-uniform", name='lambda_l2')]
         train_loss = []
         val_loss = []
         val_acc = []

@@ -41,9 +41,12 @@ class vqSGD(Compression):
                 a[i] = gamma / (2 * d)
         """
         input_shape = gradient.shape
-
-        l2 = tf.norm(gradient, ord=2)
-        gradient = tf.reshape(gradient, [-1]) / l2
+        gradient = tf.where(tf.math.is_nan(gradient), 0., gradient)
+        l2 = tf.norm(gradient, ord=2)  # tf.sqrt(tf.reduce_sum(tf.square(gradient)) + 1.0e-12)
+        if l2 != 0:
+            gradient = tf.reshape(gradient, [-1]) / l2
+        else:
+            gradient = tf.reshape(gradient, [-1])
 
         d = gradient.shape[0]
         d_sqrt = np.sqrt(d)
@@ -59,6 +62,7 @@ class vqSGD(Compression):
         a = tf.where(a == 0, gamma_by_2d, a)
 
         a = a.numpy()
+        a[np.isnan(a)] = 0
         np.divide(a, a.sum(), out=a)
 
         indices = np.random.choice(np.arange(2 * d), self.s, p=a)

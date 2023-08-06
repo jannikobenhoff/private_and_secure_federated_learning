@@ -8,7 +8,7 @@ if __name__ == "__main__":
     result = load('../results/bayesian/bayesian_result_SGD_OneBitSGD_mnist.pkl')
     # metrics = load('../results/bayesian/bayesian_metrics_SGD_TopK_0108.pkl')
     # metrics = {"val_acc":[0,0,0,0,0], "args":0}
-    # metrics = result["metrics"]
+    metrics = result["metrics"]
     #
     # print(result)
     # print(metrics)
@@ -54,7 +54,7 @@ if __name__ == "__main__":
         axs[n_iter + 1].set_title("step {}, {:.7f}".format(n_iter, xiter[n_iter]), fontsize=10,
                                   fontweight="bold" if xiter[n_iter] == result.x[0] else"normal")
 
-    # plt.suptitle(metrics["args"], fontsize=8)
+    plt.suptitle(metrics["args"], fontsize=8)
     plt.tight_layout()
     plt.show()
     # plt.savefig("SGD_TopK.pdf")
