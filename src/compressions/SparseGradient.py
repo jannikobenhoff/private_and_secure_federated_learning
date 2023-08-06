@@ -4,9 +4,7 @@ import tensorflow_probability as tfp
 from tensorflow import Tensor
 
 from .Compression import Compression
-# from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
 # from ..utilities.huffman import *
-
 
 
 class SparseGradient(Compression):
