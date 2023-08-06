@@ -109,9 +109,8 @@ python model_train.py --model LeNet --dataset mnist \
       --fullset=10 \
       --stop_patience=25 \
       --bayesian_search \
-      --lambda_l2=0.001 \
       --log=0 \
-      --strategy='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.01, "k": 10}'
+      --strategy='{"optimizer": "sgd", "compression": "none", "learning_rate": 0.01}'
 
 
 #python model_train.py --model LeNet --dataset mnist \

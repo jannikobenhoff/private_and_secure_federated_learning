@@ -13,7 +13,6 @@ from skopt.utils import use_named_args
 
 from models.ResNet import ResNet
 from models.LeNet import LeNet
-from optimizer.SGD import SGD
 
 from utilities.datasets import load_dataset
 
@@ -123,11 +122,13 @@ def worker(args):
         validation_acc_per_epoch = []
 
         n_iter_step = [0]
+        strategy = strategy_factory(**strategy_params)
 
         @use_named_args(search_space)
         def objective(**params):
-            strategy = strategy_factory(**strategy_params)
-            print("Search step:", len(n_iter_step))
+            print("Search step:", len(n_iter_step), "Lambda:", params["lambda_l2"])
+            search_step_start_time = time.time()
+
             n_iter_step.append(1)
             # k_step = 0
             # for train_index, val_index in kf.split(img_train):
@@ -166,16 +167,20 @@ def worker(args):
             #                                                     average_training_loss, average_validation_loss,
             #                                                     strategy.get_plot_title(), params["lambda_l2"]))
 
-            k_step = 0
+            all_scores = []
+            k_step = -1
             for train_index, val_index in kf.split(img_train):
+                training_losses_per_epoch.append([])
+                training_acc_per_epoch.append([])
+                validation_losses_per_epoch.append([])
+                validation_acc_per_epoch.append([])
+
                 k_step += 1
 
                 # Early stopping
                 best_val_loss = float('inf')
                 epochs_no_improve = 0
                 patience = args.stop_patience
-
-                strategy = strategy_factory(**strategy_params)
 
                 model = model_factory(args.model.lower(), params["lambda_l2"], input_shape, num_classes)
 
@@ -200,10 +205,13 @@ def worker(args):
                         with tf.GradientTape() as tape:
                             # Minibatch gradient descent
                             logits = model(x_batch_train, training=True)
-                            loss_value = loss_fn(y_batch_train, logits)
-                            l2_loss = params["lambda_l2"] * tf.reduce_sum(
-                                [tf.reduce_sum(tf.square(w)) for w in model.trainable_weights])
-                            loss_value += l2_loss
+                            main_loss = tf.reduce_mean(loss_fn(y_batch_train, logits))
+                            loss_value = tf.add_n([main_loss] + model.losses)
+
+                            # loss_value = loss_fn(y_batch_train, logits)
+                            # l2_loss = params["lambda_l2"] * tf.reduce_sum(
+                            #     [tf.reduce_sum(tf.square(w)) for w in model.trainable_weights])
+                            # loss_value += l2_loss
 
                         grads = tape.gradient(loss_value, model.trainable_weights)
                         train_acc_metric.update_state(y_batch_train, logits)
@@ -213,10 +221,10 @@ def worker(args):
                         training_losses.append(loss_value.numpy())
 
                     average_training_loss = np.mean(training_losses)
-                    training_losses_per_epoch.append(average_training_loss)
+                    training_losses_per_epoch[k_step].append(average_training_loss)
 
                     train_acc = train_acc_metric.result()
-                    training_acc_per_epoch.append(train_acc.numpy())
+                    training_acc_per_epoch[k_step].append(train_acc.numpy())
 
                     train_acc_metric.reset_states()
 
@@ -228,17 +236,17 @@ def worker(args):
                         val_acc_metric.update_state(y_batch_val, val_logits)
 
                     val_acc = val_acc_metric.result()
-                    validation_acc_per_epoch.append(val_acc.numpy())
+                    validation_acc_per_epoch[k_step].append(val_acc.numpy())
                     val_acc_metric.reset_states()
 
                     average_validation_loss = np.mean(validation_losses)
-                    validation_losses_per_epoch.append(average_validation_loss)
+                    validation_losses_per_epoch[k_step].append(average_validation_loss)
 
                     # compression_rates.append(np.mean(strategy.compression.compression_rates))
                     if args.log:
                         print(
                             "Epoch: {} of {}\nK-Step: {} of {}\nTrain acc: {:.4f}\nVal acc: {:.4f}\nTrain loss: {:.4f}\n"
-                            "Val loss: {:.4f}\n{} {}\nTime taken: {:.2f}\n---".format(epoch + 1, args.epochs, k_step,
+                            "Val loss: {:.4f}\n{} {}\nTime taken: {:.2f}\n---".format(epoch + 1, args.epochs, k_step+1,
                                                                                        args.k_fold,
                                                                                        float(train_acc),
                                                                                        float(val_acc),
@@ -255,8 +263,9 @@ def worker(args):
                     if epochs_no_improve == patience:
                         print('Early stopping!')
                         break
-
-            return - np.mean(validation_acc_per_epoch)
+                all_scores.append(np.mean(validation_acc_per_epoch[k_step]))
+            print("   Mean val accuracy:", np.mean(all_scores), "Time taken: {:.2f}".format(time.time() - search_step_start_time))
+            return - np.mean(all_scores)
 
         # @use_named_args(search_space)
         # def objective(**params):
@@ -419,11 +428,15 @@ def worker(args):
                 for step, (x_batch_train, y_batch_train) in enumerate(training_data):
                     with tf.GradientTape() as tape:
                         # Minibatch gradient descent
+                        # Minibatch gradient descent
                         logits = model(x_batch_train, training=True)
-                        loss_value = loss_fn(y_batch_train, logits)
-                        l2_loss = args.lambda_l2 * tf.reduce_sum(
-                            [tf.reduce_sum(tf.square(w)) for w in model.trainable_weights])
-                        loss_value += l2_loss
+                        main_loss = tf.reduce_mean(loss_fn(y_batch_train, logits))
+                        loss_value = tf.add_n([main_loss] + model.losses)
+
+                        # loss_value = loss_fn(y_batch_train, logits)
+                        # l2_loss = params["lambda_l2"] * tf.reduce_sum(
+                        #     [tf.reduce_sum(tf.square(w)) for w in model.trainable_weights])
+                        # loss_value += l2_loss
 
                     grads = tape.gradient(loss_value, model.trainable_weights)
                     train_acc_metric.update_state(y_batch_train, logits)

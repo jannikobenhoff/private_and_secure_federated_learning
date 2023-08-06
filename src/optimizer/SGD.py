@@ -3,7 +3,7 @@ from keras.optimizers.optimizer import Optimizer
 from tensorflow import Tensor
 
 
-class SGD(Optimizer):
+class SGD2(Optimizer):
     def __init__(
         self,
         learning_rate=0.01,
@@ -33,6 +33,8 @@ class SGD(Optimizer):
             jit_compile=jit_compile,
             **kwargs
         )
+        print("asdasf")
+
         self._learning_rate = self._build_learning_rate(learning_rate)
         self.momentum = momentum
         self.nesterov = nesterov
@@ -50,6 +52,7 @@ class SGD(Optimizer):
         Args:
           var_list: list of model variables to build SGD variables on.
         """
+        print("asdasf")
         super().build(var_list)
         if hasattr(self, "_built") and self._built:
             return

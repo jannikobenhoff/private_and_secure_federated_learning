@@ -2,24 +2,9 @@ import numpy as np
 from tensorflow import Tensor
 import tensorflow as tf
 
-# from ..compressions.TernGrad import TernGrad
-# from ..compressions.NaturalCompression import NaturalCompression
-# from ..optimizer.EFsignSGD import EFsignSGD
-# from ..optimizer.FetchSGD import FetchSGD
-# from ..optimizer.MemSGD import MemSGD
-# from ..compressions.GradientSparsification import GradientSparsification
-# from ..compressions.OneBitSGD import OneBitSGD
-# from ..compressions.SparseGradient import SparseGradient
-# from ..compressions.Atomo import Atomo
-# from ..compressions.TopK import TopK
-# from ..compressions.vqSGD import vqSGD
-#from ..optimizer.SGD import SGD
-
-# from .utilities.huffman import decode_rle, decode_huffman
-
 
 class Strategy:
-    def __init__(self, optimizer, compression = None):
+    def __init__(self, optimizer, compression=None):
         self.optimizer = optimizer
         self.compression = compression
         self.compression_ratio = []
@@ -80,12 +65,13 @@ class Strategy:
         else:
             try:
                 return "{} - {} - {:.4f}".format(self.optimizer.name,
-                                             self.compression.name,
-                                             self.optimizer.learning_rate.numpy())
+                                                 self.compression.name,
+                                                 self.optimizer.learning_rate.numpy())
             except AttributeError:
                 return "{} - {} - {:.4f}".format(self.optimizer._name,
                                                  self.compression.name,
                                                  self.optimizer.learning_rate.numpy())
+
     def get_file_name(self):
         if self.compression is None:
             try:
@@ -96,7 +82,7 @@ class Strategy:
         else:
             try:
                 return "{}_{}".format(self.optimizer.name,
-                                             self.compression.name)
+                                      self.compression.name)
             except AttributeError:
                 return "{}_{}".format(self.optimizer._name,
                                       self.compression.name)

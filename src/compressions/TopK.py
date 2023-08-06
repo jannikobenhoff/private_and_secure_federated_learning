@@ -30,6 +30,7 @@ class TopK(Compression):
         self.compression_rates.append(
             gradient.dtype.size * 8 * np.prod(gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
                 sparse_gradient))
+
         # huffman
         # rle = run_length_encoding(sparse_gradient)
         # vc = count_tensor_values(rle)
@@ -48,7 +49,6 @@ class TopK(Compression):
         """
         input_shape = input_tensor.shape
         flattened_tensor: Tensor = tf.reshape(input_tensor, [-1])
-
         if tf.size(flattened_tensor) < k:
             return input_tensor
 
