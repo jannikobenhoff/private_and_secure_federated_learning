@@ -109,7 +109,7 @@ python model_train.py --model LeNet --dataset mnist \
       --fullset=10 \
       --stop_patience=25 \
       --bayesian_search \
-      --log=0 \
+      --log=1 \
       --strategy='{"optimizer": "sgd", "compression": "none", "learning_rate": 0.01}'
 
 

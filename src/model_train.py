@@ -116,11 +116,6 @@ def worker(args):
         print("Bayesian Search")
         search_space = [Real(1e-7, 1e-1, "log-uniform", name='lambda_l2')]
 
-        training_losses_per_epoch = []
-        training_acc_per_epoch = []
-        validation_losses_per_epoch = []
-        validation_acc_per_epoch = []
-
         n_iter_step = [0]
         strategy = strategy_factory(**strategy_params)
 
@@ -128,6 +123,11 @@ def worker(args):
         def objective(**params):
             print("Search step:", len(n_iter_step), "Lambda:", params["lambda_l2"])
             search_step_start_time = time.time()
+
+            training_losses_per_epoch = []
+            training_acc_per_epoch = []
+            validation_losses_per_epoch = []
+            validation_acc_per_epoch = []
 
             n_iter_step.append(1)
             # k_step = 0
@@ -205,13 +205,12 @@ def worker(args):
                         with tf.GradientTape() as tape:
                             # Minibatch gradient descent
                             logits = model(x_batch_train, training=True)
-                            main_loss = tf.reduce_mean(loss_fn(y_batch_train, logits))
-                            loss_value = tf.add_n([main_loss] + model.losses)
-
-                            # loss_value = loss_fn(y_batch_train, logits)
-                            # l2_loss = params["lambda_l2"] * tf.reduce_sum(
-                            #     [tf.reduce_sum(tf.square(w)) for w in model.trainable_weights])
-                            # loss_value += l2_loss
+                            # main_loss = tf.reduce_mean(loss_fn(y_batch_train, logits))
+                            # loss_value = tf.add_n([main_loss] + model.losses)
+                            loss_value = loss_fn(y_batch_train, logits)
+                            l2_loss = params["lambda_l2"] * tf.reduce_sum(
+                                [tf.reduce_sum(tf.square(w)) for w in model.trainable_weights])
+                            loss_value += l2_loss
 
                         grads = tape.gradient(loss_value, model.trainable_weights)
                         train_acc_metric.update_state(y_batch_train, logits)
@@ -261,7 +260,7 @@ def worker(args):
                     else:
                         epochs_no_improve += 1
                     if epochs_no_improve == patience:
-                        print('Early stopping!')
+                        print(f'Early stopping at Epoch: {epoch}!', np.mean(validation_acc_per_epoch[k_step]), len(validation_acc_per_epoch[k_step]))
                         break
                 all_scores.append(np.mean(validation_acc_per_epoch[k_step]))
             print("   Mean val accuracy:", np.mean(all_scores), "Time taken: {:.2f}".format(time.time() - search_step_start_time))
@@ -362,20 +361,20 @@ def worker(args):
         result = gp_minimize(objective, search_space, n_calls=args.n_calls, acq_func='EI',  # kappa=1,
                              # x0=[[1e-6], [1e-4], [1e-2]],
                              # n_random_starts=3,
-                             # n_jobs=3,
+                             n_jobs=3,
                              random_state=45
                              )
 
         print("Best lambda: {}".format(result.x))
         print("Best validation loss: {}".format(result.fun))
-        metrics = {
-            "training_loss": training_losses_per_epoch,
-            "training_acc": training_acc_per_epoch,
-            "val_loss": validation_losses_per_epoch,
-            "val_acc": validation_acc_per_epoch,
-            "args": args
-        }
-        result["metrics"] = metrics
+        # metrics = {
+        #     "training_loss": training_losses_per_epoch,
+        #     "training_acc": training_acc_per_epoch,
+        #     "val_loss": validation_losses_per_epoch,
+        #     "val_acc": validation_acc_per_epoch,
+        #     "args": args
+        # }
+        # result["metrics"] = metrics
         dump(result, f'results/bayesian/bayesian_result_{strategy.get_file_name()}_{args.dataset}.pkl',
              store_objective=False)
         print(f"Finished search for {strategy.get_plot_title()}")
