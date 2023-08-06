@@ -73,32 +73,32 @@ def strategy_factory(**params) -> Strategy:
 
     if params["compression"].lower() == "terngrad":
         return Strategy(learning_rate=params["learning_rate"],
-            compression=TernGrad(params["clip"]))
+                        compression=TernGrad(params["clip"]))
     elif params["compression"].lower() == "naturalcompression":
         return Strategy(learning_rate=params["learning_rate"],
-            compression=NaturalCompression())
+                        compression=NaturalCompression())
     elif params["compression"].lower() == "gradientsparsification":
         return Strategy(learning_rate=params["learning_rate"],
-            compression=GradientSparsification(max_iter=params["max_iter"], k=params["k"]))
+                        compression=GradientSparsification(max_iter=params["max_iter"], k=params["k"]))
     elif params["compression"].lower() == "onebitsgd":
         return Strategy(learning_rate=params["learning_rate"],
-            compression=OneBitSGD())
+                        compression=OneBitSGD())
     elif params["compression"].lower() == "sparsegradient":
         return Strategy(learning_rate=params["learning_rate"],
-            compression=SparseGradient(drop_rate=params["drop_rate"]))
+                        compression=SparseGradient(drop_rate=params["drop_rate"]))
     elif params["compression"].lower() == "topk":
         return Strategy(learning_rate=params["learning_rate"],
-            compression=TopK(k=params["k"]))
+                        compression=TopK(k=params["k"]))
     elif params["compression"].lower() == "vqsgd":
         return Strategy(learning_rate=params["learning_rate"],
-            compression=vqSGD(repetition=params["repetition"]))
+                        compression=vqSGD(repetition=params["repetition"]))
     elif params["compression"].lower() == "atomo":
         # not working yet
         return Strategy(learning_rate=params["learning_rate"],
-            compression=Atomo(sparsity_budget=params["sparsity_budget"]))
+                        compression=Atomo(sparsity_budget=params["sparsity_budget"]))
     elif params["compression"].lower() == "none":
         return Strategy(learning_rate=params["learning_rate"],
-            compression=None)
+                        compression=None)
 
 
 def worker(args):
@@ -112,7 +112,6 @@ def worker(args):
     strategy_params = json.loads(args.strategy)
     strategy = strategy_factory(**strategy_params)
 
-    kf = KFold(n_splits=args.k_fold, shuffle=True)
 
     if args.bayesian_search:
         print("Bayesian Search")
@@ -138,6 +137,8 @@ def worker(args):
 
             n_iter_step.append(1)
 
+            kf = KFold(n_splits=args.k_fold, shuffle=True)
+
             all_scores = []
             k_step = -1
             for train_index, val_index in kf.split(img_train):
@@ -155,7 +156,7 @@ def worker(args):
 
                 history = model.fit(train_images, train_labels, epochs=args.epochs,
                                     batch_size=32,
-                                    validation_data=(val_images, val_labels), verbose=0, callbacks=[early_stopping])
+                                    validation_data=(val_images, val_labels), verbose=args.log, callbacks=[early_stopping])
 
                 training_acc_per_epoch[k_step].append(history.history['accuracy'])
                 validation_acc_per_epoch[k_step].append(history.history['val_accuracy'])
@@ -295,38 +296,69 @@ def worker(args):
         validation_acc_per_epoch = [[] for _ in range(args.k_fold)]
         compression_rates = [[] for _ in range(args.k_fold)]
 
-        k_step = -1
-        for train_index, val_index in kf.split(img_train):
-            train_images, val_images = img_train[train_index], img_train[val_index]
-            train_labels, val_labels = label_train[train_index], label_train[val_index]
-            k_step += 1
+        if args.k_fold > 1:
+            kf = KFold(n_splits=args.k_fold, shuffle=True)
 
+            k_step = -1
+            for train_index, val_index in kf.split(img_train):
+                train_images, val_images = img_train[train_index], img_train[val_index]
+                train_labels, val_labels = label_train[train_index], label_train[val_index]
+                k_step += 1
+
+                model = model_factory(args.model.lower(), args.lambda_l2, input_shape, num_classes)
+
+                strategy = strategy_factory(**strategy_params)
+                strategy.summary()
+
+                model.compile(optimizer=strategy,
+                              loss='sparse_categorical_crossentropy',
+                              metrics=['accuracy'])
+
+                callbacks = []
+                if args.stop_patience < args.epochs:
+                    early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
+                    callbacks = [early_stopping]
+
+                history = model.fit(train_images, train_labels, epochs=args.epochs,
+                                    batch_size=32,
+                                    validation_data=(val_images, val_labels), verbose=args.log, callbacks=callbacks)
+
+                training_acc_per_epoch[k_step] = history.history['accuracy']
+                validation_acc_per_epoch[k_step] = history.history['val_accuracy']
+                training_losses_per_epoch[k_step] = history.history['loss']
+                validation_losses_per_epoch[k_step] = history.history['val_loss']
+                compression_rates[k_step].append(strategy.compression.compression_rates)
+        else:
             model = model_factory(args.model.lower(), args.lambda_l2, input_shape, num_classes)
+
             strategy = strategy_factory(**strategy_params)
+            strategy.summary()
 
             model.compile(optimizer=strategy,
                           loss='sparse_categorical_crossentropy',
                           metrics=['accuracy'])
 
-            early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
+            callbacks = []
+            if args.stop_patience < args.epochs:
+                early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
+                callbacks = [early_stopping]
 
-            history = model.fit(train_images, train_labels, epochs=args.epochs,
+            history = model.fit(img_train, label_train, epochs=args.epochs,
                                 batch_size=32,
-                                validation_data=(val_images, val_labels), verbose=0, callbacks=[early_stopping])
+                                validation_data=(img_test, label_test), verbose=args.log, callbacks=callbacks)
 
-            training_acc_per_epoch[k_step].append(history.history['accuracy'])
-            validation_acc_per_epoch[k_step].append(history.history['val_accuracy'])
-            training_losses_per_epoch[k_step].append(history.history['loss'])
-            validation_losses_per_epoch[k_step].append(history.history['val_loss'])
-            compression_rates[k_step].append(strategy.compression.compression_rates)
-
+            training_acc_per_epoch[0] = history.history['accuracy']
+            validation_acc_per_epoch[0] = history.history['val_accuracy']
+            training_losses_per_epoch[0] = history.history['loss']
+            validation_losses_per_epoch[0] = history.history['val_loss']
+            compression_rates[0].append(strategy.compression.compression_rates)
         metrics = {
             "training_loss": str(training_losses_per_epoch),
             "training_acc": str(training_acc_per_epoch),
             "val_loss": str(validation_losses_per_epoch),
             "val_acc": str(validation_acc_per_epoch),
             "args": vars(args),
-            "compression_rates": np.mean(compression_rates)
+            "compression_rates": compression_rates
         }
 
         file = open('results/compression/training_{}_{}_'

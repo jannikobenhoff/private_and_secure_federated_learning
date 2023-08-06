@@ -27,6 +27,7 @@ class GradientSparsification(Compression):
     def compress(self, gradient: Tensor, variable) -> Tensor:
         input_shape = gradient.shape
         gradient = tf.reshape(gradient, [-1])
+        gradient = tf.where(tf.math.is_nan(gradient), 0., gradient)
 
         probabilities = self.greedy_algorithm(input_tensor=gradient, max_iter=self.max_iter, k=self.k)
 
@@ -36,9 +37,11 @@ class GradientSparsification(Compression):
         gradient_spars = tf.multiply(selectors, gradient) / probabilities
 
         self.compression_rates.append(gradient.dtype.size * 8 * np.prod(gradient.shape.as_list()) /
-                                      get_sparse_tensor_size_in_bits(gradient_spars))
+                                      self.get_sparse_tensor_size_in_bits(gradient_spars))
 
         gradient_spars = tf.reshape(gradient_spars, input_shape)
+        gradient_spars = tf.where(tf.math.is_nan(gradient_spars), 0., gradient_spars)
+
         return gradient_spars
 
     @staticmethod
@@ -54,9 +57,9 @@ class GradientSparsification(Compression):
         d = input_tensor.shape[0]
 
         comp = k * d * tf.abs(input_tensor) / tf.reduce_sum(tf.abs(input_tensor)).numpy()
+        comp = tf.where(tf.math.is_nan(comp), 0., comp)
         p = tf.where(comp < 1,
                      comp, p)
-
         c = 2
         while j < max_iter and c > 1:
             active_set = tf.where(p != 1, p, 0)
@@ -65,4 +68,13 @@ class GradientSparsification(Compression):
             cp = tf.math.multiply(c, p)
             p = tf.where(cp < 1, cp, 1)
             j += 1
+
         return p
+
+    @staticmethod
+    def get_sparse_tensor_size_in_bits(tensor):
+        num_nonzero_entries = tf.math.count_nonzero(tensor)
+        num_index_bits = np.ceil(np.log2(len(tf.reshape(tensor, [-1]))))
+        num_value_bits = tensor.dtype.size * 8
+        return num_nonzero_entries.numpy() * (num_index_bits + num_value_bits) if num_nonzero_entries.numpy() * (
+                num_index_bits + num_value_bits) != 0 else 1

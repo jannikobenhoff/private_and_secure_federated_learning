@@ -5,7 +5,7 @@ from skopt.plots import plot_gaussian_process, plot_convergence
 
 
 if __name__ == "__main__":
-    result = load('../results/bayesian/bayesian_result_SGD_OneBitSGD_mnist.pkl')
+    result = load('../results/bayesian/bayesian_result_SGD_vqSGD_mnist.pkl')
     # metrics = load('../results/bayesian/bayesian_metrics_SGD_TopK_0108.pkl')
     # metrics = {"val_acc":[0,0,0,0,0], "args":0}
     metrics = result["metrics"]
@@ -17,7 +17,7 @@ if __name__ == "__main__":
     # acc = np.array(metrics["val_acc"])
     # acc = acc.reshape(-1, len(xiter))
     # acc = acc.max(axis=0)
-
+    print(result.x)
     print("lambda iterations:  ",   xiter)
     print("validation accuracy:    ", result.func_vals)
 

@@ -47,7 +47,7 @@ class SparseGradient(Compression):
         gradient_dropped = self.gradDrop(gradient_with_residuals, self.drop_rate)
         self.residuals[variable.ref()].assign(gradient - gradient_dropped)
 
-        # self.compression_rates.append(gradient.dtype.size*8*np.prod(gradient.shape.as_list())/get_sparse_tensor_size_in_bits(gradient_dropped))
+        self.compression_rates.append(gradient.dtype.size*8*np.prod(gradient.shape.as_list())/self.get_sparse_tensor_size_in_bits(gradient_dropped))
 
         return gradient_dropped
 
@@ -60,3 +60,10 @@ class SparseGradient(Compression):
         gradient_dropped = tf.where(tf.abs(gradient) > threshold, gradient, 0)
         return gradient_dropped
 
+    @staticmethod
+    def get_sparse_tensor_size_in_bits(tensor):
+        num_nonzero_entries = tf.math.count_nonzero(tensor)
+        num_index_bits = np.ceil(np.log2(len(tf.reshape(tensor, [-1]))))
+        num_value_bits = tensor.dtype.size * 8
+        return num_nonzero_entries.numpy() * (num_index_bits + num_value_bits) if num_nonzero_entries.numpy() * (
+                num_index_bits + num_value_bits) != 0 else 1

@@ -52,6 +52,7 @@ def plot_compression_metrics(results: list, params: list, baseline: str):
             print(param_value, cr, np.mean(ast.literal_eval(metrics["val_acc"])[0]))
             all_params.append(param_value)
             all_cr.append(cr)
+            print(metrics)
             val_acc = ast.literal_eval(metrics["val_acc"])[0]
             val_loss = ast.literal_eval(metrics["val_loss"])[0]
             all_val_acc.append(val_acc)
@@ -70,6 +71,7 @@ def plot_compression_metrics(results: list, params: list, baseline: str):
     axes[2].set_title('Validation Accuracy vs Compression Rate', fontsize=10)
     axes[2].legend()
     axes[3].legend()
+    axes[3].set_title("Validation Loss", fontsize=10)
 
     axes[1].plot(all_params, all_cr, alpha=0.2)
     axes[1].legend()
@@ -90,14 +92,20 @@ if __name__ == "__main__":
         1. CR - Val Acc
         2. CR - Val Loss
     """
-    plot_compression_metrics(["training_SGD_TopK_mnist_08_05_22_45.json",
-                              "training_SGD_TopK_mnist_08_05_22_48.json",
-                              "training_SGD_TopK_mnist_08_05_23_07.json",
-                              "training_SGD_TopK_mnist_08_05_23_10.json",
-                              "training_SGD_TopK_mnist_08_05_22_52.json",
+    # plot_compression_metrics(["training_SGD_TopK_mnist_08_05_22_45.json",
+    #                           "training_SGD_TopK_mnist_08_05_22_48.json",
+    #                           "training_SGD_TopK_mnist_08_05_23_07.json",
+    #                           "training_SGD_TopK_mnist_08_05_23_10.json",
+    #                           "training_SGD_TopK_mnist_08_05_22_52.json",
+    #
+    #                           ],
+    #                          ["k"],
+    #                          'training_SGD_mnist_08_05_22_42.json')
 
+    plot_compression_metrics(["training_SGD_vqSGD_mnist_08_06_23_30.json",
+                                "training_SGD_vqSGD_mnist_08_06_23_37.json"
                               ],
-                             ["k"],
+                             ["repetition"],
                              'training_SGD_mnist_08_05_22_42.json')
 
     compression_dict = {
