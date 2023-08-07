@@ -47,7 +47,7 @@ class FetchSGD(Optimizer):
             )
         self._built = True
 
-    def _update_step(self, gradient: Tensor, variable):
+    def update_step(self, gradient: Tensor, variable) -> Tensor:
         input_shape = gradient.shape
 
         d = tf.reshape(gradient, [-1]).shape[0]
@@ -88,7 +88,8 @@ class FetchSGD(Optimizer):
 
         # Update
         delta = tf.reshape(delta, input_shape)
-        variable.assign_add(-delta)
+        # variable.assign_add(-delta)
+        return delta
 
     def get_config(self):
         config = super().get_config()

@@ -28,7 +28,7 @@ class EFsignSGD(Optimizer):
             )
         self._built = True
 
-    def _update_step(self, gradient: Tensor, variable):
+    def update_step(self, gradient: Tensor, variable) -> Tensor:
         var_key = self._var_key(variable)
 
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
@@ -38,13 +38,16 @@ class EFsignSGD(Optimizer):
         p_t = lr * gradient + error
 
         norm = tf.norm(p_t, ord=1, axis=0, keepdims=True)/d
+        # TODO nan check
         # delta_t = (tf.norm(p_t, ord=1, keepdims=True, axis=1)/d) * tf.sign(p_t)
         delta_t = tf.multiply(norm, tf.sign(p_t))
 
         # update residual error
         error.assign(p_t-delta_t)
         # update iterate
-        variable.assign_add(-delta_t)
+        # variable.assign_add(-delta_t)
+
+        return delta_t
 
     def get_config(self):
         config = super().get_config()

@@ -99,40 +99,27 @@
 #      --lambda_l2=0.001 \
 #      --log=1 \
 #      --strategy='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.01, "k": 10}'
-#
-#
-#
+
+
+python model_train.py --model LeNet --dataset mnist \
+      --epochs=200 \
+      --n_calls=10 \
+      --k_fold=5 \
+      --fullset=10 \
+      --stop_patience=15 \
+      --bayesian_search \
+      --log=1 \
+      --strategy='{"optimizer": "memsgd", "compression": "None", "learning_rate": 0.01}'
+
+
 #python model_train.py --model LeNet --dataset mnist \
 #      --epochs=250 \
 #      --n_calls=10 \
 #      --k_fold=5 \
 #      --fullset=10 \
-#      --stop_patience=25 \
 #      --bayesian_search \
 #      --log=1 \
-#      --strategy='{"optimizer": "sgd", "compression": "none", "learning_rate": 0.01}'
-
-python model_train.py --model LeNet --dataset mnist \
-      --epochs=200 \
-      --n_calls=10 \
-      --k_fold=5 \
-      --fullset=1 \
-      --stop_patience=25 \
-      --bayesian_search \
-      --log=0 \
-      --strategy='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.1, "k": 10}'
-
-
-
-python model_train.py --model LeNet --dataset mnist \
-      --epochs=200 \
-      --n_calls=10 \
-      --k_fold=5 \
-      --fullset=1 \
-      --stop_patience=25 \
-      --bayesian_search \
-      --log=0 \
-      --strategy='{"optimizer": "sgd", "compression": "sparsegradient", "learning_rate": 0.1, "drop_rate": 90}'
+#      --strategy='{"optimizer": "sgd", "compression": "naturalcompression", "learning_rate": 0.01}'
 #
 #python model_train.py --model LeNet --dataset mnist \
 #      --epochs=250 \

@@ -4,7 +4,7 @@ from tensorflow import Tensor
 
 
 class MemSGD(Optimizer):
-    def __init__(self, learning_rate, top_k: int = None, rand_k: int= None, name="MemSGD"):
+    def __init__(self, learning_rate, top_k: int = None, rand_k: int = None, name="MemSGD"):
         super().__init__(name=name)
         self._learning_rate = self._build_learning_rate(learning_rate)
 
@@ -36,7 +36,7 @@ class MemSGD(Optimizer):
             )
         self._built = True
 
-    def _update_step(self, gradient: Tensor, variable):
+    def update_step(self, gradient: Tensor, variable) -> Tensor:
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
 
         var_key = self._var_key(variable)
@@ -53,7 +53,8 @@ class MemSGD(Optimizer):
                                           k=self.top_k)
 
         self.memory[self._index_dict[var_key]].assign(m+lr*gradient-g)
-        variable.assign_add(-g)
+        # variable.assign_add(-g)
+        return g
 
     @staticmethod
     def top_k_sparsification(input_tensor: Tensor, k: int) -> Tensor:

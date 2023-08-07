@@ -4,7 +4,6 @@ from datetime import datetime
 import json
 
 from keras.callbacks import EarlyStopping
-from tensorflow import keras
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import KFold
@@ -19,9 +18,7 @@ from utilities.datasets import load_dataset
 
 from compressions.TernGrad import TernGrad
 from compressions.NaturalCompression import NaturalCompression
-from optimizer.EFsignSGD import EFsignSGD
-from optimizer.FetchSGD import FetchSGD
-from optimizer.MemSGD import MemSGD
+
 from compressions.GradientSparsification import GradientSparsification
 from compressions.OneBitSGD import OneBitSGD
 from compressions.SparseGradient import SparseGradient
@@ -29,7 +26,7 @@ from compressions.Atomo import Atomo
 from compressions.TopK import TopK
 from compressions.vqSGD import vqSGD
 
-from utilities.strategy import Strategy
+from strategy import Strategy
 
 
 def parse_args():
@@ -58,19 +55,6 @@ def model_factory(model_name, lambda_l2, input_shape, num_classes):
 
 
 def strategy_factory(**params) -> Strategy:
-    # optimizer = None
-    # if params["optimizer"].lower() == "sgd":
-    #     optimizer = tf.keras.optimizers.legacy.SGD(learning_rate=params["learning_rate"])
-    # elif params["optimizer"].lower() == "adam":
-    #     optimizer = tf.keras.optimizers.Adam(learning_rate=params["learning_rate"])
-    # elif params["optimizer"].lower() == "efsignsgd":
-    #     optimizer = EFsignSGD(learning_rate=params["learning_rate"])
-    # elif params["optimizer"].lower() == "fetchsgd":
-    #     optimizer = FetchSGD(learning_rate=params["learning_rate"], c=params["c"],
-    #                          r=params["r"])
-    # elif params["optimizer"].lower() == "memsgd":
-    #     optimizer = MemSGD(learning_rate=params["learning_rate"], top_k=params["top_k"])
-
     if params["compression"].lower() == "terngrad":
         return Strategy(learning_rate=params["learning_rate"],
                         compression=TernGrad(params["clip"]))
@@ -98,7 +82,7 @@ def strategy_factory(**params) -> Strategy:
                         compression=Atomo(sparsity_budget=params["sparsity_budget"]))
     elif params["compression"].lower() == "none":
         return Strategy(learning_rate=params["learning_rate"],
-                        compression=None)
+                        compression=None, optimizer=params["optimizer"].lower())
 
 
 def worker(args):
@@ -111,7 +95,6 @@ def worker(args):
 
     strategy_params = json.loads(args.strategy)
     strategy = strategy_factory(**strategy_params)
-
 
     if args.bayesian_search:
         print("Bayesian Search")
@@ -137,7 +120,7 @@ def worker(args):
 
             n_iter_step.append(1)
 
-            kf = KFold(n_splits=args.k_fold, shuffle=True)
+            kf: KFold = KFold(n_splits=args.k_fold, shuffle=True)
 
             all_scores = []
             k_step = -1
@@ -329,10 +312,6 @@ def worker(args):
                 validation_losses_per_epoch[k_step] = history.history['val_loss']
                 compression_rates[k_step].append(strategy.compression.compression_rates)
         else:
-            training_losses_per_epoch = []
-            training_acc_per_epoch = []
-            validation_losses_per_epoch = []
-            validation_acc_per_epoch = []
             compression_rates = []
 
             model = model_factory(args.model.lower(), args.lambda_l2, input_shape, num_classes)
@@ -373,7 +352,7 @@ def worker(args):
                     "w")
         json.dump(metrics, file, indent=4)
         file.close()
-        print(f"Finished search for {strategy.get_plot_title()}")
+        print(f"Finished training for {strategy.get_plot_title()}")
 
 
 def main():

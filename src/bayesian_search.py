@@ -2,23 +2,18 @@ import os
 import numpy as np
 import tensorflow as tf
 
-#
-
 from keras.callbacks import EarlyStopping
 from matplotlib import pyplot as plt
 from sklearn.model_selection import KFold
 from skopt.plots import plot_gaussian_process
-from keras import datasets, models, layers, regularizers
 from skopt import gp_minimize
 from skopt.utils import use_named_args
-from skopt.space import Real, Categorical, Integer
+from skopt.space import Real
 from keras.utils import get_custom_objects
 
-from src.compressions.TopK import TopK
-from src.models.LeNet import LeNet
-from src.optimizer.SGD import SGD
-from src.utilities.datasets import load_dataset
-from src.utilities.strategy import Strategy
+from models.LeNet import LeNet
+from utilities.datasets import load_dataset
+from strategy import Strategy
 
 if __name__ == "__main__":
     tf.get_logger().setLevel('ERROR')
@@ -26,7 +21,6 @@ if __name__ == "__main__":
     tf.config.set_visible_devices([], 'GPU')
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-    # tf.data.experimental.enable_debug_mode()
     tf.config.run_functions_eagerly(run_eagerly=True)
     tf.data.experimental.enable_debug_mode()
 
@@ -55,8 +49,7 @@ if __name__ == "__main__":
 
             early_stopping = EarlyStopping(monitor='val_loss', patience=30, verbose=1)
 
-            history = model.fit(train_images, train_labels, epochs=200,
-                                #batch_size=32,
+            history = model.fit(train_images, train_labels, epochs=200, batch_size=32,
                                 validation_data=(val_images, val_labels), verbose=2, callbacks=[early_stopping])
 
             validation_acc = np.mean(history.history['val_accuracy'])
@@ -67,7 +60,7 @@ if __name__ == "__main__":
         print('Val Acc: ', np.mean(validation_acc_list))
         print('Val Loss:', np.mean(val_loss_list))
 
-        return - np.mean(validation_acc_list)  # np.mean(val_loss_list)  #
+        return - np.mean(validation_acc_list)
 
 
     res_gp = gp_minimize(objective, space, n_calls=10, verbose=0, random_state=45,  # n_random_starts=3,
