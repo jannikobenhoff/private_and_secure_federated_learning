@@ -107,11 +107,11 @@ class Strategy(optimizer_v2.OptimizerV2):
         ) or self._fallback_apply_state(var_device, var_dtype)
 
         return tf.raw_ops.ResourceApplyGradientDescent(
-                var=var.handle,
-                alpha=tf.constant(1.0, dtype=tf.float32),
-                delta=delta,
-                use_locking=self._use_locking,
-            )
+            var=var.handle,
+            alpha=tf.constant(1.0, dtype=tf.float32),
+            delta=delta,
+            use_locking=self._use_locking,
+        )
 
     def _resource_apply_sparse_duplicate_indices(
             self, grad, var, indices, **kwargs
@@ -165,81 +165,69 @@ class Strategy(optimizer_v2.OptimizerV2):
             }
         )
         return config
-# class Strategy:
-#     def __init__(self, optimizer, compression=None):
-#         self.optimizer = optimizer
-#         self.compression = compression
-#
-#     def update_parameters(self, grads_and_vars: zip):
-#         grads_and_vars = list(grads_and_vars)
-#         gradient, variables = zip(*grads_and_vars)
-#         gradient = list(gradient)
-#
-#         if self.compression is not None:
-#             scope_name = "optimizer"
-#             with tf.name_scope(scope_name):
-#                 with tf.init_scope():
-#                     # Lift variable creation to init scope to avoid environment
-#                     # issues.
-#                     self.compression.build(variables)
-#         if self.compression is None:
-#             self.optimizer.apply_gradients(zip(gradient, variables))
-#         else:
-#             gradient_compressed = []
-#             for i, grad in enumerate(gradient):
-#                 if False:  # huffman
-#                     enc, huf, shape = self.compression.compress(grad, variables[i])
-#                     dec_huf = decode_huffman(enc, huf)
-#                     dec = decode_rle(dec_huf)
-#                     gradient_compressed.append(tf.reshape(dec, shape))
-#                 else:
-#                     gradient_compressed.append(self.compression.compress(grad, variables[i]))
-#
-#             self.optimizer.apply_gradients(zip(gradient_compressed, variables))
-
 
     def summary(self, add: str = ""):
         if self.compression is None:
             try:
-                print(f"---\nOptimizer: SGD\nCompression: None\n--- {add}")
+                print(f"---\nOptimizer: {self.optimizer_name.upper()}\nCompression: None\n--- {add}")
             except AttributeError:
-                print(f"---\nOptimizer: SGD\nCompression: None\n--- {add}")
+                print(f"---\nOptimizer: {self.optimizer_name.upper()}\nCompression: None\n--- {add}")
 
         else:
             try:
-                print(f"---\nOptimizer: SGD\nCompression: {self.compression.name}\n--- {add}")
+                print(f"---\nOptimizer: {self.optimizer_name.upper()}\nCompression: {self.compression.name}\n--- {add}")
             except AttributeError:
-                print(f"---\nOptimizer: SGD\nCompression: {self.compression.name}\n--- {add}")
+                print(f"---\nOptimizer: {self.optimizer_name.upper()}\nCompression: {self.compression.name}\n--- {add}")
 
     def get_plot_title(self):
         if self.compression is None:
-            try:
-                return "SGD - {:.4f}".format(
-                                            self.learning_rate.numpy())
-            except AttributeError:
-                return "SGD - {:.4f}".format(
-                                            self.learning_rate.numpy())
+            return "{} - {:.4f}".format(self.optimizer_name.upper(),
+                                        self.learning_rate.numpy())
 
         else:
-            try:
-                return "SGD - {} - {:.4f}".format(
-                                                 self.compression.name,
-                                                 self.learning_rate.numpy())
-            except AttributeError:
-                return "SGD - {} - {:.4f}".format(
-                                                 self.compression.name,
-                                                 self.learning_rate.numpy())
+            return "{} - {} - {:.4f}".format(self.optimizer_name.upper(),
+                                             self.compression.name,
+                                             self.learning_rate.numpy())
 
     def get_file_name(self):
         if self.compression is None:
-            try:
-                return "SGD"
-            except AttributeError:
-                return "SGD"
+            return self.optimizer_name.upper()
 
         else:
             try:
-                return "SGD_{}".format(self.compression.name)
+                return "{}_{}".format(self.optimizer_name.upper(), self.compression.name)
             except AttributeError:
-                return "SGD_{}".format(
+                return "{}_{}".format(self.optimizer_name.upper(),
                                       self.compression.name)
+
+    # class Strategy:
+    #     def __init__(self, optimizer, compression=None):
+    #         self.optimizer = optimizer
+    #         self.compression = compression
+    #
+    #     def update_parameters(self, grads_and_vars: zip):
+    #         grads_and_vars = list(grads_and_vars)
+    #         gradient, variables = zip(*grads_and_vars)
+    #         gradient = list(gradient)
+    #
+    #         if self.compression is not None:
+    #             scope_name = "optimizer"
+    #             with tf.name_scope(scope_name):
+    #                 with tf.init_scope():
+    #                     # Lift variable creation to init scope to avoid environment
+    #                     # issues.
+    #                     self.compression.build(variables)
+    #         if self.compression is None:
+    #             self.optimizer.apply_gradients(zip(gradient, variables))
+    #         else:
+    #             gradient_compressed = []
+    #             for i, grad in enumerate(gradient):
+    #                 if False:  # huffman
+    #                     enc, huf, shape = self.compression.compress(grad, variables[i])
+    #                     dec_huf = decode_huffman(enc, huf)
+    #                     dec = decode_rle(dec_huf)
+    #                     gradient_compressed.append(tf.reshape(dec, shape))
+    #                 else:
+    #                     gradient_compressed.append(self.compression.compress(grad, variables[i]))
+    #
+    #             self.optimizer.apply_gradients(zip(gradient_compressed, variables))

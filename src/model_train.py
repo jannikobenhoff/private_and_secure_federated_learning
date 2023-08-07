@@ -107,6 +107,7 @@ def worker(args):
         n_iter_step = [0]
 
         strategy = strategy_factory(**strategy_params)
+        strategy.summary()
 
         @use_named_args(search_space)
         def objective(**params):
