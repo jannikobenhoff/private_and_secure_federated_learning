@@ -1,5 +1,6 @@
 import ast
 import json
+import os
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -30,31 +31,31 @@ def plot_compression_rates(compression_dict):
     plt.savefig("compression_rates.pdf")
 
 
-def plot_compression_metrics(results: list, params: list, baseline: str):
+def plot_compression_metrics(params: list, title: str, baseline: str):
     marker = itertools.cycle(('s', '+', 'v', 'o', '*'))
 
     base = open("../results/compression/" + baseline, "r")
     baseline_metrics = json.load(base)
     fig, axes = plt.subplots(1, 4, figsize=(15, 5))
-    axes[0].plot(np.arange(0, len(ast.literal_eval(baseline_metrics["val_acc"])[0])),
-                 ast.literal_eval(baseline_metrics["val_acc"])[0], label=f"baseline")
-    axes[3].plot(np.arange(0, len(ast.literal_eval(baseline_metrics["val_loss"])[0])),
-                 ast.literal_eval(baseline_metrics["val_loss"])[0], label=f"baseline")
+    axes[0].plot(np.arange(0, len(ast.literal_eval(baseline_metrics["val_acc"]))),
+                 ast.literal_eval(baseline_metrics["val_acc"]), label=f"baseline")
+    axes[3].plot(np.arange(0, len(ast.literal_eval(baseline_metrics["val_loss"]))),
+                 ast.literal_eval(baseline_metrics["val_loss"]), label=f"baseline")
     all_params = []
     all_cr = []
     all_val_acc = []
-    for res in results:
+    for res in os.listdir("../results/compression/" + title + "/"):
         for param in params:
-            file = open("../results/compression/" + res, "r")
+            file = open("../results/compression/" + title + "/" + res, "r")
             metrics = json.load(file)
             param_value = ast.literal_eval((metrics["args"]["strategy"]))[param]
             cr = np.mean(metrics["compression_rates"])
-            print(param_value, cr, np.mean(ast.literal_eval(metrics["val_acc"])[0]))
+            print(param_value, cr, np.mean(ast.literal_eval(metrics["val_acc"])))
             all_params.append(param_value)
             all_cr.append(cr)
             print(metrics)
-            val_acc = ast.literal_eval(metrics["val_acc"])[0]
-            val_loss = ast.literal_eval(metrics["val_loss"])[0]
+            val_acc = ast.literal_eval(metrics["val_acc"])
+            val_loss = ast.literal_eval(metrics["val_loss"])
             all_val_acc.append(val_acc)
             m = next(marker)
             axes[0].plot(np.arange(0, len(val_acc)),
@@ -64,8 +65,6 @@ def plot_compression_metrics(results: list, params: list, baseline: str):
             axes[1].scatter([param_value], [cr], label=f"{param}: {param_value}", marker=m)
             axes[2].scatter(cr, np.mean(val_acc), marker=m, label=f"{param}: {param_value}")
 
-
-
     axes[2].set_xlabel('Compression Rate')
     axes[2].set_ylabel('Validation Accuracy')
     axes[2].set_title('Validation Accuracy vs Compression Rate', fontsize=10)
@@ -73,12 +72,14 @@ def plot_compression_metrics(results: list, params: list, baseline: str):
     axes[3].legend()
     axes[3].set_title("Validation Loss", fontsize=10)
 
+    all_params, all_cr = zip(*sorted(zip(all_params, all_cr)))
     axes[1].plot(all_params, all_cr, alpha=0.2)
     axes[1].legend()
     axes[1].set_title("Compression Rate", fontsize=10)
 
     axes[0].set_title("Validation Accuracy", fontsize=10)
     axes[0].legend()
+    plt.suptitle(title)
     plt.tight_layout()
     plt.show()
 
@@ -92,21 +93,17 @@ if __name__ == "__main__":
         1. CR - Val Acc
         2. CR - Val Loss
     """
-    # plot_compression_metrics(["training_SGD_TopK_mnist_08_05_22_45.json",
-    #                           "training_SGD_TopK_mnist_08_05_22_48.json",
-    #                           "training_SGD_TopK_mnist_08_05_23_07.json",
-    #                           "training_SGD_TopK_mnist_08_05_23_10.json",
-    #                           "training_SGD_TopK_mnist_08_05_22_52.json",
-    #
-    #                           ],
-    #                          ["k"],
-    #                          'training_SGD_mnist_08_05_22_42.json')
+    # plot_compression_metrics(["max_iter"],
+    #                          "GradientSparsification",
+    #                          'training_SGD_mnist_08_07_00_18.json')
 
-    plot_compression_metrics(["training_SGD_vqSGD_mnist_08_06_23_30.json",
-                                "training_SGD_vqSGD_mnist_08_06_23_37.json"
-                              ],
-                             ["repetition"],
-                             'training_SGD_mnist_08_05_22_42.json')
+    plot_compression_metrics(["repetition"],
+                             "vqsgd",
+                             'training_SGD_mnist_08_07_00_18.json')
+
+    # plot_compression_metrics(["k"],
+    #                           "topk",
+    #                          'training_SGD_mnist_08_07_00_18.json')
 
     compression_dict = {
         'SGD': 1,

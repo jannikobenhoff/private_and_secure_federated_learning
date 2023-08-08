@@ -16,12 +16,14 @@ class Strategy(optimizer_v2.OptimizerV2):
             learning_rate=0.01,
             momentum=0.0,
             optimizer="sgd",
+            params=None,
             compression=None,
             nesterov=False,
             name="Strategy",
             **kwargs,
     ):
         super().__init__(name, **kwargs)
+
         self._set_hyper("learning_rate", kwargs.get("lr", learning_rate))
         self._set_hyper("decay", self._initial_decay)
         self._momentum = False
@@ -48,9 +50,13 @@ class Strategy(optimizer_v2.OptimizerV2):
         if self.optimizer_name == "efsignsgd":
             self.optimizer = EFsignSGD(learning_rate=learning_rate)
         if self.optimizer_name == "fetchsgd":
-            self.optimizer = FetchSGD(learning_rate=learning_rate)  # variables missing
+            self.optimizer = FetchSGD(learning_rate=learning_rate, c=params["c"], r=params["r"],
+                                      momentum=params["momentum"])
         if self.optimizer_name == "memsgd":
-            self.optimizer = MemSGD(learning_rate=learning_rate, top_k=10)  # variables missing
+            if params["top_k"] == "None":
+                self.optimizer = MemSGD(learning_rate=learning_rate, rand_k=params["rand_k"])
+            else:
+                self.optimizer = MemSGD(learning_rate=learning_rate, top_k=params["top_k"])
 
     def _create_slots(self, var_list):
         if self._momentum:

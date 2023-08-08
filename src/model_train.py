@@ -81,7 +81,7 @@ def strategy_factory(**params) -> Strategy:
         return Strategy(learning_rate=params["learning_rate"],
                         compression=Atomo(sparsity_budget=params["sparsity_budget"]))
     elif params["compression"].lower() == "none":
-        return Strategy(learning_rate=params["learning_rate"],
+        return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=None, optimizer=params["optimizer"].lower())
 
 

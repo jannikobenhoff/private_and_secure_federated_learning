@@ -5,7 +5,7 @@ python model_train.py --model LeNet --dataset mnist \
       --stop_patience=20 \
       --lambda_l2=0.0075632494949532695 \
       --log=1 \
-      --strategy='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.01, "k": 1}'
+      --strategy='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.01, "k": 2}'
 
 python model_train.py --model LeNet --dataset mnist \
       --epochs=20 \
@@ -14,7 +14,7 @@ python model_train.py --model LeNet --dataset mnist \
       --lambda_l2=0.0075632494949532695 \
       --stop_patience=20 \
       --log=1 \
-      --strategy='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.01, "k": 10}'
+      --strategy='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.01, "k": 3}'
 
 python model_train.py --model LeNet --dataset mnist \
       --epochs=20 \
@@ -23,7 +23,7 @@ python model_train.py --model LeNet --dataset mnist \
       --lambda_l2=0.0075632494949532695 \
       --stop_patience=20 \
       --log=1 \
-      --strategy='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.01, "k": 100}'
+      --strategy='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.01, "k": 5}'
 
 python model_train.py --model LeNet --dataset mnist \
       --epochs=20 \
@@ -32,4 +32,4 @@ python model_train.py --model LeNet --dataset mnist \
       --lambda_l2=0.0075632494949532695 \
       --stop_patience=20 \
       --log=1 \
-      --strategy='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.01, "k": 200}'
+      --strategy='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.01, "k": 7}'

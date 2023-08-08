@@ -100,16 +100,36 @@
 #      --log=1 \
 #      --strategy='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.01, "k": 10}'
 
+python model_train.py --model LeNet --dataset mnist \
+      --epochs=200 \
+      --n_calls=10 \
+      --k_fold=5 \
+      --fullset=1 \
+      --stop_patience=15 \
+      --bayesian_search \
+      --log=1 \
+      --strategy='{"optimizer": "fetchsgd", "compression": "None", "learning_rate": 0.01, "c": 10000, "r": 1 , "momentum": 0.9}'
+
 
 python model_train.py --model LeNet --dataset mnist \
       --epochs=200 \
       --n_calls=10 \
       --k_fold=5 \
-      --fullset=10 \
+      --fullset=1 \
       --stop_patience=15 \
       --bayesian_search \
       --log=1 \
-      --strategy='{"optimizer": "memsgd", "compression": "None", "learning_rate": 0.01}'
+      --strategy='{"optimizer": "memsgd", "compression": "None", "learning_rate": 0.01, "top_k": 10, "rand_k": "None"}'
+
+python model_train.py --model LeNet --dataset mnist \
+      --epochs=200 \
+      --n_calls=10 \
+      --k_fold=5 \
+      --fullset=1 \
+      --stop_patience=15 \
+      --bayesian_search \
+      --log=1 \
+      --strategy='{"optimizer": "efsignsgd", "compression": "None", "learning_rate": 0.01}'
 
 
 #python model_train.py --model LeNet --dataset mnist \
