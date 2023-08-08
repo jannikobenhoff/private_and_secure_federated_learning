@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 import json
 
-from keras.callbacks import EarlyStopping
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import KFold
@@ -136,11 +136,15 @@ def worker(args):
                 model.compile(optimizer=strategy,
                               loss='sparse_categorical_crossentropy',
                               metrics=['accuracy'])
+
                 early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
+                reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
+                                              patience=5, min_lr=0.001)
 
                 history = model.fit(train_images, train_labels, epochs=args.epochs,
                                     batch_size=32,
-                                    validation_data=(val_images, val_labels), verbose=args.log, callbacks=[early_stopping])
+                                    validation_data=(val_images, val_labels), verbose=args.log,
+                                    callbacks=[early_stopping, reduce_lr])
 
                 training_acc_per_epoch[k_step].append(history.history['accuracy'])
                 validation_acc_per_epoch[k_step].append(history.history['val_accuracy'])
