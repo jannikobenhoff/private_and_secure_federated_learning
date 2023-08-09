@@ -9,7 +9,7 @@ class NaturalCompression(Compression):
         super().__init__(name=name)
         self.clip_max = clip_max
         self.clip_min = clip_min
-        self.compression_rate = None
+        self.compression_rates = []
 
     def build(self, var_list):
         """Initialize optimizer variables.
@@ -20,8 +20,7 @@ class NaturalCompression(Compression):
         """
         if hasattr(self, "_built") and self._built:
             return
-        self.compression_rate = var_list[0].dtype.size
-
+        self.compression_rates.append(var_list[0].dytpe.size)
         self._built = True
 
     def compress(self, gradient: Tensor, variable) -> Tensor:

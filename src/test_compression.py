@@ -13,7 +13,6 @@ from sklearn.model_selection import KFold
 from keras import models, layers, regularizers
 
 from src.compressions.Atomo import Atomo
-from src.compressions.ScaleCom import ScaleCom
 from src.compressions.vqSGD import vqSGD
 from src.optimizer.FetchSGD import FetchSGD
 from src.optimizer.EFsignSGD import EFsignSGD
@@ -27,10 +26,13 @@ from src.compressions.TopK import TopK
 from src.optimizer.SGD import SGD
 from src.plots.plot_training_result import plot_training_result
 from src.utilities.datasets import load_dataset
-from src.utilities.strategy import Strategy
+from strategy import Strategy
 
 
 if __name__ == "__main__":
+    a = json.load(open("results/lambda_lookup.json", "r"))
+    json.dump(a, open("results/lambda_lookup.json", "w"), indent=5)
+
     tf.config.set_visible_devices([], 'GPU')
     tf.config.run_functions_eagerly(run_eagerly=True)
     tf.data.experimental.enable_debug_mode()

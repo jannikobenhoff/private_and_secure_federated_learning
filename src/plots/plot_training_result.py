@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from src.compressions.OneBitSGD import OneBitSGD
-from src.utilities.strategy import Strategy
+from ..strategy import Strategy
 
 
 def plot_training_result(train_acc, train_loss, val_acc, val_loss, title, filename, save=False):

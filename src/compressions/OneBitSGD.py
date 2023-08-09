@@ -10,7 +10,7 @@ class OneBitSGD(Compression):
     def __init__(self, name="OneBitSGD"):
         super().__init__(name=name)
         self.quantization_threshold = 0
-        self.compression_rate = None
+        self.compression_rates = []
 
     def build(self, var_list):
         """Initialize optimizer variables.
@@ -27,7 +27,7 @@ class OneBitSGD(Compression):
             self.error[var.ref()] = self.add_variable_from_reference(
                 model_variable=var, variable_name="error", initial_value=tf.zeros_like(var)
             )
-        self.compression_rate = var_list[0].dtype.size*8
+        self.compression_rates.append(var_list[0].dytpe.size*8)
         self._built = True
 
     def compress(self, gradient: Tensor, variable):

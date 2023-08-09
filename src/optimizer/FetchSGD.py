@@ -21,6 +21,7 @@ class FetchSGD(Optimizer):
         self.momentum = momentum
         self.r = r
         self.c = c
+        self.compression_rates = []
 
 
     def build(self, var_list):
@@ -48,10 +49,13 @@ class FetchSGD(Optimizer):
         self._built = True
 
     def update_step(self, gradient: Tensor, variable) -> Tensor:
+        """
+        Compression rate based on c and r.
+        """
         input_shape = gradient.shape
 
         d = tf.reshape(gradient, [-1]).shape[0]
-        cs = CSVec(d, self.c, self.r)
+        cs = CSVec(d=d, c=self.c, r=self.r)
 
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
         momentum = tf.cast(self.momentum, variable.dtype.base_dtype)
@@ -61,6 +65,10 @@ class FetchSGD(Optimizer):
 
         # Create sketch
         cs.accumulateVec(tf.reshape(gradient, [-1]).numpy())
+        # Access sketch
+        sketch = cs.table
+        self.compression_rates.append(gradient.dtype.size*8*np.prod(gradient.shape.as_list())/ self.get_sparse_tensor_size_in_bits(tf.convert_to_tensor(sketch.numpy(), dtype=gradient.dtype)))
+        # print(np.mean(self.compression_rates), gradient.dtype.size*8*np.prod(gradient.shape.as_list())/d*(10+32))
 
         if momentum > 0:
             # Momentum
@@ -102,6 +110,14 @@ class FetchSGD(Optimizer):
             }
         )
         return config
+
+    @staticmethod
+    def get_sparse_tensor_size_in_bits(tensor):
+        num_nonzero_entries = tf.math.count_nonzero(tensor)
+        num_index_bits = np.ceil(np.log2(len(tf.reshape(tensor, [-1]))))
+        num_value_bits = tensor.dtype.size * 8
+        return num_nonzero_entries.numpy() * (num_index_bits + num_value_bits) if num_nonzero_entries.numpy() * (
+                num_index_bits + num_value_bits) != 0 else 1
 
 
 class CSVec(object):

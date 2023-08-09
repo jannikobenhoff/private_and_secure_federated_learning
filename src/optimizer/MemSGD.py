@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 from keras.optimizers.optimizer import Optimizer
 from tensorflow import Tensor
@@ -15,6 +16,7 @@ class MemSGD(Optimizer):
             raise "Please select a sparsification method, top-k or random-k."
         self.top_k = top_k
         self.rand_k = rand_k
+        self.compression_rates = []
 
     def build(self, var_list):
         """Initialize optimizer variables.
@@ -51,7 +53,7 @@ class MemSGD(Optimizer):
         else:
             g = self.top_k_sparsification(input_tensor=m + lr * gradient,
                                           k=self.top_k)
-
+        self.compression_rates.append(gradient.dtype.size*8*np.prod(gradient.shape.as_list())/self.get_sparse_tensor_size_in_bits(g))
         self.memory[self._index_dict[var_key]].assign(m+lr*gradient-g)
         # variable.assign_add(-g)
         return g
@@ -108,3 +110,11 @@ class MemSGD(Optimizer):
             }
         )
         return config
+
+    @staticmethod
+    def get_sparse_tensor_size_in_bits(tensor):
+        num_nonzero_entries = tf.math.count_nonzero(tensor)
+        num_index_bits = np.ceil(np.log2(len(tf.reshape(tensor, [-1]))))
+        num_value_bits = tensor.dtype.size * 8
+        return num_nonzero_entries.numpy() * (num_index_bits + num_value_bits) if num_nonzero_entries.numpy() * (
+                num_index_bits + num_value_bits) != 0 else 1

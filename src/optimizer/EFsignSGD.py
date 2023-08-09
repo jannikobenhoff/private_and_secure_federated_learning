@@ -7,7 +7,7 @@ class EFsignSGD(Optimizer):
     def __init__(self, learning_rate, name="EFsignSGD"):
         super().__init__(name=name)
         self._learning_rate = self._build_learning_rate(learning_rate)
-
+        self.compression_rates = []
     def build(self, var_list):
         """Initialize optimizer variables.
 
@@ -26,9 +26,14 @@ class EFsignSGD(Optimizer):
                     model_variable=var, variable_name="error"
                 )
             )
+        self.compression_rates.append(var_list[0].dtype.size*8)
         self._built = True
 
     def update_step(self, gradient: Tensor, variable) -> Tensor:
+        """
+        Send sign(p_t) and norm(p_t)
+        -> compression rate like signSGD + bits for norm
+        """
         var_key = self._var_key(variable)
 
         lr = tf.cast(self.lr, variable.dtype.base_dtype)

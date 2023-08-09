@@ -37,6 +37,7 @@ def parse_args():
     parser.add_argument('--epochs', type=int, help='Epochs')
     parser.add_argument('--n_calls', type=int, help='Bayesian Search iterations')
     parser.add_argument('--stop_patience', type=int, help='Early stopping patience')
+    parser.add_argument('--lr_decay', type=int, help='Lr decay')
     parser.add_argument('--k_fold', type=int, help='K-Fold')
     parser.add_argument('--lambda_l2', type=float, help='L2 regularization lambda')
     parser.add_argument('--fullset', type=float, help='% of dataset')
@@ -56,33 +57,50 @@ def model_factory(model_name, lambda_l2, input_shape, num_classes):
 
 def strategy_factory(**params) -> Strategy:
     if params["compression"].lower() == "terngrad":
-        return Strategy(learning_rate=params["learning_rate"],
+        return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=TernGrad(params["clip"]))
     elif params["compression"].lower() == "naturalcompression":
-        return Strategy(learning_rate=params["learning_rate"],
+        return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=NaturalCompression())
     elif params["compression"].lower() == "gradientsparsification":
-        return Strategy(learning_rate=params["learning_rate"],
+        return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=GradientSparsification(max_iter=params["max_iter"], k=params["k"]))
     elif params["compression"].lower() == "onebitsgd":
-        return Strategy(learning_rate=params["learning_rate"],
+        return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=OneBitSGD())
     elif params["compression"].lower() == "sparsegradient":
-        return Strategy(learning_rate=params["learning_rate"],
+        return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=SparseGradient(drop_rate=params["drop_rate"]))
     elif params["compression"].lower() == "topk":
-        return Strategy(learning_rate=params["learning_rate"],
+        return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=TopK(k=params["k"]))
     elif params["compression"].lower() == "vqsgd":
-        return Strategy(learning_rate=params["learning_rate"],
+        return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=vqSGD(repetition=params["repetition"]))
     elif params["compression"].lower() == "atomo":
         # not working yet
-        return Strategy(learning_rate=params["learning_rate"],
+        return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=Atomo(sparsity_budget=params["sparsity_budget"]))
     elif params["compression"].lower() == "none":
         return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=None, optimizer=params["optimizer"].lower())
+
+
+def get_l2_lambda(**params) -> float:
+    lambdas = json.load(open("results/lambda_lookup.json", "r"))
+    opt = params["optimizer"]
+    comp = params["compression"]
+    if (opt == "efsignsgd" or opt == "sgd") and comp == "none":
+        return lambdas[opt][comp]
+    keys = [k for k in params.keys() if k != "compression" and k != "optimizer" and k != "learning_rate"]
+    first_key = list(lambdas[opt][comp].keys())[0]
+    first_key_value = lambdas[opt][comp][first_key][str(params[first_key])]
+    if type(first_key_value) != float:
+        second_key = list(first_key_value.keys())[0]
+        if second_key in keys:
+            second_key_value = first_key_value[second_key][str(params[second_key])]
+            return second_key_value
+    return first_key_value
 
 
 def worker(args):
@@ -98,7 +116,7 @@ def worker(args):
 
     if args.bayesian_search:
         print("Bayesian Search")
-        search_space = [Real(1e-5, 1e-1, "log-uniform", name='lambda_l2')]
+        search_space = [Real(1e-5, 1e0, "log-uniform", name='lambda_l2')]
         train_loss = []
         val_loss = []
         val_acc = []
@@ -108,6 +126,7 @@ def worker(args):
 
         strategy = strategy_factory(**strategy_params)
         strategy.summary()
+        print(strategy.get_file_name())
 
         @use_named_args(search_space)
         def objective(**params):
@@ -138,13 +157,14 @@ def worker(args):
                               metrics=['accuracy'])
 
                 early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
-                reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
-                                              patience=5, min_lr=0.001)
+                # reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
+                #                               patience=max(5, args.stop_patience - 5),
+                #                               min_lr=strategy_params["learning_rate"]/20)
 
                 history = model.fit(train_images, train_labels, epochs=args.epochs,
                                     batch_size=32,
                                     validation_data=(val_images, val_labels), verbose=args.log,
-                                    callbacks=[early_stopping, reduce_lr])
+                                    callbacks=[early_stopping])
 
                 training_acc_per_epoch[k_step].append(history.history['accuracy'])
                 validation_acc_per_epoch[k_step].append(history.history['val_accuracy'])
@@ -277,7 +297,8 @@ def worker(args):
 
     else:
         print("Training")
-
+        lambda_l2 = get_l2_lambda(**strategy_params)
+        print("Using L2 lambda:", lambda_l2)
         if args.k_fold > 1:
             kf = KFold(n_splits=args.k_fold, shuffle=True)
 
@@ -293,7 +314,7 @@ def worker(args):
                 train_labels, val_labels = label_train[train_index], label_train[val_index]
                 k_step += 1
 
-                model = model_factory(args.model.lower(), args.lambda_l2, input_shape, num_classes)
+                model = model_factory(args.model.lower(), lambda_l2, input_shape, num_classes)
 
                 strategy = strategy_factory(**strategy_params)
                 strategy.summary()
@@ -307,6 +328,11 @@ def worker(args):
                     early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
                     callbacks = [early_stopping]
 
+                reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
+                                              patience=args.lr_decay,
+                                              min_lr=strategy_params["learning_rate"] / 20)
+                callbacks.append(reduce_lr)
+
                 history = model.fit(train_images, train_labels, epochs=args.epochs,
                                     batch_size=32,
                                     validation_data=(val_images, val_labels), verbose=args.log, callbacks=callbacks)
@@ -319,7 +345,7 @@ def worker(args):
         else:
             compression_rates = []
 
-            model = model_factory(args.model.lower(), args.lambda_l2, input_shape, num_classes)
+            model = model_factory(args.model.lower(), lambda_l2, input_shape, num_classes)
 
             strategy = strategy_factory(**strategy_params)
             strategy.summary()
@@ -333,6 +359,11 @@ def worker(args):
                 early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
                 callbacks = [early_stopping]
 
+            reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
+                                          patience=args.lr_decay,
+                                          min_lr=strategy_params["learning_rate"] / 20)
+            callbacks.append(reduce_lr)
+
             history = model.fit(img_train, label_train, epochs=args.epochs,
                                 batch_size=32,
                                 validation_data=(img_test, label_test), verbose=args.log, callbacks=callbacks)
@@ -343,6 +374,9 @@ def worker(args):
             validation_losses_per_epoch = history.history['val_loss']
             if strategy.compression is not None:
                 compression_rates = [np.mean(strategy.compression.compression_rates)]
+            elif strategy.optimizer_name != "sgd":
+                compression_rates = [np.mean(strategy.optimizer.compression_rates)]
+
         metrics = {
             "training_loss": str(training_losses_per_epoch),
             "training_acc": str(training_acc_per_epoch),
@@ -391,3 +425,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # print(get_l2_lambda(**{"optimizer": "sgd", "compression": "gradientsparsification", "learning_rate": 0.01, "k": 0.02,"max_iter": 2}))
+    # print(get_l2_lambda(**{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.01, "k": 1}))

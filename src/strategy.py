@@ -45,7 +45,7 @@ class Strategy(optimizer_v2.OptimizerV2):
             )
         self._set_hyper("momentum", momentum)
         self.nesterov = nesterov
-
+        self.params = params
         self.optimizer = None
         if self.optimizer_name == "efsignsgd":
             self.optimizer = EFsignSGD(learning_rate=learning_rate)
@@ -197,14 +197,17 @@ class Strategy(optimizer_v2.OptimizerV2):
 
     def get_file_name(self):
         if self.compression is None:
-            return self.optimizer_name.upper()
-
+            add_on = ""
+            for key in self.params.keys():
+                if key != 'optimizer' and key != 'compression' and key != 'learning_rate':
+                    add_on += "_" + key + str(self.params[key])
+            return "{}{}".format(self.optimizer_name.upper(), add_on)
         else:
-            try:
-                return "{}_{}".format(self.optimizer_name.upper(), self.compression.name)
-            except AttributeError:
-                return "{}_{}".format(self.optimizer_name.upper(),
-                                      self.compression.name)
+            add_on = ""
+            for key in self.params.keys():
+                if key != 'optimizer' and key != 'compression' and key != 'learning_rate':
+                    add_on += "_" + key + str(self.params[key])
+            return "{}_{}{}".format(self.optimizer_name.upper(), self.compression.name, add_on)
 
     # class Strategy:
     #     def __init__(self, optimizer, compression=None):

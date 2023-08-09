@@ -8,10 +8,12 @@ from sklearn.model_selection import KFold
 from skopt.plots import plot_gaussian_process
 from skopt import gp_minimize
 from skopt.utils import use_named_args
-from skopt.space import Real
+from skopt.space import Real, Integer
 from keras.utils import get_custom_objects
 
 from models.LeNet import LeNet
+from src.compressions.TopK import TopK
+from src.models.ResNet import ResNet
 from utilities.datasets import load_dataset
 from strategy import Strategy
 
@@ -24,13 +26,15 @@ if __name__ == "__main__":
     tf.config.run_functions_eagerly(run_eagerly=True)
     tf.data.experimental.enable_debug_mode()
 
-    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("mnist", fullset=1)  # 10
-    get_custom_objects().update({"strategy": Strategy})
+    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("mnist", fullset=10)  # 10
+    # get_custom_objects().update({"strategy": Strategy})
 
-    space = [Real(1e-7, 1e-1, "log-uniform", name='l2_reg')]
+    # space = [Real(1e-5, 1e-1, "log-uniform", name='l2_reg')]
+    space = [Real(1, 200, "uniform", name='l2_reg')]
 
     @use_named_args(space)
     def objective(**params):
+        params["l2_reg"] = int(params["l2_reg"])
         print("Lambda: ", params["l2_reg"])
         validation_acc_list = []
         val_loss_list = []
@@ -40,16 +44,17 @@ if __name__ == "__main__":
             train_images, val_images = img_train[train_index], img_train[val_index]
             train_labels, val_labels = label_train[train_index], label_train[val_index]
 
-            model = LeNet(search=True).search_model(params["l2_reg"])
+            # model = ResNet().search_model(lambda_l2=params["l2_reg"], input_shape=input_shape, num_classes=num_classes)
+            model = LeNet(search=True).search_model(lambda_l2=None)
 
-            opt = Strategy(compression=None, learning_rate=0.01)
+            opt = Strategy(compression=TopK(k=params["l2_reg"]), learning_rate=0.01)
             model.compile(optimizer=opt,
                           loss='sparse_categorical_crossentropy',
                           metrics=['accuracy'])
 
-            early_stopping = EarlyStopping(monitor='val_loss', patience=30, verbose=1)
+            early_stopping = EarlyStopping(monitor='val_loss', patience=20, verbose=1)
 
-            history = model.fit(train_images, train_labels, epochs=200, batch_size=32,
+            history = model.fit(train_images, train_labels, epochs=50, batch_size=32,
                                 validation_data=(val_images, val_labels), verbose=2, callbacks=[early_stopping])
 
             validation_acc = np.mean(history.history['val_accuracy'])

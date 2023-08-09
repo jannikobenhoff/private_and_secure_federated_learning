@@ -42,6 +42,8 @@ class vqSGD(Compression):
         """
         input_shape = gradient.shape
         gradient = tf.where(tf.math.is_nan(gradient), 0., gradient)
+        #print(gradient.numpy()[0:5])
+
         l2 = tf.norm(gradient, ord=2)  # tf.sqrt(tf.reduce_sum(tf.square(gradient)) + 1.0e-12)
         if l2 != 0:
             gradient = tf.reshape(gradient, [-1]) / l2
@@ -74,9 +76,12 @@ class vqSGD(Compression):
             else:
                 compressed_gradient[index] += d_sqrt
 
+        #print(sum(compressed_gradient))
+
         compressed_gradient = tf.reshape(compressed_gradient, input_shape) / self.s
         compressed_gradient = tf.cast(compressed_gradient, dtype=variable.dtype)
         self.compression_rates.append((len(gradient)*32/self.get_sparse_tensor_size_in_bits(compressed_gradient)))
+
         return compressed_gradient * l2
 
     @staticmethod
