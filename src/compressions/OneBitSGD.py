@@ -27,7 +27,7 @@ class OneBitSGD(Compression):
             self.error[var.ref()] = self.add_variable_from_reference(
                 model_variable=var, variable_name="error", initial_value=tf.zeros_like(var)
             )
-        self.compression_rates.append(var_list[0].dytpe.size*8)
+        self.compression_rates.append(var_list[0].dtype.size*8)
         self._built = True
 
     def compress(self, gradient: Tensor, variable):

@@ -20,7 +20,7 @@ class NaturalCompression(Compression):
         """
         if hasattr(self, "_built") and self._built:
             return
-        self.compression_rates.append(var_list[0].dytpe.size)
+        self.compression_rates.append(var_list[0].dtype.size)
         self._built = True
 
     def compress(self, gradient: Tensor, variable) -> Tensor:

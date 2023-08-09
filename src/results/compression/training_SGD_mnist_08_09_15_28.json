@@ -17,5 +17,5 @@
         "log": 2,
         "bayesian_search": false
     },
-    "compression_rates": []
+    "compression_rates": [1]
 }

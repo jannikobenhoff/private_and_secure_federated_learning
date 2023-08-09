@@ -7,7 +7,21 @@ import matplotlib.pyplot as plt
 import itertools
 
 
-def plot_compression_rates(compression_dict):
+def plot_compression_rates():
+    compression_dict = {
+        'SGD': 1,
+        'Gradient Sparsification (k=0.02)': 225,
+        'Natural Compression': 4,
+        '1-Bit SGD': 32,
+        'Sparse Gradient (R=90%)': 7.4,
+        'TernGrad': np.log2(3),
+        'Top-K (k=10)': 306.3,
+        'vqSGD (s=200)': 7.7,
+        'EFsignSGD': 32,
+        'FetchSGD': "1-50",
+        'MemSGD (k=10)': 306.3
+    }
+
     fig, ax = plt.subplots()
 
     table_data = [[name, rate] for name, rate in compression_dict.items()]
@@ -31,7 +45,20 @@ def plot_compression_rates(compression_dict):
     plt.savefig("compression_rates.pdf")
 
 
-def plot_compression_metrics(params: list, title: str, baseline: str):
+def plot_compression_metrics(title: str):
+    baseline = 'training_SGD_mnist_08_07_00_18.json'
+    plot_configs = {
+        "gradientsparsification": ["max_iter", "k"],
+        "fetchsgd": ["c"],
+        "sparsegradient": ["drop_rate"],
+        "vqsgd": ["repetition"],
+        "topk": ["k"],
+        "memsgd": ["top_k"],
+        "naturalcompression": [],
+        "EFsignSGD": [],
+        "OneBitSGD": []
+    }
+    params = plot_configs[title]
     marker = itertools.cycle(('s', '+', 'v', 'o', '*'))
 
     base = open("../results/compression/" + baseline, "r")
@@ -39,36 +66,37 @@ def plot_compression_metrics(params: list, title: str, baseline: str):
     fig, axes = plt.subplots(2, 2, figsize=(10, 7))
     axes = axes.flatten()
 
-    # Gathering data
-    all_params = [-100]
+    all_params = [[-100]]
     all_cr = [1]
     all_val_acc = [np.mean(ast.literal_eval(baseline_metrics["val_acc"]))]
     all_val_loss = [ast.literal_eval(baseline_metrics["val_loss"])]
     all_val_acc_plots = [ast.literal_eval(baseline_metrics["val_acc"])]
 
-
-    for res in sorted(os.listdir("../results/compression/" + title + "/")):
-        for param in params:
-            file = open("../results/compression/" + title + "/" + res, "r")
-            metrics = json.load(file)
-            param_value = ast.literal_eval(metrics["args"]["strategy"])[param]
-            all_params.append(param_value)
-            all_cr.append(np.mean(metrics["compression_rates"]))
-            all_val_acc.append(np.mean(ast.literal_eval(metrics["val_acc"])))
-            all_val_acc_plots.append(ast.literal_eval(metrics["val_acc"]))
-            all_val_loss.append(ast.literal_eval(metrics["val_loss"]))
+    for res in os.listdir("../results/compression/" + title):
+        file = open("../results/compression/" + title + "/" + res, "r")
+        metrics = json.load(file)
+        param_value = []
+        if len(params) > 0:
+            for param in params:
+                param_value.append(ast.literal_eval(metrics["args"]["strategy"])[param])
             print(param_value, "lr:", ast.literal_eval(metrics["args"]["strategy"])["learning_rate"])
+        else:
+            all_params.append(title)
+        all_params.append(param_value)
+        all_cr.append(np.mean(metrics["compression_rates"]))
+        all_val_acc.append(np.mean(ast.literal_eval(metrics["val_acc"])))
+        all_val_acc_plots.append(ast.literal_eval(metrics["val_acc"]))
+        all_val_loss.append(ast.literal_eval(metrics["val_loss"]))
 
-    # Sorting data by parameter
-    all_params, all_cr, all_val_acc, all_val_loss, all_val_acc_plots = zip(
-        *sorted(zip(all_params, all_cr, all_val_acc, all_val_loss, all_val_acc_plots)))
-    all_params, all_cr, all_val_acc, all_val_loss, all_val_acc_plots = list(all_params), list(all_cr), list(all_val_acc), list(all_val_loss), list(all_val_acc_plots)
-    # all_params.append(["baseline"])
-    # all_cr.append([1])
-    # all_val_acc.append([round(100 * np.mean(ast.literal_eval(baseline_metrics["val_acc"])), 2)])
-    # all_val_loss.append([ast.literal_eval(baseline_metrics["val_loss"])])
-    # all_val_acc_plots.append([ast.literal_eval(baseline_metrics["val_acc"])])
-    # Plotting data
+    if len(params) > 0:
+        # Sorting data by parameter
+        all_params, all_cr, all_val_acc, all_val_loss, all_val_acc_plots = zip(
+            *sorted(zip(all_params, all_cr, all_val_acc, all_val_loss, all_val_acc_plots)))
+        all_params, all_cr, all_val_acc, all_val_loss, all_val_acc_plots = list(all_params), list(all_cr), list(
+            all_val_acc), list(all_val_loss), list(all_val_acc_plots)
+
+        all_params = [" ".join([str(p) for p in param_value]) for param_value in all_params]
+
     for param, cr, val_acc, val_loss, val_acc_plot, m in zip(all_params[1:], all_cr[1:], all_val_acc[1:],
                                                              all_val_loss[1:], all_val_acc_plots[1:], marker):
         axes[0].plot(np.arange(0, len(val_acc_plot)), val_acc_plot, marker=m, label=f"{param}")
@@ -82,7 +110,7 @@ def plot_compression_metrics(params: list, title: str, baseline: str):
 
     # Table data
     table_data = [[name, round(rate, 2), str(round(100 * acc, 2)) + " %"] for name, rate, acc in
-                  zip(all_params, all_cr, all_val_acc) if name != -100]
+                  zip(all_params, all_cr, all_val_acc) if name != "-100" and name != [-100]]
     table_data.append(["baseline", "1", str(round(100 * all_val_acc[0], 2)) + " %"])
     table = axes[1].table(cellText=table_data,
                           colLabels=[params, "Compression Rate", "Val Accuracy"],
@@ -120,44 +148,77 @@ def plot_compression_metrics(params: list, title: str, baseline: str):
     plt.show()
 
 
+def plot_compare_all():
+    def get_all_files_in_directory(root_path):
+        all_files = []
+        for subdir, dirs, files in os.walk(root_path):
+            for file_name in files:
+                file_path = os.path.join(subdir, file_name)
+                all_files.append(file_path)
+        return all_files
+
+    directory_path = '../results/compression/'
+    all_files = get_all_files_in_directory(directory_path)
+
+    all_acc = {}
+    all_cr = {}
+    for file_path in all_files:
+        file = open(file_path, "r")
+        file = json.load(file)
+        strat = ast.literal_eval(file["args"]["strategy"])
+        if strat["optimizer"] + " " + strat["compression"] in all_acc:
+            if all_acc[strat["optimizer"] + " " + strat["compression"]][1] < np.mean(ast.literal_eval(file["val_acc"])):
+                all_acc[strat["optimizer"] + " " + strat["compression"]] = [file["compression_rates"][0],
+                                                                            np.mean(ast.literal_eval(file["val_acc"]))]
+        else:
+            all_acc[strat["optimizer"] + " " + strat["compression"]] = [file["compression_rates"][0],
+                                                                        np.mean(ast.literal_eval(file["val_acc"]))]
+        if strat["optimizer"] + " " + strat["compression"] in all_cr:
+            if all_cr[strat["optimizer"] + " " + strat["compression"]][0] < np.mean(file["compression_rates"]):
+                all_cr[strat["optimizer"] + " " + strat["compression"]] = [file["compression_rates"][0],
+                                                                           np.mean(ast.literal_eval(file["val_acc"]))]
+        else:
+            all_cr[strat["optimizer"] + " " + strat["compression"]] = [file["compression_rates"][0],
+                                                                       np.mean(ast.literal_eval(file["val_acc"]))]
+
+    marker = itertools.cycle(('s', '+', 'v', 'o', '*'))
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    for a in all_acc:
+        m = next(marker)
+        axes[0].scatter(all_acc[a][0], all_acc[a][1], label=a.replace("none", "") if a[-4:] == "none" else a[4:],
+                        marker=m)
+        axes[1].scatter(all_cr[a][0], all_cr[a][1], label=a.replace("none", "") if a[-4:] == "none" else a[4:],
+                        marker=m)
+    axes[0].grid(alpha=0.2)
+    axes[0].set_title("Max Validation Acc")
+    axes[1].grid(alpha=0.2)
+    axes[1].set_title("Max Compression Rate")
+    axes[0].legend(fontsize=8)
+
+    table_data = [[name.replace("none", "") if name[-4:] == "none" else name[4:], str(round(100 * rate[1], 2)) + "%",
+                   round(rate[0], 2)] for name, rate in all_acc.items()]
+    table = axes[2].table(cellText=table_data,
+                          colLabels=["Method", "Val Acc", "Compression Rate"],
+                          cellLoc='center',
+                          loc='center')
+
+    axes[2].axis('off')
+
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1.1, 1.6)
+
+    for (row, col), cell in table.get_celld().items():
+        if row == 0:
+            cell.set_fontsize(10)
+            cell._text.set_weight('bold')
+    plt.tight_layout()
+    plt.show()
+
+
 if __name__ == "__main__":
-    """
-    - baseline model mit l2 regularization
-    - training over epochs mit k-val und early stopping
-    - 5 different param sets
-    - 2 plots
-        1. CR - Val Acc
-        2. CR - Val Loss
-    """
-    # plot_compression_metrics(["max_iter"],
-    #                          "GradientSparsification",
-    #                          'training_SGD_mnist_08_07_00_18.json')
+    # plot_compression_metrics("fetchsgd")
 
-    plot_compression_metrics(["repetition"],
-                             "vqsgd",
-                             'training_SGD_mnist_08_07_00_18.json')
+    plot_compare_all()
 
-    # plot_compression_metrics(["k"],
-    #                          "topk",
-    #                          'training_SGD_mnist_08_07_00_18.json')
-
-    # plot_compression_metrics(["top_k"],
-    #                          "memsgd",
-    #                          'training_SGD_mnist_08_07_00_18.json')
-
-
-    compression_dict = {
-        'SGD': 1,
-        'Gradient Sparsification (k=0.02)': 225,
-        'Natural Compression': 4,
-        '1-Bit SGD': 32,
-        'Sparse Gradient (R=90%)': 7.4,
-        'TernGrad': np.log2(3),
-        'Top-K (k=10)': 306.3,
-        'vqSGD (s=200)': 7.7,
-        'EFsignSGD': 32,
-        'FetchSGD': "1-50",
-        'MemSGD (k=10)': 306.3
-    }
-
-    # plot_compression_rates(compression_dict)
+    # plot_compression_rates()

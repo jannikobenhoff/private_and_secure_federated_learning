@@ -90,11 +90,14 @@ def get_l2_lambda(**params) -> float:
     lambdas = json.load(open("results/lambda_lookup.json", "r"))
     opt = params["optimizer"]
     comp = params["compression"]
-    if (opt == "efsignsgd" or opt == "sgd") and comp == "none":
+
+    if (opt in ["efsignsgd", "sgd"] and comp == "none") or comp in ["onebitsgd", "naturalcompression"]:
         return lambdas[opt][comp]
+
     keys = [k for k in params.keys() if k != "compression" and k != "optimizer" and k != "learning_rate"]
     first_key = list(lambdas[opt][comp].keys())[0]
     first_key_value = lambdas[opt][comp][first_key][str(params[first_key])]
+
     if type(first_key_value) != float:
         second_key = list(first_key_value.keys())[0]
         if second_key in keys:
@@ -298,6 +301,7 @@ def worker(args):
     else:
         print("Training")
         lambda_l2 = get_l2_lambda(**strategy_params)
+        args.lambda_l2 = lambda_l2
         print("Using L2 lambda:", lambda_l2)
         if args.k_fold > 1:
             kf = KFold(n_splits=args.k_fold, shuffle=True)
