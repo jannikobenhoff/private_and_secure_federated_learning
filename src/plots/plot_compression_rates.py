@@ -55,8 +55,8 @@ def plot_compression_metrics(title: str):
         "topk": ["k"],
         "memsgd": ["top_k"],
         "naturalcompression": [],
-        "EFsignSGD": [],
-        "OneBitSGD": []
+        "efsignsgd": [],
+        "onebitsgd": []
     }
     params = plot_configs[title]
     marker = itertools.cycle(('s', '+', 'v', 'o', '*'))
@@ -145,6 +145,7 @@ def plot_compression_metrics(title: str):
     axes[0].legend()
     plt.suptitle(title)
     plt.tight_layout()
+    plt.savefig("../../figures/methods/" + title + ".pdf", bbox_inches='tight')
     plt.show()
 
 
@@ -162,6 +163,7 @@ def plot_compare_all():
 
     all_acc = {}
     all_cr = {}
+    all_loss = {}
     for file_path in all_files:
         file = open(file_path, "r")
         file = json.load(file)
@@ -170,9 +172,12 @@ def plot_compare_all():
             if all_acc[strat["optimizer"] + " " + strat["compression"]][1] < np.mean(ast.literal_eval(file["val_acc"])):
                 all_acc[strat["optimizer"] + " " + strat["compression"]] = [file["compression_rates"][0],
                                                                             np.mean(ast.literal_eval(file["val_acc"]))]
+                all_loss[strat["optimizer"] + " " + strat["compression"]] = ast.literal_eval(file["val_loss"])
         else:
             all_acc[strat["optimizer"] + " " + strat["compression"]] = [file["compression_rates"][0],
                                                                         np.mean(ast.literal_eval(file["val_acc"]))]
+            all_loss[strat["optimizer"] + " " + strat["compression"]] = ast.literal_eval(file["val_loss"])
+
         if strat["optimizer"] + " " + strat["compression"] in all_cr:
             if all_cr[strat["optimizer"] + " " + strat["compression"]][0] < np.mean(file["compression_rates"]):
                 all_cr[strat["optimizer"] + " " + strat["compression"]] = [file["compression_rates"][0],
@@ -182,27 +187,37 @@ def plot_compare_all():
                                                                        np.mean(ast.literal_eval(file["val_acc"]))]
 
     marker = itertools.cycle(('s', '+', 'v', 'o', '*'))
-    fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+    fig, axes = plt.subplots(2, 2, figsize=(10, 10))
+    axes = axes.flatten()
     for a in all_acc:
         m = next(marker)
         axes[0].scatter(all_acc[a][0], all_acc[a][1], label=a.replace("none", "") if a[-4:] == "none" else a[4:],
                         marker=m)
-        axes[1].scatter(all_cr[a][0], all_cr[a][1], label=a.replace("none", "") if a[-4:] == "none" else a[4:],
+        axes[2].scatter(all_cr[a][0], all_cr[a][1], label=a.replace("none", "") if a[-4:] == "none" else a[4:],
                         marker=m)
+        axes[1].plot(np.arange(1, 21, 1), all_loss[a], marker=m)
+
     axes[0].grid(alpha=0.2)
-    axes[0].set_title("Max Validation Acc")
-    axes[1].grid(alpha=0.2)
-    axes[1].set_title("Max Compression Rate")
+    axes[0].set_title("Max Validation Acc / Compression Rate", fontsize=10)
     axes[0].legend(fontsize=8)
 
-    table_data = [[name.replace("none", "") if name[-4:] == "none" else name[4:], str(round(100 * rate[1], 2)) + "%",
+    axes[1].grid(alpha=0.2)
+    axes[1].set_title("Validation Loss", fontsize=10)
+    axes[2].set_title("Validation Acc / Max Compression Rate", fontsize=10)
+
+    axes[2].grid(alpha=0.2)
+
+    table_data = [[name.replace("none", "") if name[-4:] == "none" else name[4:], round(100 * rate[1], 2),
                    round(rate[0], 2)] for name, rate in all_acc.items()]
-    table = axes[2].table(cellText=table_data,
+
+    table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
+
+    table = axes[3].table(cellText=table_data,
                           colLabels=["Method", "Val Acc", "Compression Rate"],
                           cellLoc='center',
                           loc='center')
 
-    axes[2].axis('off')
+    axes[3].axis('off')
 
     table.auto_set_font_size(False)
     table.set_fontsize(10)
@@ -213,12 +228,13 @@ def plot_compare_all():
             cell.set_fontsize(10)
             cell._text.set_weight('bold')
     plt.tight_layout()
+    plt.savefig("../../figures/compare_all.pdf", bbox_inches='tight')
     plt.show()
 
 
 if __name__ == "__main__":
-    # plot_compression_metrics("fetchsgd")
+    plot_compression_metrics("vqsgd")
 
-    plot_compare_all()
+    # plot_compare_all()
 
     # plot_compression_rates()

@@ -12,12 +12,12 @@
         "stop_patience": 20,
         "lr_decay": 5,
         "k_fold": 1,
-        "lambda_l2": null,
+        "lambda_l2": 0.0115935,
         "fullset": 100.0,
         "log": 2,
         "bayesian_search": false
     },
     "compression_rates": [
-        406.3215777701199
+        380.48874028897717
     ]
 }

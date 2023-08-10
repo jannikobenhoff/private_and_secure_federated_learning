@@ -20,17 +20,17 @@ from strategy import Strategy
 if __name__ == "__main__":
     tf.get_logger().setLevel('ERROR')
 
-    tf.config.set_visible_devices([], 'GPU')
+    # tf.config.set_visible_devices([], 'GPU')
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
     tf.config.run_functions_eagerly(run_eagerly=True)
     tf.data.experimental.enable_debug_mode()
 
-    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("mnist", fullset=10)  # 10
+    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("cifar10", fullset=10)  # 10
     # get_custom_objects().update({"strategy": Strategy})
 
-    # space = [Real(1e-5, 1e-1, "log-uniform", name='l2_reg')]
-    space = [Real(1, 200, "uniform", name='l2_reg')]
+    space = [Real(1e-5, 1e-0, "log-uniform", name='l2_reg')]
+    # space = [Real(1, 200, "uniform", name='l2_reg')]
 
     @use_named_args(space)
     def objective(**params):
@@ -44,17 +44,17 @@ if __name__ == "__main__":
             train_images, val_images = img_train[train_index], img_train[val_index]
             train_labels, val_labels = label_train[train_index], label_train[val_index]
 
-            # model = ResNet().search_model(lambda_l2=params["l2_reg"], input_shape=input_shape, num_classes=num_classes)
-            model = LeNet(search=True).search_model(lambda_l2=None)
+            model = ResNet().search_model(lambda_l2=params["l2_reg"], input_shape=input_shape, num_classes=num_classes)
+            # model = LeNet(search=True).search_model(lambda_l2=None)
 
-            opt = Strategy(compression=TopK(k=params["l2_reg"]), learning_rate=0.01)
+            opt = Strategy(compression=None, learning_rate=0.05)
             model.compile(optimizer=opt,
                           loss='sparse_categorical_crossentropy',
                           metrics=['accuracy'])
 
-            early_stopping = EarlyStopping(monitor='val_loss', patience=20, verbose=1)
+            early_stopping = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
 
-            history = model.fit(train_images, train_labels, epochs=50, batch_size=32,
+            history = model.fit(train_images, train_labels, epochs=20, batch_size=64,
                                 validation_data=(val_images, val_labels), verbose=2, callbacks=[early_stopping])
 
             validation_acc = np.mean(history.history['val_accuracy'])
