@@ -11,7 +11,7 @@ from skopt import dump, gp_minimize
 from skopt.space import Real
 from skopt.utils import use_named_args
 
-from models.ResNet import ResNet
+#from models.ResNet import ResNet
 from models.LeNet import LeNet
 
 from utilities.datasets import load_dataset

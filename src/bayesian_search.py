@@ -13,7 +13,7 @@ from keras.utils import get_custom_objects
 
 from models.LeNet import LeNet
 from src.compressions.TopK import TopK
-from src.models.ResNet import ResNet
+from src.models.ResNet import resnet18
 from utilities.datasets import load_dataset
 from strategy import Strategy
 
@@ -44,7 +44,7 @@ if __name__ == "__main__":
             train_images, val_images = img_train[train_index], img_train[val_index]
             train_labels, val_labels = label_train[train_index], label_train[val_index]
 
-            model = ResNet().search_model(lambda_l2=params["l2_reg"], input_shape=input_shape, num_classes=num_classes)
+            model = resnet18(input_shape=input_shape, num_classes=num_classes)  #ResNet().search_model(lambda_l2=params["l2_reg"], input_shape=input_shape, num_classes=num_classes)
             # model = LeNet(search=True).search_model(lambda_l2=None)
 
             opt = Strategy(compression=None, learning_rate=0.05)

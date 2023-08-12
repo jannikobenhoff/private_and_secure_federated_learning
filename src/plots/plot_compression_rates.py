@@ -145,7 +145,7 @@ def plot_compression_metrics(title: str):
     axes[0].legend()
     plt.suptitle(title)
     plt.tight_layout()
-    plt.savefig("../../figures/methods/" + title + ".pdf", bbox_inches='tight')
+    # plt.savefig("../../figures/methods/" + title + ".pdf", bbox_inches='tight')
     plt.show()
 
 
@@ -228,7 +228,7 @@ def plot_compare_all():
             cell.set_fontsize(10)
             cell._text.set_weight('bold')
     plt.tight_layout()
-    plt.savefig("../../figures/compare_all.pdf", bbox_inches='tight')
+    # plt.savefig("../../figures/compare_all.pdf", bbox_inches='tight')
     plt.show()
 
 

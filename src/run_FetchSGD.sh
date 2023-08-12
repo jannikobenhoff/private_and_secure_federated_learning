@@ -27,7 +27,7 @@ python model_train.py --model LeNet --dataset mnist \
       --stop_patience=20 \
       --lr_decay=5 \
       --log=2 \
-      --strategy='{"optimizer": "fetchsgd", "compression": "none", "learning_rate": 0.01, "c": 100, "r": 1, "momentum": 0.9}'
+      --strategy='{"optimizer": "fetchsgd", "compression": "none", "learning_rate": 0.05, "c": 100, "r": 1, "momentum": 0.9}'
 
 python model_train.py --model LeNet --dataset mnist \
       --epochs=20 \
@@ -36,7 +36,7 @@ python model_train.py --model LeNet --dataset mnist \
       --stop_patience=20 \
       --lr_decay=5 \
       --log=2 \
-      --strategy='{"optimizer": "fetchsgd", "compression": "none", "learning_rate": 0.01, "c": 1000, "r": 1, "momentum": 0.9}'
+      --strategy='{"optimizer": "fetchsgd", "compression": "none", "learning_rate": 0.05, "c": 1000, "r": 1, "momentum": 0.9}'
 
 python model_train.py --model LeNet --dataset mnist \
       --epochs=20 \
@@ -45,4 +45,4 @@ python model_train.py --model LeNet --dataset mnist \
       --stop_patience=20 \
       --lr_decay=5 \
       --log=2 \
-      --strategy='{"optimizer": "fetchsgd", "compression": "none", "learning_rate": 0.01, "c": 10000, "r": 1, "momentum": 0.9}'
+      --strategy='{"optimizer": "fetchsgd", "compression": "none", "learning_rate": 0.05, "c": 10000, "r": 1, "momentum": 0.9}'
