@@ -1,6 +1,7 @@
 import ast
 import json
 import os
+from pprint import pprint
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -45,8 +46,8 @@ def plot_compression_rates():
     plt.savefig("compression_rates.pdf")
 
 
-def plot_compression_metrics(title: str):
-    baseline = 'training_SGD_mnist_08_07_00_18.json'
+def plot_compression_metrics(title: str, parent_folder: str, baseline):
+    # baseline = 'training_SGD_mnist_08_07_00_18.json'
     plot_configs = {
         "gradientsparsification": ["max_iter", "k"],
         "fetchsgd": ["c"],
@@ -56,12 +57,13 @@ def plot_compression_metrics(title: str):
         "memsgd": ["top_k"],
         "naturalcompression": [],
         "efsignsgd": [],
-        "onebitsgd": []
+        "onebitsgd": [],
+        "terngrad": []
     }
     params = plot_configs[title]
     marker = itertools.cycle(('s', '+', 'v', 'o', '*'))
 
-    base = open("../results/compression/" + baseline, "r")
+    base = open(f"../results/compression/{parent_folder}/" + baseline, "r")
     baseline_metrics = json.load(base)
     fig, axes = plt.subplots(2, 2, figsize=(10, 7))
     axes = axes.flatten()
@@ -72,8 +74,8 @@ def plot_compression_metrics(title: str):
     all_val_loss = [ast.literal_eval(baseline_metrics["val_loss"])]
     all_val_acc_plots = [ast.literal_eval(baseline_metrics["val_acc"])]
 
-    for res in os.listdir("../results/compression/" + title):
-        file = open("../results/compression/" + title + "/" + res, "r")
+    for res in os.listdir(f"../results/compression/{parent_folder}/" + title):
+        file = open(f"../results/compression/{parent_folder}/" + title + "/" + res, "r")
         metrics = json.load(file)
         param_value = []
         if len(params) > 0:
@@ -99,9 +101,11 @@ def plot_compression_metrics(title: str):
 
     for param, cr, val_acc, val_loss, val_acc_plot, m in zip(all_params[1:], all_cr[1:], all_val_acc[1:],
                                                              all_val_loss[1:], all_val_acc_plots[1:], marker):
-        axes[0].plot(np.arange(0, len(val_acc_plot)), val_acc_plot, marker=m, label=f"{param}")
+        axes[0].plot(np.arange(0, len(val_acc_plot)), val_acc_plot, marker=m, label=f"{param}", markersize=2)
         axes[3].plot(np.arange(0, len(val_loss)), val_loss, marker=m, label=f"{param}")
-        axes[2].scatter(cr, val_acc, marker=m, label=f"{param}")
+        axes[2].plot(cr, val_acc, marker=m, label=f"{param}")
+
+    axes[2].plot(all_cr[1:], all_val_acc[1:], c="black", alpha=0.2)#, marker=m, label=f"{param}")
 
     # Plotting baseline
     axes[0].plot(np.arange(0, len(all_val_acc_plots[0])), all_val_acc_plots[0], label="baseline")
@@ -149,7 +153,7 @@ def plot_compression_metrics(title: str):
     plt.show()
 
 
-def plot_compare_all():
+def plot_compare_all(parent_folder: str):
     def get_all_files_in_directory(root_path):
         all_files = []
         for subdir, dirs, files in os.walk(root_path):
@@ -158,33 +162,40 @@ def plot_compare_all():
                 all_files.append(file_path)
         return all_files
 
-    directory_path = '../results/compression/'
+    directory_path = '../results/compression/'+parent_folder
     all_files = get_all_files_in_directory(directory_path)
 
     all_acc = {}
     all_cr = {}
     all_loss = {}
+    all_strats = {}
     for file_path in all_files:
         file = open(file_path, "r")
         file = json.load(file)
         strat = ast.literal_eval(file["args"]["strategy"])
-        if strat["optimizer"] + " " + strat["compression"] in all_acc:
-            if all_acc[strat["optimizer"] + " " + strat["compression"]][1] < np.mean(ast.literal_eval(file["val_acc"])):
-                all_acc[strat["optimizer"] + " " + strat["compression"]] = [file["compression_rates"][0],
-                                                                            np.mean(ast.literal_eval(file["val_acc"]))]
-                all_loss[strat["optimizer"] + " " + strat["compression"]] = ast.literal_eval(file["val_loss"])
-        else:
-            all_acc[strat["optimizer"] + " " + strat["compression"]] = [file["compression_rates"][0],
-                                                                        np.mean(ast.literal_eval(file["val_acc"]))]
-            all_loss[strat["optimizer"] + " " + strat["compression"]] = ast.literal_eval(file["val_loss"])
+        strat_key = f"{strat['optimizer']} {strat['compression']}"
 
-        if strat["optimizer"] + " " + strat["compression"] in all_cr:
-            if all_cr[strat["optimizer"] + " " + strat["compression"]][0] < np.mean(file["compression_rates"]):
-                all_cr[strat["optimizer"] + " " + strat["compression"]] = [file["compression_rates"][0],
-                                                                           np.mean(ast.literal_eval(file["val_acc"]))]
+        if strat_key in all_acc:
+            if all_acc[strat_key][1] < np.mean(ast.literal_eval(file["val_acc"])):
+                all_acc[strat_key] = [file["compression_rates"][0], np.mean(ast.literal_eval(file["val_acc"]))]
+                all_loss[strat_key] = ast.literal_eval(file["val_loss"])
         else:
-            all_cr[strat["optimizer"] + " " + strat["compression"]] = [file["compression_rates"][0],
-                                                                       np.mean(ast.literal_eval(file["val_acc"]))]
+            all_acc[strat_key] = [file["compression_rates"][0], np.mean(ast.literal_eval(file["val_acc"]))]
+            all_loss[strat_key] = ast.literal_eval(file["val_loss"])
+
+        if strat_key in all_cr:
+            if all_cr[strat_key][0] < np.mean(file["compression_rates"]):
+                all_cr[strat_key] = [file["compression_rates"][0], np.mean(ast.literal_eval(file["val_acc"]))]
+        else:
+            all_cr[strat_key] = [file["compression_rates"][0], np.mean(ast.literal_eval(file["val_acc"]))]
+
+        if strat_key in all_strats:
+            all_strats[strat_key][0].append(file["compression_rates"][0])
+            all_strats[strat_key][1].append(np.mean(ast.literal_eval(file["val_acc"])))
+        else:
+            all_strats[strat_key] = [[], []]
+            all_strats[strat_key][0].append(file["compression_rates"][0])
+            all_strats[strat_key][1].append(np.mean(ast.literal_eval(file["val_acc"])))
 
     marker = itertools.cycle(('s', '+', 'v', 'o', '*'))
     fig, axes = plt.subplots(2, 2, figsize=(10, 10))
@@ -193,9 +204,12 @@ def plot_compare_all():
         m = next(marker)
         axes[0].scatter(all_acc[a][0], all_acc[a][1], label=a.replace("none", "") if a[-4:] == "none" else a[4:],
                         marker=m)
-        axes[2].scatter(all_cr[a][0], all_cr[a][1], label=a.replace("none", "") if a[-4:] == "none" else a[4:],
+        asa = all_strats[a]
+        sorted_pairs = sorted(zip(*asa), key=lambda pair: pair[0], reverse=True)
+        sorted_lists = list(map(list, zip(*sorted_pairs)))
+        axes[2].plot(sorted_lists[0], sorted_lists[1], label=a.replace("none", "") if a[-4:] == "none" else a[4:],
                         marker=m)
-        axes[1].plot(np.arange(1, 21, 1), all_loss[a], marker=m)
+        axes[1].plot(np.arange(1, len(all_loss[a])+1, 1), all_loss[a], marker=m)
 
     axes[0].grid(alpha=0.2)
     axes[0].set_title("Max Validation Acc / Compression Rate", fontsize=10)
@@ -203,9 +217,10 @@ def plot_compare_all():
 
     axes[1].grid(alpha=0.2)
     axes[1].set_title("Validation Loss", fontsize=10)
-    axes[2].set_title("Validation Acc / Max Compression Rate", fontsize=10)
+    axes[2].set_title("Validation Acc / Compression Rate", fontsize=10)
 
     axes[2].grid(alpha=0.2)
+    axes[2].legend(fontsize=8)
 
     table_data = [[name.replace("none", "") if name[-4:] == "none" else name[4:], round(100 * rate[1], 2),
                    round(rate[0], 2)] for name, rate in all_acc.items()]
@@ -228,13 +243,13 @@ def plot_compare_all():
             cell.set_fontsize(10)
             cell._text.set_weight('bold')
     plt.tight_layout()
-    # plt.savefig("../../figures/compare_all.pdf", bbox_inches='tight')
+    plt.savefig("../../figures/compare_all.pdf", bbox_inches='tight')
     plt.show()
 
 
 if __name__ == "__main__":
-    plot_compression_metrics("vqsgd")
+    # plot_compression_metrics("memsgd", "45epochsbaseline", "training_SGD_mnist_08_12_18_59.json")
 
-    # plot_compare_all()
+    plot_compare_all("45epochsbaseline")
 
     # plot_compression_rates()

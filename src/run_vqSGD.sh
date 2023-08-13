@@ -1,120 +1,74 @@
-# Hyperparameter Search
-#python model_train.py --model LeNet --dataset mnist \
-#      --epochs=200 \
-#      --n_calls=10 \
-#      --k_fold=5 \
-#      --fullset=1 \
-#      --stop_patience=15 \
-#      --bayesian_search \
-#      --log=1 \
-#      --strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.001, "repetition": 5}'
-#
-#python model_train.py --model LeNet --dataset mnist \
-#      --epochs=200 \
-#      --n_calls=10 \
-#      --k_fold=5 \
-#      --fullset=1 \
-#      --stop_patience=15 \
-#      --bayesian_search \
-#      --log=1 \
-#      --strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.001, "repetition": 10}'
-#
-#python model_train.py --model LeNet --dataset mnist \
-#      --epochs=200 \
-#      --n_calls=10 \
-#      --k_fold=5 \
-#      --fullset=1 \
-#      --stop_patience=15 \
-#      --bayesian_search \
-#      --log=1 \
-#      --strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.01, "repetition": 50}'
-#
-#python model_train.py --model LeNet --dataset mnist \
-#      --epochs=200 \
-#      --n_calls=10 \
-#      --k_fold=5 \
-#      --fullset=1 \
-#      --stop_patience=15 \
-#      --bayesian_search \
-#      --log=1 \
-#      --strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.1, "repetition": 100}'
-#
-#python model_train.py --model LeNet --dataset mnist \
-#      --epochs=200 \
-#      --n_calls=10 \
-#      --k_fold=5 \
-#      --fullset=1 \
-#      --stop_patience=15 \
-#      --bayesian_search \
-#      --log=1 \
-#      --strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.1, "repetition": 200}'
+#!/bin/bash
 
-#python model_train.py --model LeNet --dataset mnist \
-#      --epochs=200 \
-#      --n_calls=10 \
-#      --k_fold=5 \
-#      --fullset=1 \
-#      --stop_patience=15 \
-#      --bayesian_search \
-#      --log=1 \
-#      --strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.01, "repetition": 500}'
+# Default mode set at the top of the script
+DEFAULT_MODE="search"  # search  training  baseline_l2  no_l2
 
-#Training
-#python model_train.py --model LeNet --dataset mnist \
-#      --epochs=20 \
-#      --k_fold=1 \
-#      --fullset=100 \
-#      --stop_patience=20 \
-#      --lr_decay=5 \
-#      --log=1 \
-#      --strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.001, "repetition": 5}'
+# If an argument is provided, use it. Otherwise, use the default.
+mode=${1:-$DEFAULT_MODE}
 
-python model_train.py --model LeNet --dataset mnist \
-      --epochs=20 \
-      --k_fold=1 \
-      --fullset=100 \
-      --stop_patience=20 \
-      --lr_decay=5 \
-      --log=2 \
-      --strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.001, "repetition": 10}'
+base_strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.01, "repetition": REP_VALUE}'
 
+repetitions=(10 50 100)
 
-python model_train.py --model LeNet --dataset mnist \
-      --epochs=20 \
-      --k_fold=1 \
-      --fullset=100 \
-      --stop_patience=20 \
-      --lr_decay=5 \
-      --log=2 \
-      --strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.01, "repetition": 50}'
+case $mode in
+    "search")
+        for k in "${repetitions[@]}"; do
+            python model_train.py --model LeNet --dataset mnist \
+              --epochs=100 \
+              --n_calls=13 \
+              --k_fold=5 \
+              --fullset=1 \
+              --stop_patience=10 \
+              --bayesian_search \
+              --log=1 \
+              --strategy="${base_strategy//REP_VALUE/$k}"
+        done
+        ;;
 
+    "training")
+        for k in "${repetitions[@]}"; do
+            python model_train.py --model LeNet --dataset mnist \
+                --epochs=45 \
+                --k_fold=1 \
+                --fullset=100 \
+                --stop_patience=10 \
+                --lr_decay=3 \
+                --log=2 \
+                --train_on_baseline=2 \
+                --strategy="${base_strategy//REP_VALUE/$k}"
+        done
+        ;;
 
-python model_train.py --model LeNet --dataset mnist \
-      --epochs=20 \
-      --k_fold=1 \
-      --fullset=100 \
-      --stop_patience=20 \
-      --lr_decay=5 \
-      --log=2 \
-      --strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.01, "repetition": 100}'
+    "baseline_l2")
+        for k in "${repetitions[@]}"; do
+            python model_train.py --model LeNet --dataset mnist \
+                --epochs=45 \
+                --k_fold=1 \
+                --fullset=100 \
+                --stop_patience=10 \
+                --train_on_baseline=1 \
+                --lr_decay=3 \
+                --log=2 \
+                --strategy="${base_strategy//REP_VALUE/$k}"
+        done
+        ;;
 
+    "no_l2")
+        for k in "${repetitions[@]}"; do
+            python model_train.py --model LeNet --dataset mnist \
+                --epochs=45 \
+                --k_fold=1 \
+                --fullset=100 \
+                --stop_patience=10 \
+                --train_on_baseline=0 \
+                --lr_decay=3 \
+                --log=2 \
+                --strategy="${base_strategy//REP_VALUE/$k}"
+        done
+        ;;
 
-python model_train.py --model LeNet --dataset mnist \
-      --epochs=20 \
-      --k_fold=1 \
-      --fullset=100 \
-      --stop_patience=20 \
-      --log=2 \
-      --strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.01, "repetition": 200}'
-
-
-python model_train.py --model LeNet --dataset mnist \
-      --epochs=20 \
-      --k_fold=1 \
-      --fullset=100 \
-      --stop_patience=20 \
-      --lr_decay=5 \
-      --log=2 \
-      --strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.01, "repetition": 500}'
-
-
+    *)
+        echo "Invalid mode provided. Please use: search, training, baseline_l2, or no_l2"
+        exit 1
+        ;;
+esac

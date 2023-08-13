@@ -2,6 +2,7 @@ import argparse
 import time
 from datetime import datetime
 import json
+from pprint import pprint
 
 from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import numpy as np
@@ -42,6 +43,7 @@ def parse_args():
     parser.add_argument('--lambda_l2', type=float, help='L2 regularization lambda')
     parser.add_argument('--fullset', type=float, help='% of dataset')
     parser.add_argument('--log', type=int, help='Log')
+    parser.add_argument('--train_on_baseline', type=int, help='Take baseline L2')
     parser.add_argument('--bayesian_search', action='store_true', help='Apply Bayesian search')
     return parser.parse_args()
 
@@ -100,6 +102,7 @@ def get_l2_lambda(**params) -> float:
 
     if type(first_key_value) != float:
         second_key = list(first_key_value.keys())[0]
+        print(second_key, first_key_value)
         if second_key in keys:
             second_key_value = first_key_value[second_key][str(params[second_key])]
             return second_key_value
@@ -113,9 +116,10 @@ def worker(args):
 
     img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset(args.dataset,
                                                                                           fullset=args.fullset)
-
+    print(args.strategy)
     strategy_params = json.loads(args.strategy)
     strategy = strategy_factory(**strategy_params)
+    pprint(strategy_params)
 
     if args.bayesian_search:
         print("Bayesian Search")
@@ -277,7 +281,7 @@ def worker(args):
 
         # result = gp_minimize(objective, search_space, n_calls=args.n_calls,  x0=[[1e-7], [1e-4], [0.1]], #n_initial_points=0,
         #                      random_state=1)
-        result = gp_minimize(objective, search_space, n_calls=args.n_calls, acq_func='EI',
+        result = gp_minimize(objective, search_space, n_calls=args.n_calls, #acq_func='EI',
                              # x0=[[1e-6], [1e-4], [1e-2]],
                              # n_random_starts=3,
                              # n_jobs=3,
@@ -300,7 +304,12 @@ def worker(args):
 
     else:
         print("Training")
-        lambda_l2 = get_l2_lambda(**strategy_params)
+        if args.train_on_baseline == 1:
+            lambda_l2 = get_l2_lambda(**{"optimizer": "sgd", "compression": "none"})
+        elif args.train_on_baseline == 2:
+            lambda_l2 = get_l2_lambda(**strategy_params)
+        else:
+            lambda_l2 = 0
         args.lambda_l2 = lambda_l2
         print("Using L2 lambda:", lambda_l2)
         if args.k_fold > 1:

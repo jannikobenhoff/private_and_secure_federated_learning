@@ -9,8 +9,8 @@ from .Compression import Compression
 class GradientSparsification(Compression):
     def __init__(self, k: float = 0.02, max_iter: int = 2, name="GradientSparsification"):
         super().__init__(name=name)
-        self.k = k
-        self.max_iter = max_iter
+        self.k = float(k)
+        self.max_iter = int(max_iter)
         self.compression_rates = []
 
     def build(self, var_list):
