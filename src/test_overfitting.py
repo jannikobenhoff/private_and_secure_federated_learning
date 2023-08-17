@@ -15,7 +15,8 @@ from scikeras.wrappers import KerasClassifier
 from skopt.plots import plot_gaussian_process
 from skopt import dump
 
-from src.models.Alexnet import alexnet
+from src.compressions.TopK import TopK
+from src.models.Alexnet import alexnet, AlexnetModel
 from src.models.ResNet import resnet18, ResNet18_new
 from src.optimizer.FetchSGD import FetchSGD
 from src.strategy import Strategy
@@ -52,7 +53,7 @@ def create_model(lambda_l2):
     return model
 
 
-lambdas = [0, 0.001]  # 0.000584928836834173]  #0.0015, 0.01, 0.
+lambdas = [0, 1e-4]  # 0.000584928836834173]  #0.0015, 0.01, 0.
 epochs = 20
 train_loss = []
 train_acc = []
@@ -70,36 +71,46 @@ for l2 in lambdas:
     # label_test = encoder.transform(label_test).toarray()
     # model = create_model(l2)
 
-    # model = ResNet18_new(num_classes=num_classes,lambda_l2=l2) #resnet18(num_classes=num_classes, input_shape=input_shape, regularization_factor=l2)  #create_model(l2)
-    # model.build(input_shape=(None, 32, 32, 3))
+    model = ResNet18_new(num_classes=num_classes, lambda_l2=l2) #resnet18(num_classes=num_classes, input_shape=input_shape, regularization_factor=l2)  #create_model(l2)
+    model.build(input_shape=(None, 32, 32, 3))
 
-    model = alexnet(l2, input_shape=(None, 32, 32, 3))
+    # model = alexnet(l2, input_shape=(None, 32, 32, 3))
+    # model = AlexnetModel(input_shape=input_shape, num_classes=num_classes)
 
-    p = {"optimizer": "fetchsgd", "momentum": 0.9, "c": 10000, "r": 1, "learning_rate": 0.01}
+    initial_learning_rate = 0.1
+    decay_schedule = [32000, 48000]
+
+    def learning_rate_schedule(epoch, lr):
+        # Assuming batch size is 1 for simplicity. If not, you'd have to account for it.
+        global_step = epoch
+
+        if global_step in decay_schedule:
+            return lr * 0.1
+        return lr
+
+
+    p = {"optimizer": "fetchsgd", "momentum": 0.9, "c": 10000, "r": 1, "learning_rate": initial_learning_rate}
     strat = Strategy(
         # params=p,
+        optimizer="sgd",
         compression=None,
         # optimizer="fetchsgd",
         learning_rate=0.01)
 
     print(strat.optimizer)
-
     model.compile(optimizer=strat,
                   loss='sparse_categorical_crossentropy',
                   # loss="categorical_crossentropy",
                   metrics=['accuracy'])
 
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
-                                  patience=4,
-                                  min_lr=0.0001)
-
-    STEPS = len(img_train) / 256
-
+    lr_callback = tf.keras.callbacks.LearningRateScheduler(learning_rate_schedule, verbose=1)
+    STEPS = len(img_train) / 128
+    print(STEPS)
     history = model.fit(img_train, label_train, validation_data=(img_test, label_test), epochs=epochs, verbose=2,
-                        # steps_per_epoch=STEPS,
-                        # batch_size=256,
-                        batch_size=32,
-                        # callbacks=[reduce_lr]
+                        steps_per_epoch=STEPS,
+                        batch_size=128,
+                        # batch_size=32,
+                        # callbacks=[lr_callback]
                         )
     print(np.mean(strat.optimizer.compression_rates))
     train_loss.append(history.history["loss"])

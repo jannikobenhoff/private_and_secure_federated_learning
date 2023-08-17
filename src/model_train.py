@@ -14,6 +14,7 @@ from skopt.utils import use_named_args
 
 #from models.ResNet import ResNet
 from models.LeNet import LeNet
+from models.ResNet import ResNet18_new
 
 from utilities.datasets import load_dataset
 
@@ -43,6 +44,7 @@ def parse_args():
     parser.add_argument('--lambda_l2', type=float, help='L2 regularization lambda')
     parser.add_argument('--fullset', type=float, help='% of dataset')
     parser.add_argument('--log', type=int, help='Log')
+    parser.add_argument('--gpu', type=int, help='GPU')
     parser.add_argument('--train_on_baseline', type=int, help='Take baseline L2')
     parser.add_argument('--bayesian_search', action='store_true', help='Apply Bayesian search')
     return parser.parse_args()
@@ -52,7 +54,9 @@ def model_factory(model_name, lambda_l2, input_shape, num_classes):
     if model_name == "lenet":
         return LeNet(search=True).search_model(lambda_l2)
     elif model_name == "resnet":
-        return ResNet().search_model(lambda_l2, input_shape, num_classes)
+        model = ResNet18_new(num_classes=num_classes, lambda_l2=lambda_l2) # ResNet().search_model(lambda_l2, input_shape, num_classes)
+        model.build(input_shape=(None, 32, 32, 3))
+        return model
     else:
         raise ValueError(f"Invalid model name: {model_name}")
 
@@ -110,16 +114,16 @@ def get_l2_lambda(**params) -> float:
 
 
 def worker(args):
-    tf.config.set_visible_devices([], 'GPU')
+    if args.gpu != 1:
+        tf.config.set_visible_devices([], 'GPU')
     tf.config.run_functions_eagerly(run_eagerly=True)
     tf.data.experimental.enable_debug_mode()
 
     img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset(args.dataset,
                                                                                           fullset=args.fullset)
-    print(args.strategy)
     strategy_params = json.loads(args.strategy)
     strategy = strategy_factory(**strategy_params)
-    pprint(strategy_params)
+    print(input_shape, num_classes)
 
     if args.bayesian_search:
         print("Bayesian Search")
@@ -377,8 +381,12 @@ def worker(args):
                                           min_lr=strategy_params["learning_rate"] / 20)
             callbacks.append(reduce_lr)
 
+            BATCH_SIZE = 32
+            if args.dataset == "cifar10":
+                BATCH_SIZE = 64
+
             history = model.fit(img_train, label_train, epochs=args.epochs,
-                                batch_size=32,
+                                batch_size=BATCH_SIZE,
                                 validation_data=(img_test, label_test), verbose=args.log, callbacks=callbacks)
 
             training_acc_per_epoch = history.history['accuracy']

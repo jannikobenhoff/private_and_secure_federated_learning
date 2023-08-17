@@ -1,0 +1,24 @@
+{
+    "training_loss": "[0.2766977846622467, 0.27263322472572327]",
+    "training_acc": "[0.9326000213623047, 0.9518499970436096]",
+    "val_loss": "[0.2407817393541336, 0.3256804347038269]",
+    "val_acc": "[0.9538000226020813, 0.9429000020027161]",
+    "args": {
+        "model": "LeNet",
+        "dataset": "mnist",
+        "strategy": "{\"optimizer\": \"sgd\", \"compression\": \"onebitsgd\", \"learning_rate\": 0.01}",
+        "epochs": 45,
+        "n_calls": null,
+        "stop_patience": 10,
+        "lr_decay": 3,
+        "k_fold": 1,
+        "lambda_l2": 0,
+        "fullset": 100.0,
+        "log": 2,
+        "train_on_baseline": 0,
+        "bayesian_search": false
+    },
+    "compression_rates": [
+        32.0
+    ]
+}

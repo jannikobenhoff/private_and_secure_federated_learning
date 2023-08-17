@@ -105,7 +105,7 @@ def plot_compression_metrics(title: str, parent_folder: str, baseline):
         axes[3].plot(np.arange(0, len(val_loss)), val_loss, marker=m, label=f"{param}")
         axes[2].plot(cr, val_acc, marker=m, label=f"{param}")
 
-    axes[2].plot(all_cr[1:], all_val_acc[1:], c="black", alpha=0.2)#, marker=m, label=f"{param}")
+    axes[2].plot(all_cr[1:], all_val_acc[1:], c="black", alpha=0.2)  # , marker=m, label=f"{param}")
 
     # Plotting baseline
     axes[0].plot(np.arange(0, len(all_val_acc_plots[0])), all_val_acc_plots[0], label="baseline")
@@ -162,12 +162,15 @@ def plot_compare_all(parent_folder: str):
                 all_files.append(file_path)
         return all_files
 
-    directory_path = '../results/compression/'+parent_folder
+    directory_path = '../results/compression/' + parent_folder
     all_files = get_all_files_in_directory(directory_path)
 
     all_acc = {}
+    all_train_acc = {}
+    all_val_acc = {}
     all_cr = {}
-    all_loss = {}
+    all_val_loss = {}
+    all_train_loss = {}
     all_strats = {}
     for file_path in all_files:
         file = open(file_path, "r")
@@ -178,10 +181,16 @@ def plot_compare_all(parent_folder: str):
         if strat_key in all_acc:
             if all_acc[strat_key][1] < np.mean(ast.literal_eval(file["val_acc"])):
                 all_acc[strat_key] = [file["compression_rates"][0], np.mean(ast.literal_eval(file["val_acc"]))]
-                all_loss[strat_key] = ast.literal_eval(file["val_loss"])
+                all_train_acc[strat_key] = ast.literal_eval(file["training_acc"])
+                all_val_loss[strat_key] = ast.literal_eval(file["val_loss"])
+                all_train_loss[strat_key] = ast.literal_eval(file["training_loss"])
+                all_val_acc[strat_key] = ast.literal_eval(file["val_acc"])
         else:
             all_acc[strat_key] = [file["compression_rates"][0], np.mean(ast.literal_eval(file["val_acc"]))]
-            all_loss[strat_key] = ast.literal_eval(file["val_loss"])
+            all_val_loss[strat_key] = ast.literal_eval(file["val_loss"])
+            all_train_loss[strat_key] = ast.literal_eval(file["training_loss"])
+            all_train_acc[strat_key] = ast.literal_eval(file["training_acc"])
+            all_val_acc[strat_key] = ast.literal_eval(file["val_acc"])
 
         if strat_key in all_cr:
             if all_cr[strat_key][0] < np.mean(file["compression_rates"]):
@@ -197,42 +206,50 @@ def plot_compare_all(parent_folder: str):
             all_strats[strat_key][0].append(file["compression_rates"][0])
             all_strats[strat_key][1].append(np.mean(ast.literal_eval(file["val_acc"])))
 
-    marker = itertools.cycle(('s', '+', 'v', 'o', '*'))
-    fig, axes = plt.subplots(2, 2, figsize=(10, 10))
+    marker = itertools.cycle(('+', 'v', 'o', '*'))
+    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
     axes = axes.flatten()
     for a in all_acc:
         m = next(marker)
-        axes[0].scatter(all_acc[a][0], all_acc[a][1], label=a.replace("none", "") if a[-4:] == "none" else a[4:],
+        axes[3].scatter(all_acc[a][0], all_acc[a][1], label=a.replace("none", "") if a[-4:] == "none" else a[4:],
                         marker=m)
         asa = all_strats[a]
         sorted_pairs = sorted(zip(*asa), key=lambda pair: pair[0], reverse=True)
         sorted_lists = list(map(list, zip(*sorted_pairs)))
-        axes[2].plot(sorted_lists[0], sorted_lists[1], label=a.replace("none", "") if a[-4:] == "none" else a[4:],
-                        marker=m)
-        axes[1].plot(np.arange(1, len(all_loss[a])+1, 1), all_loss[a], marker=m)
 
-    axes[0].grid(alpha=0.2)
-    axes[0].set_title("Max Validation Acc / Compression Rate", fontsize=10)
-    axes[0].legend(fontsize=8)
+        axes[4].plot(sorted_lists[0], sorted_lists[1], label=a.replace("none", "") if a[-4:] == "none" else a[4:],
+                     marker=m, markersize=4)
+        axes[0].plot(np.arange(1, len(all_train_acc[a]) + 1, 1), all_train_acc[a], marker=m, markersize=3)
+        axes[1].plot(np.arange(1, len(all_val_loss[a]) + 1, 1), all_val_loss[a], marker=m, markersize=3)
+        axes[0].plot(np.arange(1, len(all_train_loss[a]) + 1, 1), all_train_loss[a], marker=m, markersize=3)
+        axes[2].plot(np.arange(1, len(all_val_acc[a]) + 1, 1), all_val_acc[a], marker=m, markersize=3)
+
+    axes[3].grid(alpha=0.2)
+    axes[3].set_title("Max Validation Acc / Compression Rate", fontsize=10)
+    axes[3].legend(fontsize=8)
 
     axes[1].grid(alpha=0.2)
     axes[1].set_title("Validation Loss", fontsize=10)
-    axes[2].set_title("Validation Acc / Compression Rate", fontsize=10)
-
     axes[2].grid(alpha=0.2)
-    axes[2].legend(fontsize=8)
+    axes[2].set_title("Validation Accuracy", fontsize=10)
+    axes[0].grid(alpha=0.2)
+    axes[0].set_title("Training Accuracy & Loss", fontsize=10)
+
+    axes[4].grid(alpha=0.2)
+    axes[4].legend(fontsize=8)
+    axes[4].set_title("Validation Acc / Compression Rate", fontsize=10)
 
     table_data = [[name.replace("none", "") if name[-4:] == "none" else name[4:], round(100 * rate[1], 2),
                    round(rate[0], 2)] for name, rate in all_acc.items()]
 
     table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
 
-    table = axes[3].table(cellText=table_data,
+    table = axes[5].table(cellText=table_data,
                           colLabels=["Method", "Val Acc", "Compression Rate"],
                           cellLoc='center',
                           loc='center')
 
-    axes[3].axis('off')
+    axes[5].axis('off')
 
     table.auto_set_font_size(False)
     table.set_fontsize(10)
@@ -250,6 +267,6 @@ def plot_compare_all(parent_folder: str):
 if __name__ == "__main__":
     # plot_compression_metrics("memsgd", "45epochsbaseline", "training_SGD_mnist_08_12_18_59.json")
 
-    plot_compare_all("45epochsbaseline")
+    plot_compare_all("45epochsbaseline_1")
 
     # plot_compression_rates()

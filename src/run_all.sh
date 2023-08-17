@@ -62,6 +62,10 @@ case $mode in
         execute_scripts no_l2
         ;;
 
+    "no_l2_resnet")
+        execute_scripts no_l2_resnet
+        ;;
+
     *)
         echo "Invalid mode: $mode"
         echo "Valid modes are: search, training, baseline_l2, no_l2"
