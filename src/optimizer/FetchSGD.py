@@ -22,6 +22,7 @@ class FetchSGD(Optimizer):
         self.r = r
         self.c = c
         self.compression_rates = []
+        self.cr = {}
 
 
     def build(self, var_list):
@@ -67,7 +68,12 @@ class FetchSGD(Optimizer):
         cs.accumulateVec(tf.reshape(gradient, [-1]).numpy())
         # Access sketch
         sketch = cs.table
-        self.compression_rates.append(gradient.dtype.size*8*np.prod(gradient.shape.as_list())/ self.get_sparse_tensor_size_in_bits(tf.convert_to_tensor(sketch.numpy(), dtype=gradient.dtype)))
+        if variable.ref() not in self.cr:
+            self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(
+                gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
+                tf.convert_to_tensor(sketch.numpy(), dtype=gradient.dtype))
+            self.compression_rates.append(self.cr[variable.ref()])
+
         # print(np.mean(self.compression_rates), gradient.dtype.size*8*np.prod(gradient.shape.as_list())/d*(10+32))
 
         if momentum > 0:
@@ -113,11 +119,17 @@ class FetchSGD(Optimizer):
 
     @staticmethod
     def get_sparse_tensor_size_in_bits(tensor):
-        num_nonzero_entries = tf.math.count_nonzero(tensor)
-        num_index_bits = np.ceil(np.log2(len(tf.reshape(tensor, [-1]))))
-        num_value_bits = tensor.dtype.size * 8
-        return num_nonzero_entries.numpy() * (num_index_bits + num_value_bits) if num_nonzero_entries.numpy() * (
-                num_index_bits + num_value_bits) != 0 else 1
+        flattened_tensor = tf.reshape(tensor, [-1])
+        num_nonzero_entries = tf.math.count_nonzero(flattened_tensor)
+
+        # num_elements = tf.size(flattened_tensor, out_type=tf.float32)
+        # num_index_bits = tf.math.ceil(tf.math.log(num_elements) / tf.math.log(2.0))
+
+        num_index_bits = tf.int32.size * 8
+        num_value_bits = tf.constant(tensor.dtype.size * 8, dtype=tf.int64)
+
+        total_bits = num_nonzero_entries * (num_index_bits + num_value_bits)
+        return tf.maximum(total_bits, 1)
 
 
 class CSVec(object):

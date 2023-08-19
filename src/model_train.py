@@ -1,4 +1,5 @@
 import argparse
+import os
 import time
 from datetime import datetime
 import json
@@ -12,10 +13,11 @@ from skopt import dump, gp_minimize
 from skopt.space import Real
 from skopt.utils import use_named_args
 
-#from models.ResNet import ResNet
 from models.LeNet import LeNet
-from models.ResNet import ResNet18_new
+from models.ResNet import ResNet
+from models.MobileNet import MobileNet
 
+from utilities.lrDecay import CosineDecayCallback
 from utilities.datasets import load_dataset
 
 from compressions.TernGrad import TernGrad
@@ -51,11 +53,18 @@ def parse_args():
 
 
 def model_factory(model_name, lambda_l2, input_shape, num_classes):
+    print(f"Initializing {model_name.upper()}")
     if model_name == "lenet":
-        return LeNet(search=True).search_model(lambda_l2)
+        model = LeNet(search=True).search_model(lambda_l2)
+        return model
     elif model_name == "resnet":
-        model = ResNet18_new(num_classes=num_classes, lambda_l2=lambda_l2) # ResNet().search_model(lambda_l2, input_shape, num_classes)
-        model.build(input_shape=(None, 32, 32, 3))
+        model = ResNet("resnet18", num_classes, lambda_l2)
+        # model = ResNet18(num_classes=num_classes, lambda_l2=lambda_l2)
+        # input shape for cifar10
+        # model.build(input_shape=(None, 32, 32, 3))
+        return model
+    elif model_name == "mobilenet":
+        model = MobileNet(num_classes)
         return model
     else:
         raise ValueError(f"Invalid model name: {model_name}")
@@ -92,8 +101,13 @@ def strategy_factory(**params) -> Strategy:
                         compression=None, optimizer=params["optimizer"].lower())
 
 
-def get_l2_lambda(**params) -> float:
-    lambdas = json.load(open("results/lambda_lookup.json", "r"))
+def get_l2_lambda(args, **params) -> float:
+    lambdas = None
+    if args.model == "LeNet":
+        lambdas = json.load(open("results/lambda_lookup.json", "r"))
+    elif args.model == "ResNet":
+        lambdas = json.load(open("results/lambda_lookup_resnet.json", "r"))
+
     opt = params["optimizer"]
     comp = params["compression"]
 
@@ -113,9 +127,54 @@ def get_l2_lambda(**params) -> float:
     return first_key_value
 
 
+def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, input_shape, num_classes,
+                strategy_params, args):
+    model = model_factory(args.model.lower(), lambda_l2, input_shape, num_classes)
+    strategy = strategy_factory(**strategy_params)
+    strategy.summary()
+
+    BATCH_SIZE = 32
+    if args.dataset == "cifar10":
+        BATCH_SIZE = 128
+
+    callbacks = []
+    if args.stop_patience < args.epochs:
+        early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
+        callbacks.append(early_stopping)
+
+    if args.bayesian_search:
+        model.compile(optimizer=strategy,
+                      loss='sparse_categorical_crossentropy',
+                      metrics=['accuracy'])
+    else:
+        model.compile(optimizer=strategy,
+                      loss='sparse_categorical_crossentropy',
+                      metrics=['accuracy'])
+
+        cosine_decay = CosineDecayCallback(strategy_params["learning_rate"],
+                                           decay_steps=int(args.epochs*len(train_images)/BATCH_SIZE),
+                                           data_length=len(train_images), batch_size=BATCH_SIZE,
+                                           alpha=strategy_params["learning_rate"] * 0.001)
+
+        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1,
+                                      patience=args.lr_decay,
+                                      min_lr=strategy_params["learning_rate"] * 0.001)
+
+        callbacks.append(reduce_lr)
+
+    history = model.fit(train_images, train_labels, epochs=args.epochs,
+                        batch_size=BATCH_SIZE,
+                        validation_data=(val_images, val_labels), verbose=args.log, callbacks=callbacks)
+
+    return history, strategy
+
+
 def worker(args):
     if args.gpu != 1:
+        print("Using CPU")
         tf.config.set_visible_devices([], 'GPU')
+    else:
+        print("Using GPU")
     tf.config.run_functions_eagerly(run_eagerly=True)
     tf.data.experimental.enable_debug_mode()
 
@@ -123,10 +182,9 @@ def worker(args):
                                                                                           fullset=args.fullset)
     strategy_params = json.loads(args.strategy)
     strategy = strategy_factory(**strategy_params)
-    print(input_shape, num_classes)
 
     if args.bayesian_search:
-        print("Bayesian Search")
+        print("--- Bayesian Search ---")
         search_space = [Real(1e-5, 1e0, "log-uniform", name='lambda_l2')]
         train_loss = []
         val_loss = []
@@ -160,22 +218,8 @@ def worker(args):
                 train_labels, val_labels = label_train[train_index], label_train[val_index]
                 k_step += 1
 
-                model = model_factory(args.model.lower(), params["lambda_l2"], input_shape, num_classes)
-                strategy = strategy_factory(**strategy_params)
-
-                model.compile(optimizer=strategy,
-                              loss='sparse_categorical_crossentropy',
-                              metrics=['accuracy'])
-
-                early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
-                # reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
-                #                               patience=max(5, args.stop_patience - 5),
-                #                               min_lr=strategy_params["learning_rate"]/20)
-
-                history = model.fit(train_images, train_labels, epochs=args.epochs,
-                                    batch_size=32,
-                                    validation_data=(val_images, val_labels), verbose=args.log,
-                                    callbacks=[early_stopping])
+                history, strategy = train_model(train_images, train_labels, val_images, val_labels, lambda_l2,
+                                                input_shape, num_classes, strategy_params, args)
 
                 training_acc_per_epoch[k_step].append(history.history['accuracy'])
                 validation_acc_per_epoch[k_step].append(history.history['val_accuracy'])
@@ -184,7 +228,7 @@ def worker(args):
 
                 all_scores.append(np.mean(history.history['val_accuracy']))
 
-            print("   Mean val accuracy:", np.mean(all_scores),
+            print("Mean val accuracy:", np.mean(all_scores),
                   "Time taken: {:.2f}".format(time.time() - search_step_start_time))
 
             train_acc.append(training_acc_per_epoch)
@@ -193,99 +237,7 @@ def worker(args):
             val_loss.append(validation_losses_per_epoch)
             return - np.mean(all_scores)
 
-        # @use_named_args(search_space)
-        # def objective(**params):
-        #     strategy = strategy_factory(**strategy_params)
-        #     strategy.summary()
-        #
-        #     all_scores = []
-        #     k_step = 0
-        #     for train_index, val_index in kf.split(img_train):
-        #         k_step += 1
-        #         # Early stopping
-        #         best_val_loss = float('inf')
-        #         epochs_no_improve = 0
-        #         patience = int(args.epochs / 3)
-        #
-        #         model = model_factory(args.model.lower(), params["lambda_l2"], input_shape, num_classes)
-        #         # model.compile(optimizer=strategy.optimizer,
-        #         #               loss='sparse_categorical_crossentropy',
-        #         #               metrics=['accuracy']
-        #         #               )
-        #
-        #         x_train, x_val = img_train[train_index], img_train[val_index]
-        #         y_train, y_val = label_train[train_index], label_train[val_index]
-        #
-        #         ds_train_batch = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-        #         training_data = ds_train_batch.batch(32)
-        #
-        #         val_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
-        #         val_dataset = val_dataset.batch(32)
-        #
-        #         loss_fn = keras.losses.SparseCategoricalCrossentropy()
-        #         train_acc_metric = keras.metrics.SparseCategoricalAccuracy()
-        #         val_acc_metric = keras.metrics.SparseCategoricalAccuracy()
-        #
-        #         for epoch in range(args.epochs):
-        #             training_losses = []
-        #             for step, (x_batch_train, y_batch_train) in enumerate(training_data):
-        #
-        #                 with tf.GradientTape() as tape:
-        #                     # Minibatch gradient descent
-        #                     logits = model(x_batch_train, training=True)
-        #                     loss_value = loss_fn(y_batch_train, logits)
-        #                     l2_loss = params["lambda_l2"] * tf.reduce_sum(
-        #                         [tf.reduce_sum(tf.square(w)) for w in model.trainable_weights])
-        #                     loss_value += l2_loss
-        #
-        #                 grads = tape.gradient(loss_value, model.trainable_weights)
-        #                 train_acc_metric.update_state(y_batch_train, logits)
-        #
-        #                 strategy.update_parameters(zip(grads, model.trainable_weights))
-        #
-        #                 training_losses.append(loss_value.numpy())
-        #
-        #             average_training_loss = np.mean(training_losses)
-        #             training_losses_per_epoch.append(average_training_loss)
-        #
-        #             train_acc = train_acc_metric.result()
-        #             training_acc_per_epoch.append(train_acc.numpy())
-        #
-        #             train_acc_metric.reset_states()
-        #
-        #             validation_losses = []
-        #             for x_batch_val, y_batch_val in val_dataset:
-        #                 val_logits = model(x_batch_val, training=False)
-        #                 val_loss = loss_fn(y_batch_val, val_logits)
-        #                 validation_losses.append(val_loss.numpy())
-        #                 val_acc_metric.update_state(y_batch_val, val_logits)
-        #
-        #             val_acc = val_acc_metric.result()
-        #             validation_acc_per_epoch.append(val_acc.numpy())
-        #             val_acc_metric.reset_states()
-        #
-        #             average_validation_loss = np.mean(validation_losses)
-        #             validation_losses_per_epoch.append(average_validation_loss)
-        #
-        #             if args.log:
-        #                 print("Epoch: {} of {}\nK-Step: {} of {}\nTrain acc: {:.4f}\nVal acc: {:.4f}\nTrain loss: {:.4f}\n"
-        #                       "Val loss: {:.4f}\n{} {}\n---".format(epoch + 1, args.epochs, k_step, args.k_fold,float(train_acc),
-        #                                                          float(val_acc), float(average_training_loss), float(average_validation_loss),
-        #                                                          strategy.get_plot_title(), params["lambda_l2"]))
-        #             if average_validation_loss < best_val_loss:
-        #                 best_val_loss = average_validation_loss
-        #                 epochs_no_improve = 0
-        #             else:
-        #                 epochs_no_improve += 1
-        #             if epochs_no_improve == patience:
-        #                 print('Early stopping!')
-        #                 break
-        #         all_scores.append(np.mean(validation_losses_per_epoch))
-        #     return np.mean(all_scores)
-
-        # result = gp_minimize(objective, search_space, n_calls=args.n_calls,  x0=[[1e-7], [1e-4], [0.1]], #n_initial_points=0,
-        #                      random_state=1)
-        result = gp_minimize(objective, search_space, n_calls=args.n_calls, #acq_func='EI',
+        result = gp_minimize(objective, search_space, n_calls=args.n_calls,  # acq_func='EI',
                              # x0=[[1e-6], [1e-4], [1e-2]],
                              # n_random_starts=3,
                              # n_jobs=3,
@@ -307,13 +259,13 @@ def worker(args):
         print(f"Finished search for {strategy.get_plot_title()}")
 
     else:
-        print("Training")
+        print("--- Training ---")
         if args.train_on_baseline == 1:
-            lambda_l2 = get_l2_lambda(**{"optimizer": "sgd", "compression": "none"})
+            lambda_l2 = get_l2_lambda(args, **{"optimizer": "sgd", "compression": "none"})
         elif args.train_on_baseline == 2:
-            lambda_l2 = get_l2_lambda(**strategy_params)
+            lambda_l2 = get_l2_lambda(args, **strategy_params)
         else:
-            lambda_l2 = 0
+            lambda_l2 = None
         args.lambda_l2 = lambda_l2
         print("Using L2 lambda:", lambda_l2)
         if args.k_fold > 1:
@@ -331,28 +283,8 @@ def worker(args):
                 train_labels, val_labels = label_train[train_index], label_train[val_index]
                 k_step += 1
 
-                model = model_factory(args.model.lower(), lambda_l2, input_shape, num_classes)
-
-                strategy = strategy_factory(**strategy_params)
-                strategy.summary()
-
-                model.compile(optimizer=strategy,
-                              loss='sparse_categorical_crossentropy',
-                              metrics=['accuracy'])
-
-                callbacks = []
-                if args.stop_patience < args.epochs:
-                    early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
-                    callbacks = [early_stopping]
-
-                reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
-                                              patience=args.lr_decay,
-                                              min_lr=strategy_params["learning_rate"] / 20)
-                callbacks.append(reduce_lr)
-
-                history = model.fit(train_images, train_labels, epochs=args.epochs,
-                                    batch_size=32,
-                                    validation_data=(val_images, val_labels), verbose=args.log, callbacks=callbacks)
+                history, strategy = train_model(train_images, train_labels, val_images, val_labels, lambda_l2,
+                                                input_shape, num_classes, strategy_params, args)
 
                 training_acc_per_epoch[k_step] = history.history['accuracy']
                 validation_acc_per_epoch[k_step] = history.history['val_accuracy']
@@ -362,32 +294,8 @@ def worker(args):
         else:
             compression_rates = []
 
-            model = model_factory(args.model.lower(), lambda_l2, input_shape, num_classes)
-
-            strategy = strategy_factory(**strategy_params)
-            strategy.summary()
-
-            model.compile(optimizer=strategy,
-                          loss='sparse_categorical_crossentropy',
-                          metrics=['accuracy'])
-
-            callbacks = []
-            if args.stop_patience < args.epochs:
-                early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
-                callbacks = [early_stopping]
-
-            reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
-                                          patience=args.lr_decay,
-                                          min_lr=strategy_params["learning_rate"] / 20)
-            callbacks.append(reduce_lr)
-
-            BATCH_SIZE = 32
-            if args.dataset == "cifar10":
-                BATCH_SIZE = 64
-
-            history = model.fit(img_train, label_train, epochs=args.epochs,
-                                batch_size=BATCH_SIZE,
-                                validation_data=(img_test, label_test), verbose=args.log, callbacks=callbacks)
+            history, strategy = train_model(img_train, label_train, img_test, label_test, lambda_l2,
+                                            input_shape, num_classes, strategy_params, args)
 
             training_acc_per_epoch = history.history['accuracy']
             validation_acc_per_epoch = history.history['val_accuracy']
@@ -416,35 +324,12 @@ def worker(args):
 
 
 def main():
+    tf.get_logger().setLevel('ERROR')
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
     args = parse_args()
     worker(args)
-    # tasks = []
-    # for model in args.models:
-    #     task_args = argparse.Namespace()
-    #     task_args.model = model
-    #     task_args.dataset = args.dataset
-    #     task_args.optimizer = args.optimizer
-    #     task_args.compression = args.compression
-    #     task_args.bayesian_search = args.bayesian_search
-    #     tasks.append(task_args)
-
-    # num_workers = multiprocessing.cpu_count()
-    # print("Using: ", num_workers, "workers")
-    # executor = ThreadPoolExecutor(max_workers=num_workers)
-    #
-    # futures = [executor.submit(train_model, strategy) for strategy in strategies]
-    #
-    # for future in futures:
-    #     future.result()
-
-    # with Pool(processes=len(tasks)) as pool:
-    #     results = pool.map(worker, tasks)
-    #
-    # for result in results:
-    #     print(result)
 
 
 if __name__ == "__main__":
     main()
-    # print(get_l2_lambda(**{"optimizer": "sgd", "compression": "gradientsparsification", "learning_rate": 0.01, "k": 0.02,"max_iter": 2}))
-    # print(get_l2_lambda(**{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.01, "k": 1}))

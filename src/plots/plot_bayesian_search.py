@@ -7,7 +7,7 @@ from skopt.plots import plot_gaussian_process, plot_convergence
 
 
 if __name__ == "__main__":
-    filename = "bayesian_result_SGD_vqSGD_repetition100_mnist.pkl"
+    filename = "bayesian_result_EFSIGNSGD_mnist.pkl"
 
     result = load('../results/bayesian/'+filename)
     # metrics = load('../results/bayesian/bayesian_metrics_SGD_TopK_0108.pkl')

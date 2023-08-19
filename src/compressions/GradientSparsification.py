@@ -36,8 +36,11 @@ class GradientSparsification(Compression):
 
         gradient_spars = tf.multiply(selectors, gradient) / probabilities
 
-        self.compression_rates.append(gradient.dtype.size * 8 * np.prod(gradient.shape.as_list()) /
-                                      self.get_sparse_tensor_size_in_bits(gradient_spars))
+        if variable.ref() not in self.cr:
+            self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(
+                gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
+                gradient_spars)
+            self.compression_rates.append(self.cr[variable.ref()])
 
         gradient_spars = tf.reshape(gradient_spars, input_shape)
         gradient_spars = tf.where(tf.math.is_nan(gradient_spars), 0., gradient_spars)
@@ -52,29 +55,25 @@ class GradientSparsification(Compression):
         Returns:
           The optimal probability vector p.
         """
-        j = 0
         p = tf.ones_like(input_tensor)
-        d = input_tensor.shape[0]
+        d = tf.cast(tf.shape(input_tensor)[0], dtype=tf.float32)
+        k_d = k * d
 
         comp = k * d * tf.abs(input_tensor) / tf.reduce_sum(tf.abs(input_tensor)).numpy()
         comp = tf.where(tf.math.is_nan(comp), 0., comp)
         p = tf.where(comp < 1,
                      comp, p)
         c = 2
+        j = 0
+
         while j < max_iter and c > 1:
             active_set = tf.where(p != 1, p, 0)
-            cardinality = tf.math.count_nonzero(active_set).numpy()
-            c = (k * d - d + cardinality) / tf.reduce_sum(active_set).numpy()
-            cp = tf.math.multiply(c, p)
-            p = tf.where(cp < 1, cp, 1)
+            cardinality = tf.cast(tf.math.count_nonzero(active_set), dtype=tf.float32)
+            sum_active_set = tf.reduce_sum(active_set)
+
+            c = (k_d - d + cardinality) / sum_active_set
+            p = tf.minimum(c * p, 1)
+
             j += 1
 
         return p
-
-    @staticmethod
-    def get_sparse_tensor_size_in_bits(tensor):
-        num_nonzero_entries = tf.math.count_nonzero(tensor)
-        num_index_bits = np.ceil(np.log2(len(tf.reshape(tensor, [-1]))))
-        num_value_bits = tensor.dtype.size * 8
-        return num_nonzero_entries.numpy() * (num_index_bits + num_value_bits) if num_nonzero_entries.numpy() * (
-                num_index_bits + num_value_bits) != 0 else 1

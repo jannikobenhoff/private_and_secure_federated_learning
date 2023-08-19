@@ -7,6 +7,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 import itertools
 
+names = {
+    "terngrad": "TernGrad",
+    "naturalcompression": "Natural Compression",
+    "onebitsgd": "1-Bit SGD",
+    "sparsegradient": "Sparse Gradient",
+    "gradientsparsification": "Gradient Sparsification",
+    "memsgd": "Sparsified SGD with Memory",
+    "atomo": "Atomic Sparsification",
+    "efsignsgd": "EF-SignSGD",
+    "fetchsgd": "FetchSGD",
+    "vqsgd": "vqSGD",
+    "topk": "TopK",
+    "sgd ": "SGD",
+    "sgd": "SGD"
+}
 
 def plot_compression_rates():
     compression_dict = {
@@ -147,7 +162,7 @@ def plot_compression_metrics(title: str, parent_folder: str, baseline):
 
     axes[0].set_title("Validation Accuracy", fontsize=10)
     axes[0].legend()
-    plt.suptitle(title)
+    plt.suptitle(names[title.lower()])
     plt.tight_layout()
     # plt.savefig("../../figures/methods/" + title + ".pdf", bbox_inches='tight')
     plt.show()
@@ -207,22 +222,29 @@ def plot_compare_all(parent_folder: str):
             all_strats[strat_key][1].append(np.mean(ast.literal_eval(file["val_acc"])))
 
     marker = itertools.cycle(('+', 'v', 'o', '*'))
+    colors = itertools.cycle(('r', 'g', 'b', 'y', 'm', 'c'))
+
     fig, axes = plt.subplots(2, 3, figsize=(15, 10))
     axes = axes.flatten()
     for a in all_acc:
         m = next(marker)
-        axes[3].scatter(all_acc[a][0], all_acc[a][1], label=a.replace("none", "") if a[-4:] == "none" else a[4:],
-                        marker=m)
+        c = next(colors)
+
+        l = a.replace("none", "") if a[-4:] == "none" else a[4:]
+        l = names[l.replace(" ", "").lower()]
+        axes[3].scatter(all_acc[a][0], all_acc[a][1], label=l, marker=m, color=c)
         asa = all_strats[a]
         sorted_pairs = sorted(zip(*asa), key=lambda pair: pair[0], reverse=True)
         sorted_lists = list(map(list, zip(*sorted_pairs)))
 
-        axes[4].plot(sorted_lists[0], sorted_lists[1], label=a.replace("none", "") if a[-4:] == "none" else a[4:],
-                     marker=m, markersize=4)
-        axes[0].plot(np.arange(1, len(all_train_acc[a]) + 1, 1), all_train_acc[a], marker=m, markersize=3)
-        axes[1].plot(np.arange(1, len(all_val_loss[a]) + 1, 1), all_val_loss[a], marker=m, markersize=3)
-        axes[0].plot(np.arange(1, len(all_train_loss[a]) + 1, 1), all_train_loss[a], marker=m, markersize=3)
-        axes[2].plot(np.arange(1, len(all_val_acc[a]) + 1, 1), all_val_acc[a], marker=m, markersize=3)
+        axes[4].plot(sorted_lists[0], sorted_lists[1], marker=m, markersize=4, label=l, color=c)
+        axes[0].plot(np.arange(1, len(all_train_acc[a]) + 1, 1), all_train_acc[a], marker=m, markersize=3, color=c)
+        axes[1].plot(np.arange(1, len(all_val_loss[a]) + 1, 1), all_val_loss[a], marker=m, markersize=3, label=l,
+                     color=c)
+        axes[0].plot(np.arange(1, len(all_train_loss[a]) + 1, 1), all_train_loss[a], marker=m, markersize=3, label=l,
+                     color=c)
+        axes[2].plot(np.arange(1, len(all_val_acc[a]) + 1, 1), all_val_acc[a], marker=m, markersize=3, label=l,
+                     color=c)
 
     axes[3].grid(alpha=0.2)
     axes[3].set_title("Max Validation Acc / Compression Rate", fontsize=10)
@@ -232,20 +254,23 @@ def plot_compare_all(parent_folder: str):
     axes[1].set_title("Validation Loss", fontsize=10)
     axes[2].grid(alpha=0.2)
     axes[2].set_title("Validation Accuracy", fontsize=10)
+    axes[2].legend(fontsize=8)
+
     axes[0].grid(alpha=0.2)
-    axes[0].set_title("Training Accuracy & Loss", fontsize=10)
+    axes[0].set_title("Training Accuracy and Loss", fontsize=10)
+    axes[0].legend(fontsize=8)
 
     axes[4].grid(alpha=0.2)
     axes[4].legend(fontsize=8)
     axes[4].set_title("Validation Acc / Compression Rate", fontsize=10)
 
-    table_data = [[name.replace("none", "") if name[-4:] == "none" else name[4:], round(100 * rate[1], 2),
+    table_data = [[names[(name.replace("none", "") if name[-4:] == "none" else name[4:]).replace(" ", "").lower()], round(100 * rate[1], 2),
                    round(rate[0], 2)] for name, rate in all_acc.items()]
 
     table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
 
     table = axes[5].table(cellText=table_data,
-                          colLabels=["Method", "Val Acc", "Compression Rate"],
+                          colLabels=["Method", "Mean Val Acc", "Compression Rate"],
                           cellLoc='center',
                           loc='center')
 
@@ -259,14 +284,17 @@ def plot_compare_all(parent_folder: str):
         if row == 0:
             cell.set_fontsize(10)
             cell._text.set_weight('bold')
+        if col == 0 and row > 0:
+            cell.set_fontsize(7)
+
     plt.tight_layout()
     plt.savefig("../../figures/compare_all.pdf", bbox_inches='tight')
     plt.show()
 
 
 if __name__ == "__main__":
-    # plot_compression_metrics("memsgd", "45epochsbaseline", "training_SGD_mnist_08_12_18_59.json")
+    # plot_compression_metrics("memsgd", "cifar10_no_l2", "training_SGD_cifar10_08_18_08_27.json")
 
-    plot_compare_all("45epochsbaseline_1")
+    plot_compare_all("cifar10_no_l2")
 
     # plot_compression_rates()

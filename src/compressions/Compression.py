@@ -6,6 +6,8 @@ class Compression:
         self.name = name
         self._variables = []
         self.compression_rates = []
+        self.cr = {}
+
     @abc.abstractmethod
     def build(self, var_list):
         """Initialize the optimizer's variables, such as momemtum variables.
@@ -77,3 +79,51 @@ class Compression:
 
     def decompress(self, compressed_gradient: Tensor):
         raise NotImplementedError("Subclasses must implement decompress method")
+
+    @staticmethod
+    def top_k_sparsification(input_tensor: Tensor, k: int) -> Tensor:
+        """
+        Returns a sparse tensor of the input tensor, with the top k elements.
+        k = 2: [1, 2, 3] -> [0, 2, 3]
+        """
+        # k = tf.cast(k, tf.int32.base_dtype)
+
+        input_shape = input_tensor.shape
+        flattened_tensor: Tensor = tf.reshape(input_tensor, [-1])
+        if tf.size(flattened_tensor) < k:
+            return input_tensor
+
+        abs_tensor = tf.abs(flattened_tensor)
+        # s = tf.sort(tf.reshape(abs_tensor, [-1]), direction="DESCENDING")
+        #
+        # bool_mask = tf.reduce_any(tf.equal(tf.reshape(abs_tensor, [-1, 1]), s[0:k]), axis=-1)
+        # bool_mask = tf.reshape(bool_mask, tf.shape(input_tensor))
+        #
+        # result = input_tensor * tf.cast(bool_mask, input_tensor.dtype)
+        # return result
+
+        indices = tf.math.top_k(abs_tensor, k=k, sorted=True).indices
+
+        mask = tf.zeros(flattened_tensor.shape, dtype=flattened_tensor.dtype)
+        mask = tf.tensor_scatter_nd_update(mask, tf.expand_dims(indices, axis=1),
+                                           tf.ones_like(indices, dtype=tf.float32))
+
+        spars_tensor = flattened_tensor * mask
+
+        spars_tensor = tf.reshape(spars_tensor, input_shape)
+
+        return spars_tensor
+
+    @staticmethod
+    def get_sparse_tensor_size_in_bits(tensor):
+        flattened_tensor = tf.reshape(tensor, [-1])
+        num_nonzero_entries = tf.math.count_nonzero(flattened_tensor)
+
+        # num_elements = tf.size(flattened_tensor, out_type=tf.float32)
+        # num_index_bits = tf.math.ceil(tf.math.log(num_elements) / tf.math.log(2.0))
+
+        num_index_bits = tf.int32.size * 8
+        num_value_bits = tf.constant(tensor.dtype.size * 8, dtype=tf.int64)
+
+        total_bits = num_nonzero_entries * (num_index_bits + num_value_bits)
+        return tf.maximum(total_bits, 1)

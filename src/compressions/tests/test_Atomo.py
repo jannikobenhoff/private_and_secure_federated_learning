@@ -1,6 +1,5 @@
 import unittest
 from src.compressions.Atomo import *
-from src.utilities.compression_rate import get_compression_rate
 
 import torch
 

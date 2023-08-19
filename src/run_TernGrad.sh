@@ -1,12 +1,14 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="search"  # search  training  baseline_l2  no_l2
+DEFAULT_MODE="no_l2_resnet"  # search  training  baseline_l2  no_l2
 
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
 
 base_strategy='{"optimizer": "sgd", "compression": "terngrad", "learning_rate": 0.01, "clip": CLIP_VALUE}'
+
+base_strategy_resnet='{"optimizer": "sgd", "compression": "terngrad", "learning_rate": 0.1, "clip": 2.5}'
 
 clips="2.5"
 
@@ -65,6 +67,19 @@ case $mode in
                 --log=2 \
                 --strategy="${base_strategy//CLIP_VALUE/$clip}"
         done
+        ;;
+
+    "no_l2_resnet")
+        python model_train.py --model ResNet --dataset cifar10 \
+            --epochs=45 \
+            --gpu=1 \
+            --k_fold=1 \
+            --fullset=100 \
+            --stop_patience=10 \
+            --train_on_baseline=0 \
+            --lr_decay=3 \
+            --log=1 \
+            --strategy="$base_strategy_resnet"
         ;;
 
     *)

@@ -16,10 +16,10 @@ case $mode in
           --epochs=200 \
           --n_calls=10 \
           --k_fold=5 \
-          --fullset=1 \
-          --stop_patience=15 \
+          --fullset=10 \
+          --stop_patience=50 \
           --bayesian_search \
-          --log=1 \
+          --log=2 \
           --strategy="$base_strategy"
         ;;
 

@@ -17,7 +17,7 @@ from skopt import dump
 
 from src.compressions.TopK import TopK
 from src.models.Alexnet import alexnet, AlexnetModel
-from src.models.ResNet import resnet18, ResNet18_new
+from src.models.ResNet import ResNet18
 from src.optimizer.FetchSGD import FetchSGD
 from src.strategy import Strategy
 from src.utilities.datasets import load_dataset

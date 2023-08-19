@@ -26,7 +26,11 @@ if __name__ == "__main__":
     tf.config.run_functions_eagerly(run_eagerly=True)
     tf.data.experimental.enable_debug_mode()
 
-    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("cifar10", fullset=10)
+    FULLSET = 10
+    EPOCHS = 50
+    BATCH_SIZE = 64
+
+    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("cifar10", fullset=FULLSET)
     # get_custom_objects().update({"strategy": Strategy})
     print(input_shape)
     space = [Real(1e-5, 1e-1, "log-uniform", name='l2_reg')]
@@ -39,7 +43,7 @@ if __name__ == "__main__":
         validation_acc_list = []
         val_loss_list = []
 
-        kfold = KFold(n_splits=3, shuffle=True)
+        kfold = KFold(n_splits=5, shuffle=True)
         for train_index, val_index in kfold.split(img_train):
             train_images, val_images = img_train[train_index], img_train[val_index] #img_train, img_test#
             train_labels, val_labels = label_train[train_index], label_train[val_index] #label_train, label_test#
@@ -50,18 +54,18 @@ if __name__ == "__main__":
             model = ResNet18_new(num_classes=num_classes,lambda_l2=params["l2_reg"]) #resnet18(num_classes=num_classes, input_shape=input_shape, regularization_factor=l2)  #create_model(l2)
             model.build(input_shape=(None, 32, 32, 3))
 
-            opt = Strategy(compression=None, learning_rate=0.01)
+            opt = Strategy(compression=None, learning_rate=0.001)
             model.compile(optimizer=opt,
                           loss='sparse_categorical_crossentropy',
                           metrics=['accuracy'])
 
             early_stopping = EarlyStopping(monitor='val_loss', patience=3, verbose=1, restore_best_weights=True)
 
-            STEPS = len(img_train) / 256
-            history = model.fit(train_images, train_labels, epochs=20,
-                                steps_per_epoch=STEPS, batch_size=256,
-                                # batch_size=32,
-                                validation_data=(val_images, val_labels), verbose=2, callbacks=[early_stopping],
+            # STEPS = len(img_train) / 256
+            history = model.fit(train_images, train_labels, epochs=EPOCHS,
+                                #steps_per_epoch=STEPS, batch_size=256,
+                                batch_size=BATCH_SIZE,
+                                validation_data=(val_images, val_labels), verbose=2, #callbacks=[early_stopping],
                                 #workers=3
                                 )
 
@@ -85,5 +89,6 @@ if __name__ == "__main__":
     print("Best validation accuracy: ", res_gp.fun)
     plot_gaussian_process(res_gp, ashow_title=True,
                           show_legend=True, show_next_point=True, show_observations=True)
+    plt.suptitle(f"Fullset: {FULLSET}, Epochs: {EPOCHS}, Batch-Size: {BATCH_SIZE}")
     plt.xscale('log')
     plt.show()

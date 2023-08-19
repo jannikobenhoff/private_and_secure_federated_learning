@@ -9,7 +9,6 @@ class MemSGD(Optimizer):
         super().__init__(name=name)
         self._learning_rate = self._build_learning_rate(learning_rate)
 
-
         if rand_k is not None and top_k is not None:
             raise "Please only select top-k or random-k sparsification."
         elif rand_k is None and top_k is None:
@@ -17,6 +16,7 @@ class MemSGD(Optimizer):
         self.top_k = top_k
         self.rand_k = rand_k
         self.compression_rates = []
+        self.cr = {}
 
     def build(self, var_list):
         """Initialize optimizer variables.
@@ -53,8 +53,14 @@ class MemSGD(Optimizer):
         else:
             g = self.top_k_sparsification(input_tensor=m + lr * gradient,
                                           k=self.top_k)
-        self.compression_rates.append(gradient.dtype.size*8*np.prod(gradient.shape.as_list())/self.get_sparse_tensor_size_in_bits(g))
-        self.memory[self._index_dict[var_key]].assign(m+lr*gradient-g)
+        if variable.ref() not in self.cr:
+            self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(
+                gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
+                g)
+            self.compression_rates.append(self.cr[variable.ref()])
+
+        self.memory[self._index_dict[var_key]].assign(m + lr * gradient - g)
+
         # variable.assign_add(-g)
         return g
 
@@ -74,7 +80,8 @@ class MemSGD(Optimizer):
         indices = tf.math.top_k(abs_tensor, k).indices
 
         mask = tf.zeros(flattened_tensor.shape)
-        mask = tf.tensor_scatter_nd_update(mask, tf.expand_dims(indices, axis=1), tf.ones_like(indices, dtype=tf.float32))
+        mask = tf.tensor_scatter_nd_update(mask, tf.expand_dims(indices, axis=1),
+                                           tf.ones_like(indices, dtype=tf.float32))
 
         spars_tensor = tf.math.multiply(flattened_tensor, mask)
         spars_tensor = tf.reshape(spars_tensor, input_shape)
@@ -92,7 +99,8 @@ class MemSGD(Optimizer):
 
         indices = tf.random.shuffle(tf.range(num_elements))[:k]
         mask = tf.zeros_like(flattened_tensor)
-        mask = tf.tensor_scatter_nd_update(mask, tf.expand_dims(indices, axis=1), tf.ones_like(indices, dtype=tf.float32))
+        mask = tf.tensor_scatter_nd_update(mask, tf.expand_dims(indices, axis=1),
+                                           tf.ones_like(indices, dtype=tf.float32))
 
         spars_tensor = tf.math.multiply(flattened_tensor, mask)
         spars_tensor = tf.reshape(spars_tensor, input_shape)
@@ -113,8 +121,14 @@ class MemSGD(Optimizer):
 
     @staticmethod
     def get_sparse_tensor_size_in_bits(tensor):
-        num_nonzero_entries = tf.math.count_nonzero(tensor)
-        num_index_bits = np.ceil(np.log2(len(tf.reshape(tensor, [-1]))))
-        num_value_bits = tensor.dtype.size * 8
-        return num_nonzero_entries.numpy() * (num_index_bits + num_value_bits) if num_nonzero_entries.numpy() * (
-                num_index_bits + num_value_bits) != 0 else 1
+        flattened_tensor = tf.reshape(tensor, [-1])
+        num_nonzero_entries = tf.math.count_nonzero(flattened_tensor)
+
+        # num_elements = tf.size(flattened_tensor, out_type=tf.float32)
+        # num_index_bits = tf.math.ceil(tf.math.log(num_elements) / tf.math.log(2.0))
+
+        num_index_bits = tf.int32.size * 8
+        num_value_bits = tf.constant(tensor.dtype.size * 8, dtype=tf.int64)
+
+        total_bits = num_nonzero_entries * (num_index_bits + num_value_bits)
+        return tf.maximum(total_bits, 1)
