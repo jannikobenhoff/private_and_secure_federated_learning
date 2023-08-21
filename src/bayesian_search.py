@@ -13,7 +13,8 @@ from keras.utils import get_custom_objects
 
 from models.LeNet import LeNet
 from src.compressions.TopK import TopK
-from src.models.ResNet import resnet18, ResNet18, ResNet18_new
+from src.models.ResNet import ResNet
+from src.models.MobileNet import MobileNet
 from utilities.datasets import load_dataset
 from strategy import Strategy
 
@@ -31,8 +32,8 @@ if __name__ == "__main__":
     BATCH_SIZE = 64
 
     img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("cifar10", fullset=FULLSET)
-    # get_custom_objects().update({"strategy": Strategy})
-    print(input_shape)
+
+    print(len(img_train))
     space = [Real(1e-5, 1e-1, "log-uniform", name='l2_reg')]
     # space = [Real(1, 200, "uniform", name='l2_reg')]
 
@@ -48,24 +49,19 @@ if __name__ == "__main__":
             train_images, val_images = img_train[train_index], img_train[val_index] #img_train, img_test#
             train_labels, val_labels = label_train[train_index], label_train[val_index] #label_train, label_test#
 
-            # model = resnet18(input_shape=input_shape, num_classes=num_classes, regularization_factor=params["l2_reg"])  #ResNet().search_model(lambda_l2=params["l2_reg"], input_shape=input_shape, num_classes=num_classes)
-            # model = ResNet18(num_classes=num_classes)#, regularization_factor=params["l2_reg"])  #ResNet().search_model(lambda_l2=params["l2_reg"], input_shape=input_shape, num_classes=num_classes)
-            # model = LeNet(search=True).search_model(lambda_l2=params["l2_reg"])
-            model = ResNet18_new(num_classes=num_classes,lambda_l2=params["l2_reg"]) #resnet18(num_classes=num_classes, input_shape=input_shape, regularization_factor=l2)  #create_model(l2)
-            model.build(input_shape=(None, 32, 32, 3))
+            model = MobileNet(num_classes=num_classes, lambda_l2=params["l2_reg"])
+            opt = Strategy(optimizer="sgd", compression=None, learning_rate=0.1)
 
-            opt = Strategy(compression=None, learning_rate=0.001)
             model.compile(optimizer=opt,
                           loss='sparse_categorical_crossentropy',
                           metrics=['accuracy'])
 
             early_stopping = EarlyStopping(monitor='val_loss', patience=3, verbose=1, restore_best_weights=True)
 
-            # STEPS = len(img_train) / 256
             history = model.fit(train_images, train_labels, epochs=EPOCHS,
-                                #steps_per_epoch=STEPS, batch_size=256,
                                 batch_size=BATCH_SIZE,
-                                validation_data=(val_images, val_labels), verbose=2, #callbacks=[early_stopping],
+                                validation_data=(val_images, val_labels), verbose=1,
+                                #callbacks=[early_stopping],
                                 #workers=3
                                 )
 

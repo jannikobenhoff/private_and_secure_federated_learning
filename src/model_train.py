@@ -16,6 +16,7 @@ from skopt.utils import use_named_args
 from models.LeNet import LeNet
 from models.ResNet import ResNet
 from models.MobileNet import MobileNet
+from models.DenseNet import DenseNet
 
 from utilities.lrDecay import CosineDecayCallback
 from utilities.datasets import load_dataset
@@ -55,16 +56,19 @@ def parse_args():
 def model_factory(model_name, lambda_l2, input_shape, num_classes):
     print(f"Initializing {model_name.upper()}")
     if model_name == "lenet":
-        model = LeNet(search=True).search_model(lambda_l2)
+        model = LeNet(search=True).search_model(lambda_l2=lambda_l2)
         return model
     elif model_name == "resnet":
-        model = ResNet("resnet18", num_classes, lambda_l2)
+        model = ResNet("resnet18", num_classes, lambda_l2=lambda_l2)
         # model = ResNet18(num_classes=num_classes, lambda_l2=lambda_l2)
         # input shape for cifar10
         # model.build(input_shape=(None, 32, 32, 3))
         return model
     elif model_name == "mobilenet":
-        model = MobileNet(num_classes)
+        model = MobileNet(num_classes, lambda_l2=lambda_l2)
+        return model
+    elif model_name == "densenet":
+        model = DenseNet('densenet121', num_classes)#, lambda_l2=lambda_l2)
         return model
     else:
         raise ValueError(f"Invalid model name: {model_name}")
@@ -218,7 +222,7 @@ def worker(args):
                 train_labels, val_labels = label_train[train_index], label_train[val_index]
                 k_step += 1
 
-                history, strategy = train_model(train_images, train_labels, val_images, val_labels, lambda_l2,
+                history, strategy = train_model(train_images, train_labels, val_images, val_labels, params["lambda_l2"],
                                                 input_shape, num_classes, strategy_params, args)
 
                 training_acc_per_epoch[k_step].append(history.history['accuracy'])
@@ -265,7 +269,7 @@ def worker(args):
         elif args.train_on_baseline == 2:
             lambda_l2 = get_l2_lambda(args, **strategy_params)
         else:
-            lambda_l2 = None
+            lambda_l2 = None  # 5e-4
         args.lambda_l2 = lambda_l2
         print("Using L2 lambda:", lambda_l2)
         if args.k_fold > 1:

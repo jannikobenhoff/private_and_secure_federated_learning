@@ -7,6 +7,7 @@ class Compression:
         self._variables = []
         self.compression_rates = []
         self.cr = {}
+        self._built = False
 
     @abc.abstractmethod
     def build(self, var_list):

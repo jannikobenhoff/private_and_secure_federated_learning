@@ -28,28 +28,28 @@ class OneBitSGD(Compression):
                 model_variable=var, variable_name="error", initial_value=tf.zeros_like(var)
             )
         self.compression_rates.append(var_list[0].dtype.size*8)
+        """
+        1-bit Tensor is sent, as well as values a and b of the un-quantized Tensor.
+        """
         self._built = True
 
     def compress(self, gradient: Tensor, variable):
         gradient_quantized = tf.sign(gradient + self.error[variable.ref()])
-        error = gradient - self.unquantize(gradient_quantized, gradient)
+
+        gradient_un_quantized = self.un_quantize(gradient_quantized, gradient)
+        error = gradient - gradient_un_quantized
 
         self.error[variable.ref()].assign(error)
-        # get_compression_rate(gradient, gradient_quantized)
-        # gradient_quantized = tf.cast(gradient_quantized, dtype=tf.int8)
-        # huffman
-        # rle = run_length_encoding(gradient_quantized)
-        # vc = count_tensor_values(rle)
-        # huf = generate_huffman(vc)
-        # enc = encode_huffman(rle, huf)
-        # print(enc, huf)
-        # print((len(tf.reshape(gradient_quantized, [-1])) *32) / (len("".join(enc))))# + len(huf) * 4))
-        #
-        # return enc, huf, gradient_quantized.shape
-        return gradient_quantized
+
+        return gradient_un_quantized
 
     @staticmethod
-    def unquantize(gradient_quantized: Tensor, gradient: Tensor):
+    def un_quantize(gradient_quantized: Tensor, gradient: Tensor):
+        """
+        Reconstruction values to un-quantize the quantized tensor.
+        The two values are recomputed as to minimize the square quantization error
+        and transmitted in each data exchange.
+        """
         x = tf.reshape(gradient_quantized, [-1]).numpy()
         y = tf.reshape(gradient, [-1]).numpy()
         indices_minus1 = np.where(x == -1.0)

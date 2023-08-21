@@ -23,6 +23,7 @@ names = {
     "sgd": "SGD"
 }
 
+
 def plot_compression_rates():
     compression_dict = {
         'SGD': 1,
@@ -61,6 +62,24 @@ def plot_compression_rates():
     plt.savefig("compression_rates.pdf")
 
 
+def average_and_replicate(plots):
+    # Convert to arrays
+    plots = [np.array(p) for p in plots]
+
+    max_len = max(len(p) for p in plots)
+    total = np.zeros(max_len)
+
+    # Extend and sum all plots
+    for p in plots:
+        p_extended = np.append(p, [p[-1]] * (max_len - len(p)))
+        total += p_extended
+
+    # Calculate average
+    average_plot = (total / len(plots)).tolist()
+
+    return [average_plot for _ in range(len(plots))]
+
+
 def plot_compression_metrics(title: str, parent_folder: str, baseline):
     # baseline = 'training_SGD_mnist_08_07_00_18.json'
     plot_configs = {
@@ -73,7 +92,8 @@ def plot_compression_metrics(title: str, parent_folder: str, baseline):
         "naturalcompression": [],
         "efsignsgd": [],
         "onebitsgd": [],
-        "terngrad": []
+        "terngrad": [],
+        "sgd": []
     }
     params = plot_configs[title]
     marker = itertools.cycle(('s', '+', 'v', 'o', '*'))
@@ -104,6 +124,9 @@ def plot_compression_metrics(title: str, parent_folder: str, baseline):
         all_val_acc.append(np.mean(ast.literal_eval(metrics["val_acc"])))
         all_val_acc_plots.append(ast.literal_eval(metrics["val_acc"]))
         all_val_loss.append(ast.literal_eval(metrics["val_loss"]))
+
+    # all_val_acc_plots = average_and_replicate(all_val_acc_plots)
+    # all_val_loss = average_and_replicate(all_val_loss)
 
     if len(params) > 0:
         # Sorting data by parameter
@@ -264,7 +287,8 @@ def plot_compare_all(parent_folder: str):
     axes[4].legend(fontsize=8)
     axes[4].set_title("Validation Acc / Compression Rate", fontsize=10)
 
-    table_data = [[names[(name.replace("none", "") if name[-4:] == "none" else name[4:]).replace(" ", "").lower()], round(100 * rate[1], 2),
+    table_data = [[names[(name.replace("none", "") if name[-4:] == "none" else name[4:]).replace(" ", "").lower()],
+                   round(100 * rate[1], 2),
                    round(rate[0], 2)] for name, rate in all_acc.items()]
 
     table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
@@ -293,8 +317,8 @@ def plot_compare_all(parent_folder: str):
 
 
 if __name__ == "__main__":
-    # plot_compression_metrics("memsgd", "cifar10_no_l2", "training_SGD_cifar10_08_18_08_27.json")
+    # plot_compression_metrics("onebitsgd", "45epochsbaseline_1", "training_SGD_mnist_08_12_18_59.json")
 
-    plot_compare_all("cifar10_no_l2")
+    plot_compare_all("45epochsbaseline_1")
 
     # plot_compression_rates()

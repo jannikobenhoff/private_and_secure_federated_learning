@@ -22,6 +22,19 @@ case $mode in
           --strategy="$base_strategy"
         ;;
 
+    "search_resnet")
+        python model_train.py --model ResNet --dataset cifar10 \
+          --epochs=50 \
+          --n_calls=10 \
+          --k_fold=5 \
+          --gpu=1 \
+          --fullset=100 \
+          --stop_patience=15 \
+          --bayesian_search \
+          --log=1 \
+          --strategy="$base_strategy_resnet"
+        ;;
+
     "training")
         python model_train.py --model LeNet --dataset mnist \
             --epochs=45 \
