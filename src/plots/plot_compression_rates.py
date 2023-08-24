@@ -294,7 +294,7 @@ def plot_compare_all(parent_folder: str):
     table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
 
     table = axes[5].table(cellText=table_data,
-                          colLabels=["Method", "Mean Val Acc", "Compression Rate"],
+                          colLabels=["Method", "Mean Val Acc", "Compression Ratio"],
                           cellLoc='center',
                           loc='center')
 

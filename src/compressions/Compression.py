@@ -1,6 +1,11 @@
 import abc
+
+import numpy as np
 import tensorflow as tf
 from tensorflow import Tensor
+from typing import Final
+
+
 class Compression:
     def __init__(self, name: str):
         self.name = name
@@ -26,7 +31,7 @@ class Compression:
         self._build_index_dict(var_list)
 
     def add_variable_from_reference(
-        self, model_variable, variable_name, shape=None, initial_value=None
+            self, model_variable, variable_name, shape=None, initial_value=None
     ):
         """Create an optimizer variable from model variable.
 
@@ -89,10 +94,41 @@ class Compression:
         """
         # k = tf.cast(k, tf.int32.base_dtype)
 
-        input_shape = input_tensor.shape
+        input_shape: Final = input_tensor.shape
         flattened_tensor: Tensor = tf.reshape(input_tensor, [-1])
-        if tf.size(flattened_tensor) < k:
+
+        if tf.size(flattened_tensor) <= k:
             return input_tensor
+
+        ft_np = tf.abs(flattened_tensor).numpy()
+
+        indices = np.argpartition(np.abs(ft_np.ravel()), -k)[-k:]
+        mask = tf.zeros(flattened_tensor.shape, dtype=flattened_tensor.dtype)
+        mask = tf.tensor_scatter_nd_update(mask, tf.expand_dims(indices, axis=1),
+                                           tf.ones_like(indices, dtype=tf.float32))
+
+        spars_tensor = flattened_tensor * mask
+
+        spars_tensor = tf.reshape(spars_tensor, input_shape)
+
+        return spars_tensor
+
+        # sorted_tensor = -tf.sort(-tf.abs(flattened_tensor))
+        #
+        # # binary search
+        # low, high = 0, k
+        # while low < high:
+        #     mid = (low + high) // 2
+        #     if sorted_tensor[mid] >= sorted_tensor[k]:
+        #         low = mid + 1
+        #     else:
+        #         high = mid
+        # threshold = sorted_tensor[high - 1]
+        #
+        # mask = tf.math.greater(tf.abs(flattened_tensor), threshold)
+        # gradient_dropped = flattened_tensor * tf.cast(mask, flattened_tensor.dtype)
+        # gradient_dropped = tf.reshape(gradient_dropped, input_shape)
+        # return gradient_dropped
 
         abs_tensor = tf.abs(flattened_tensor)
         # s = tf.sort(tf.reshape(abs_tensor, [-1]), direction="DESCENDING")

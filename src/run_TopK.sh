@@ -75,7 +75,7 @@ case $mode in
             echo "$k"
             python model_train.py --model ResNet --dataset cifar10 \
                 --epochs=45 \
-                --gpu=0 \
+                --gpu=1 \
                 --k_fold=1 \
                 --fullset=100 \
                 --stop_patience=10 \

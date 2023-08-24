@@ -11,7 +11,8 @@ def load_dataset(dataset_name: str, fullset=100):
         train_len = int(len(img_train_full) * (fullset / 100.0))
         test_len = int(len(img_test_full) * (fullset / 100.0))
 
-        img_train = img_train_full[:train_len].reshape(-1, 28, 28, 1).astype('float32') / 255.0  # .reshape(-1, 28, 28, 1)
+        img_train = img_train_full[:train_len].reshape(-1, 28, 28, 1).astype(
+            'float32') / 255.0  # .reshape(-1, 28, 28, 1)
         label_train = label_train_full[:train_len]
         img_test = img_test_full[:test_len].reshape(-1, 28, 28, 1).astype('float32') / 255.0  #
         label_test = label_test_full[:test_len]

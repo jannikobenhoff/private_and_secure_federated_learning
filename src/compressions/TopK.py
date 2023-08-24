@@ -27,7 +27,8 @@ class TopK(Compression):
         sparse_gradient = self.top_k_sparsification(gradient, self.k)
 
         if variable.ref() not in self.cr:
-            self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
+            self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(
+                gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
                 sparse_gradient)
             self.compression_rates.append(self.cr[variable.ref()])
 

@@ -70,20 +70,23 @@ class MemSGD(Optimizer):
         Returns a sparse tensor of the input tensor, with the top k elements.
         k = 2: [1, 2, 3] -> [0, 2, 3]
         """
+        # k = tf.cast(k, tf.int32.base_dtype)
+
         input_shape = input_tensor.shape
         flattened_tensor: Tensor = tf.reshape(input_tensor, [-1])
 
-        if tf.size(flattened_tensor) < k:
+        if tf.size(flattened_tensor) <= k:
             return input_tensor
 
-        abs_tensor = tf.abs(flattened_tensor)
-        indices = tf.math.top_k(abs_tensor, k).indices
+        ft_np = tf.abs(flattened_tensor).numpy()
 
-        mask = tf.zeros(flattened_tensor.shape)
+        indices = np.argpartition(np.abs(ft_np.ravel()), -k)[-k:]
+        mask = tf.zeros(flattened_tensor.shape, dtype=flattened_tensor.dtype)
         mask = tf.tensor_scatter_nd_update(mask, tf.expand_dims(indices, axis=1),
                                            tf.ones_like(indices, dtype=tf.float32))
 
-        spars_tensor = tf.math.multiply(flattened_tensor, mask)
+        spars_tensor = flattened_tensor * mask
+
         spars_tensor = tf.reshape(spars_tensor, input_shape)
 
         return spars_tensor

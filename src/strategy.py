@@ -6,6 +6,7 @@ import tensorflow as tf
 from optimizer.EFsignSGD import EFsignSGD
 from optimizer.FetchSGD import FetchSGD
 from optimizer.MemSGD import MemSGD
+from keras import backend as K
 
 
 class Strategy(optimizer_v2.OptimizerV2):
