@@ -20,7 +20,8 @@ names = {
     "vqsgd": "vqSGD",
     "topk": "TopK",
     "sgd ": "SGD",
-    "sgd": "SGD"
+    "sgd": "SGD",
+    "bsgd": "BucketSGD"
 }
 
 
@@ -139,23 +140,25 @@ def plot_compression_metrics(title: str, parent_folder: str, baseline):
 
     for param, cr, val_acc, val_loss, val_acc_plot, m in zip(all_params[1:], all_cr[1:], all_val_acc[1:],
                                                              all_val_loss[1:], all_val_acc_plots[1:], marker):
-        axes[0].plot(np.arange(0, len(val_acc_plot)), val_acc_plot, marker=m, label=f"{param}", markersize=2)
+        axes[0].plot(np.arange(0, len(val_acc_plot)), val_acc_plot, marker=m, label=f"{param}", markersize=4)
         axes[3].plot(np.arange(0, len(val_loss)), val_loss, marker=m, label=f"{param}")
         axes[2].plot(cr, val_acc, marker=m, label=f"{param}")
 
     axes[2].plot(all_cr[1:], all_val_acc[1:], c="black", alpha=0.2)  # , marker=m, label=f"{param}")
 
     # Plotting baseline
-    axes[0].plot(np.arange(0, len(all_val_acc_plots[0])), all_val_acc_plots[0], label="baseline")
-    axes[3].plot(np.arange(0, len(all_val_loss[0])), all_val_loss[0], label="baseline")
-    axes[2].scatter(all_cr[0], all_val_acc[0], label="baseline")
+    m = next(marker)
+    c = "black"
+    axes[0].plot(np.arange(0, len(all_val_acc_plots[0])), all_val_acc_plots[0], label="baseline", marker=m, c=c)
+    axes[3].plot(np.arange(0, len(all_val_loss[0])), all_val_loss[0], label="baseline", marker=m, c=c)
+    axes[2].scatter(all_cr[0], all_val_acc[0], label="baseline", marker=m, c=c)
 
     # Table data
     table_data = [[name, round(rate, 2), str(round(100 * acc, 2)) + " %"] for name, rate, acc in
                   zip(all_params, all_cr, all_val_acc) if name != "-100" and name != [-100]]
     table_data.append(["baseline", "1", str(round(100 * all_val_acc[0], 2)) + " %"])
     table = axes[1].table(cellText=table_data,
-                          colLabels=[params, "Compression Rate", "Val Accuracy"],
+                          colLabels=[params, "Compression Ratio", "Test Accuracy"],
                           cellLoc='center',
                           loc='center')
 
@@ -171,12 +174,13 @@ def plot_compression_metrics(title: str, parent_folder: str, baseline):
             cell._text.set_weight('bold')
 
     axes[2].set_xlabel('Compression Rate')
-    axes[2].set_ylabel('Validation Accuracy')
-    axes[2].set_title('Validation Accuracy vs Compression Rate', fontsize=10)
+    axes[2].set_ylabel('Test Accuracy')
+    axes[2].set_title('Test Accuracy vs Compression Rate', fontsize=10)
     axes[2].legend()
 
     # axes[3].legend()
-    axes[3].set_title("Validation Loss", fontsize=10)
+    axes[3].set_title("Test Loss", fontsize=10)
+    axes[3].set_yscale("log")
 
     # all_params, all_cr = zip(*sorted(zip(all_params, all_cr)))
     # axes[1].plot(all_params, all_cr, alpha=0.2)
@@ -189,6 +193,13 @@ def plot_compression_metrics(title: str, parent_folder: str, baseline):
     plt.tight_layout()
     # plt.savefig("../../figures/methods/" + title + ".pdf", bbox_inches='tight')
     plt.show()
+
+
+def extend(array: list, length):
+    if len(array) < length:
+        for _ in range(length - len(array)):
+            array.append(array[-1])
+    return array
 
 
 def plot_compare_all(parent_folder: str):
@@ -214,27 +225,40 @@ def plot_compare_all(parent_folder: str):
         file = open(file_path, "r")
         file = json.load(file)
         strat = ast.literal_eval(file["args"]["strategy"])
-        strat_key = f"{strat['optimizer']} {strat['compression']}"
+        # strat_key = f"{strat['optimizer']} {strat['compression']}"
+        strat_key = f"{strat}"
+        lean_strat_key = f"{strat['optimizer']} {strat['compression']}"
+        if strat_key in all_train_acc:
+            # if all_acc[strat_key][1] < np.mean(ast.literal_eval(file["val_acc"])):
+            # all_acc[strat_key] = [file["compression_rates"][0], np.mean(ast.literal_eval(file["val_acc"]))]
+            all_train_acc[strat_key] += np.array(extend(ast.literal_eval(file["training_acc"]), file["args"]["epochs"]))
+            all_train_acc[strat_key] /= 2
 
-        if strat_key in all_acc:
-            if all_acc[strat_key][1] < np.mean(ast.literal_eval(file["val_acc"])):
-                all_acc[strat_key] = [file["compression_rates"][0], np.mean(ast.literal_eval(file["val_acc"]))]
-                all_train_acc[strat_key] = ast.literal_eval(file["training_acc"])
-                all_val_loss[strat_key] = ast.literal_eval(file["val_loss"])
-                all_train_loss[strat_key] = ast.literal_eval(file["training_loss"])
-                all_val_acc[strat_key] = ast.literal_eval(file["val_acc"])
+            all_val_loss[strat_key] += np.array(extend(ast.literal_eval(file["val_loss"]), file["args"]["epochs"]))
+            all_val_loss[strat_key] /= 2
+
+            all_train_loss[strat_key] += np.array(
+                extend(ast.literal_eval(file["training_loss"]), file["args"]["epochs"]))
+            all_train_loss[strat_key] /= 2
+
+            all_val_acc[strat_key] += np.array(extend(ast.literal_eval(file["val_acc"]), file["args"]["epochs"]))
+            all_val_acc[strat_key] /= 2
         else:
             all_acc[strat_key] = [file["compression_rates"][0], np.mean(ast.literal_eval(file["val_acc"]))]
-            all_val_loss[strat_key] = ast.literal_eval(file["val_loss"])
-            all_train_loss[strat_key] = ast.literal_eval(file["training_loss"])
-            all_train_acc[strat_key] = ast.literal_eval(file["training_acc"])
-            all_val_acc[strat_key] = ast.literal_eval(file["val_acc"])
+            all_train_acc[strat_key] = np.array(extend(ast.literal_eval(file["training_acc"]), file["args"]["epochs"]))
+            all_val_loss[strat_key] = np.array(extend(ast.literal_eval(file["val_loss"]), file["args"]["epochs"]))
+            all_train_loss[strat_key] = np.array(
+                extend(ast.literal_eval(file["training_loss"]), file["args"]["epochs"]))
+            all_val_acc[strat_key] = np.array(extend(ast.literal_eval(file["val_acc"]), file["args"]["epochs"]))
 
-        if strat_key in all_cr:
-            if all_cr[strat_key][0] < np.mean(file["compression_rates"]):
-                all_cr[strat_key] = [file["compression_rates"][0], np.mean(ast.literal_eval(file["val_acc"]))]
+        if lean_strat_key in all_cr:
+            # if all_cr[strat_key][0] < np.mean(file["compression_rates"]):
+            all_cr[lean_strat_key][0] += file["compression_rates"][0]
+            all_cr[lean_strat_key][0] /= 2
+            all_cr[lean_strat_key][1] += np.mean(ast.literal_eval(file["val_acc"]))
+            all_cr[lean_strat_key][1] /= 2
         else:
-            all_cr[strat_key] = [file["compression_rates"][0], np.mean(ast.literal_eval(file["val_acc"]))]
+            all_cr[lean_strat_key] = [file["compression_rates"][0], np.mean(ast.literal_eval(file["val_acc"]))]
 
         if strat_key in all_strats:
             all_strats[strat_key][0].append(file["compression_rates"][0])
@@ -244,57 +268,105 @@ def plot_compare_all(parent_folder: str):
             all_strats[strat_key][0].append(file["compression_rates"][0])
             all_strats[strat_key][1].append(np.mean(ast.literal_eval(file["val_acc"])))
 
+    for key in all_strats:
+        all_strats[key][0] = [np.mean(all_strats[key][0])]
+        all_strats[key][1] = [np.mean(all_strats[key][1])]
+
+    training_acc = {}
+    training_loss = {}
+    val_acc = {}
+    val_loss = {}
+    val_acc_vs_cr = {}
+    for a in all_cr:
+        strat_keys = [all_key for all_key in all_strats]
+        strat_keys_lean = [f"{ast.literal_eval(all_key)['optimizer']} {ast.literal_eval(all_key)['compression']}" for
+                           all_key in all_strats]
+        now_key = [strat_keys[u] for u in [i for i in range(len(strat_keys_lean)) if strat_keys_lean[i] == a]]
+
+        for key in now_key:
+            if a not in training_acc:
+                training_acc[a] = all_train_acc[key]
+                training_loss[a] = all_train_loss[key]
+                val_acc[a] = all_val_acc[key]
+                val_loss[a] = all_val_loss[key]
+
+                val_acc_vs_cr[a] = [[], []]
+                val_acc_vs_cr[a][0] = [all_strats[key][0]]
+                val_acc_vs_cr[a][1] = [all_strats[key][1]]
+
+            elif np.mean(val_acc[a]) < np.mean(all_val_acc[key]):
+                training_acc[a] = all_train_acc[key]
+                training_loss[a] = all_train_loss[key]
+                val_acc[a] = all_val_acc[key]
+                val_loss[a] = all_val_loss[key]
+            val_acc_vs_cr[a][0].append(all_strats[key][0])
+            val_acc_vs_cr[a][1].append(all_strats[key][1])
+
     marker = itertools.cycle(('+', 'v', 'o', '*'))
     colors = itertools.cycle(('r', 'g', 'b', 'y', 'm', 'c'))
 
-    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+    fig, axes = plt.subplots(2, 3, figsize=(14, 8))
     axes = axes.flatten()
-    for a in all_acc:
+
+    for a in training_loss:
         m = next(marker)
         c = next(colors)
-
-        l = a.replace("none", "") if a[-4:] == "none" else a[4:]
+        # strat = a ast.literal_eval(a)
+        strat_key = a  # f"{strat['optimizer']} {strat['compression']}"
+        l = strat_key.replace("none", "") if strat_key[-4:] == "none" else strat_key[4:]
         l = names[l.replace(" ", "").lower()]
-        axes[3].scatter(all_acc[a][0], all_acc[a][1], label=l, marker=m, color=c)
-        asa = all_strats[a]
+
+        asa = val_acc_vs_cr[a]
         sorted_pairs = sorted(zip(*asa), key=lambda pair: pair[0], reverse=True)
         sorted_lists = list(map(list, zip(*sorted_pairs)))
-
-        axes[4].plot(sorted_lists[0], sorted_lists[1], marker=m, markersize=4, label=l, color=c)
-        axes[0].plot(np.arange(1, len(all_train_acc[a]) + 1, 1), all_train_acc[a], marker=m, markersize=3, color=c)
-        axes[1].plot(np.arange(1, len(all_val_loss[a]) + 1, 1), all_val_loss[a], marker=m, markersize=3, label=l,
+        a = strat_key
+        axes[2].plot(sorted_lists[0], sorted_lists[1], marker=m, markersize=4, label=l, color=c)
+        axes[0].plot(np.arange(1, len(training_acc[a]) + 1, 1), training_acc[a], marker=m, markersize=4, color=c,
+                     label=l)
+        axes[4].plot(np.arange(1, len(val_loss[a]) + 1, 1), val_loss[a], marker=m, markersize=4, label=l,
                      color=c)
-        axes[0].plot(np.arange(1, len(all_train_loss[a]) + 1, 1), all_train_loss[a], marker=m, markersize=3, label=l,
+        axes[3].plot(np.arange(1, len(training_loss[a]) + 1, 1), training_loss[a], marker=m, markersize=4, label=l,
                      color=c)
-        axes[2].plot(np.arange(1, len(all_val_acc[a]) + 1, 1), all_val_acc[a], marker=m, markersize=3, label=l,
+        axes[1].plot(np.arange(1, len(val_acc[a]) + 1, 1), val_acc[a], marker=m, markersize=4, label=l,
                      color=c)
 
     axes[3].grid(alpha=0.2)
-    axes[3].set_title("Max Validation Acc / Compression Rate", fontsize=10)
-    axes[3].legend(fontsize=8)
+    axes[3].set_title("Training Loss", fontsize=10)
+    # axes[3].legend(fontsize=8)
+    axes[3].set_yscale('log')
 
     axes[1].grid(alpha=0.2)
-    axes[1].set_title("Validation Loss", fontsize=10)
+    axes[1].set_title("Test Accuracy", fontsize=10)
+
     axes[2].grid(alpha=0.2)
-    axes[2].set_title("Validation Accuracy", fontsize=10)
+    # axes[2].set_title("Validation Acc / Compression Rate", fontsize=10)
+    axes[2].set_xlabel("Overall Compression", fontsize=10)
+    axes[2].set_ylabel("Test Accuracy", fontsize=10)
     axes[2].legend(fontsize=8)
 
     axes[0].grid(alpha=0.2)
-    axes[0].set_title("Training Accuracy and Loss", fontsize=10)
+    axes[0].set_title("Training Accuracy", fontsize=10)
     axes[0].legend(fontsize=8)
 
     axes[4].grid(alpha=0.2)
-    axes[4].legend(fontsize=8)
-    axes[4].set_title("Validation Acc / Compression Rate", fontsize=10)
+    # axes[4].legend(fontsize=8)
+    axes[4].set_title("Test Loss", fontsize=10)
+    axes[4].set_yscale('log')
 
-    table_data = [[names[(name.replace("none", "") if name[-4:] == "none" else name[4:]).replace(" ", "").lower()],
+    for key in val_acc_vs_cr:
+        ids = np.argmax(val_acc_vs_cr[key][1])
+        val_acc_vs_cr[key][0] = val_acc_vs_cr[key][0][ids][0]
+        val_acc_vs_cr[key][1] = val_acc_vs_cr[key][1][ids][0]
+
+    table_data = [[names[(name.replace("none", "") if name[-4:] == "none" else name[4:]).replace(
+        " ", "").lower()],
                    round(100 * rate[1], 2),
-                   round(rate[0], 2)] for name, rate in all_acc.items()]
+                   round(rate[0], 2)] for name, rate in val_acc_vs_cr.items()]
 
     table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
 
     table = axes[5].table(cellText=table_data,
-                          colLabels=["Method", "Mean Val Acc", "Compression Ratio"],
+                          colLabels=["Method", "Mean Test Acc", "Compression Ratio"],
                           cellLoc='center',
                           loc='center')
 
@@ -306,7 +378,7 @@ def plot_compare_all(parent_folder: str):
 
     for (row, col), cell in table.get_celld().items():
         if row == 0:
-            cell.set_fontsize(10)
+            cell.set_fontsize(9)
             cell._text.set_weight('bold')
         if col == 0 and row > 0:
             cell.set_fontsize(7)
@@ -317,8 +389,8 @@ def plot_compare_all(parent_folder: str):
 
 
 if __name__ == "__main__":
-    # plot_compression_metrics("onebitsgd", "45epochsbaseline_1", "training_SGD_mnist_08_12_18_59.json")
+    # plot_compression_metrics("sparsegradient", "45epochs", "training_SGD_mnist_08_12_10_53.json")
 
-    plot_compare_all("45epochsbaseline_1")
+    plot_compare_all("baseline")
 
     # plot_compression_rates()

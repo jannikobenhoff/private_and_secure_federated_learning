@@ -4,9 +4,9 @@ from keras import layers, models, regularizers
 
 
 class LeNet(tf.keras.Model):
-    def __init__(self, input_shape = None, num_classes=None, chosen_lambda= None, search: bool = False):
+    def __init__(self, input_shape=None, num_classes=None, chosen_lambda=None, search: bool = False):
         super(LeNet, self).__init__()
-        #self.model = None
+        # self.model = None
         self.shape = input_shape
         self.num_classes = num_classes
         self.chosen_lambda = chosen_lambda
@@ -53,6 +53,3 @@ class LeNet(tf.keras.Model):
         # model.add(layers.Dense(84, activation='relu'))
         # model.add(layers.Dense(10, activation='softmax'))
         return model
-
-    # def call(self, inputs, training=None, mask=None):
-    #     return self.model(inputs)

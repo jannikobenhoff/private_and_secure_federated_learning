@@ -17,8 +17,10 @@ from models.LeNet import LeNet
 from models.ResNet import ResNet
 from models.MobileNet import MobileNet
 from models.DenseNet import DenseNet
+from compressions.bSGD import bSGD
+from utilities import Strategy
 
-from utilities.lrDecay import CosineDecayCallback
+from utilities.custom_callbacks import TimeHistory, CosineDecayCallback
 from utilities.datasets import load_dataset
 
 from compressions.TernGrad import TernGrad
@@ -30,8 +32,6 @@ from compressions.SparseGradient import SparseGradient
 from compressions.Atomo import Atomo
 from compressions.TopK import TopK
 from compressions.vqSGD import vqSGD
-
-from strategy import Strategy
 
 
 def parse_args():
@@ -68,7 +68,7 @@ def model_factory(model_name, lambda_l2, input_shape, num_classes):
         model = MobileNet(num_classes, lambda_l2=lambda_l2)
         return model
     elif model_name == "densenet":
-        model = DenseNet('densenet121', num_classes)#, lambda_l2=lambda_l2)
+        model = DenseNet('densenet121', num_classes)  # , lambda_l2=lambda_l2)
         return model
     else:
         raise ValueError(f"Invalid model name: {model_name}")
@@ -78,6 +78,9 @@ def strategy_factory(**params) -> Strategy:
     if params["compression"].lower() == "terngrad":
         return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=TernGrad(params["clip"]))
+    elif params["compression"].lower() == "bsgd":
+        return Strategy(learning_rate=params["learning_rate"], params=params,
+                        compression=bSGD(buckets=params["buckets"], sparse_buckets=params["sparse_buckets"]))
     elif params["compression"].lower() == "naturalcompression":
         return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=NaturalCompression())
@@ -108,9 +111,9 @@ def strategy_factory(**params) -> Strategy:
 def get_l2_lambda(args, **params) -> float:
     lambdas = None
     if args.model == "LeNet":
-        lambdas = json.load(open("results/lambda_lookup.json", "r"))
+        lambdas = json.load(open("../results/lambda_lookup.json", "r"))
     elif args.model == "ResNet":
-        lambdas = json.load(open("results/lambda_lookup_resnet.json", "r"))
+        lambdas = json.load(open("../results/lambda_lookup_resnet.json", "r"))
 
     opt = params["optimizer"]
     comp = params["compression"]
@@ -141,7 +144,8 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
     if args.dataset == "cifar10":
         BATCH_SIZE = 128
 
-    callbacks = []
+    time_callback = TimeHistory()
+    callbacks = [time_callback]
     if args.stop_patience < args.epochs:
         early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
         callbacks.append(early_stopping)
@@ -156,7 +160,7 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
                       metrics=['accuracy'])
 
         cosine_decay = CosineDecayCallback(strategy_params["learning_rate"],
-                                           decay_steps=int(args.epochs*len(train_images)/BATCH_SIZE),
+                                           decay_steps=int(args.epochs * len(train_images) / BATCH_SIZE),
                                            data_length=len(train_images), batch_size=BATCH_SIZE,
                                            alpha=strategy_params["learning_rate"] * 0.001)
 
@@ -170,7 +174,7 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
                         batch_size=BATCH_SIZE,
                         validation_data=(val_images, val_labels), verbose=args.log, callbacks=callbacks)
 
-    return history, strategy
+    return history, strategy, time_callback
 
 
 def worker(args):
@@ -222,8 +226,9 @@ def worker(args):
                 train_labels, val_labels = label_train[train_index], label_train[val_index]
                 k_step += 1
 
-                history, strategy = train_model(train_images, train_labels, val_images, val_labels, params["lambda_l2"],
-                                                input_shape, num_classes, strategy_params, args)
+                history, strategy, time_history = train_model(train_images, train_labels, val_images, val_labels,
+                                                              params["lambda_l2"],
+                                                              input_shape, num_classes, strategy_params, args)
 
                 training_acc_per_epoch[k_step].append(history.history['accuracy'])
                 validation_acc_per_epoch[k_step].append(history.history['val_accuracy'])
@@ -258,7 +263,7 @@ def worker(args):
             "args": args
         }
         result["metrics"] = metrics
-        dump(result, f'results/bayesian/bayesian_result_{strategy.get_file_name()}_{args.dataset}.pkl',
+        dump(result, f'../results/bayesian/bayesian_result_{strategy.get_file_name()}_{args.dataset}.pkl',
              store_objective=False)
         print(f"Finished search for {strategy.get_plot_title()}")
 
@@ -287,8 +292,9 @@ def worker(args):
                 train_labels, val_labels = label_train[train_index], label_train[val_index]
                 k_step += 1
 
-                history, strategy = train_model(train_images, train_labels, val_images, val_labels, lambda_l2,
-                                                input_shape, num_classes, strategy_params, args)
+                history, strategy, time_history = train_model(train_images, train_labels, val_images, val_labels,
+                                                              lambda_l2,
+                                                              input_shape, num_classes, strategy_params, args)
 
                 training_acc_per_epoch[k_step] = history.history['accuracy']
                 validation_acc_per_epoch[k_step] = history.history['val_accuracy']
@@ -298,8 +304,8 @@ def worker(args):
         else:
             compression_rates = []
 
-            history, strategy = train_model(img_train, label_train, img_test, label_test, lambda_l2,
-                                            input_shape, num_classes, strategy_params, args)
+            history, strategy, time_history = train_model(img_train, label_train, img_test, label_test, lambda_l2,
+                                                          input_shape, num_classes, strategy_params, args)
 
             training_acc_per_epoch = history.history['accuracy']
             validation_acc_per_epoch = history.history['val_accuracy']
@@ -316,10 +322,12 @@ def worker(args):
             "val_loss": str(validation_losses_per_epoch),
             "val_acc": str(validation_acc_per_epoch),
             "args": vars(args),
-            "compression_rates": compression_rates
+            "compression_rates": compression_rates,
+            "time_per_epoch": time_history.epoch_times,
+            "time_per_step": np.mean(time_history.times)
         }
 
-        file = open('results/compression/training_{}_{}_'
+        file = open('../results/compression/training_{}_{}_'
                     '{}.json'.format(strategy.get_file_name(), args.dataset, datetime.now().strftime('%m_%d_%H_%M')),
                     "w")
         json.dump(metrics, file, indent=4)

@@ -12,8 +12,9 @@ LARGEPRIME = 2 ** 61 - 1
 
 cache = {}
 
+
 class FetchSGD(Optimizer):
-    def __init__(self, learning_rate, r: int, c: int, momentum: float = 0.9, name="FetchSGD"):
+    def __init__(self, learning_rate, c: int, topk: int, r: int = 1, momentum: float = 0.9, name="FetchSGD"):
         super().__init__(name=name)
         self.error = None
         self.momentums = None
@@ -21,9 +22,9 @@ class FetchSGD(Optimizer):
         self.momentum = momentum
         self.r = r
         self.c = c
+        self.topk = topk
         self.compression_rates = []
         self.cr = {}
-
 
     def build(self, var_list):
         """Initialize optimizer variables.
@@ -69,28 +70,32 @@ class FetchSGD(Optimizer):
         # Access sketch
         sketch = cs.table
         if variable.ref() not in self.cr:
-            self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(
+            sketch = tf.convert_to_tensor(sketch.numpy(), dtype=gradient.dtype)
+            self.cr[variable.ref()] = max(gradient.dtype.size * 8 * np.prod(
                 gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
-                tf.convert_to_tensor(sketch.numpy(), dtype=gradient.dtype))
+                sketch),
+                                          gradient.dtype.size * 8 * np.prod(
+                                              gradient.shape.as_list()) / (
+                                                  sketch.dtype.size * 8 * np.prod(sketch.shape.as_list()))
+                                          )
             self.compression_rates.append(self.cr[variable.ref()])
-
-        # print(np.mean(self.compression_rates), gradient.dtype.size*8*np.prod(gradient.shape.as_list())/d*(10+32))
+            print(np.mean(self.compression_rates))
 
         if momentum > 0:
             # Momentum
-            cs.accumulateTable(momentum.numpy()*m_old.numpy())
+            cs.accumulateTable(momentum.numpy() * m_old.numpy())
             m_new = cs.table
 
             # Store new momentum
             self.momentums[self._index_dict[var_key]].assign(m_new)
 
         # Error feedback
-        cs.table = cs.table*lr.numpy()
+        cs.table = cs.table * lr.numpy()
         cs.accumulateTable(error.numpy())
         error = cs.table
 
         # UnSketch with top-k
-        k = 10
+        k = self.topk
         if k > d:
             k = d
         delta = cs.unSketch(k=k)

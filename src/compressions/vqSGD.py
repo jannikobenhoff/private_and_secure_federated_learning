@@ -4,6 +4,8 @@ from scipy.optimize import nnls
 from tensorflow import Tensor
 
 from .Compression import Compression
+
+
 # from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
 
 
@@ -42,10 +44,10 @@ class vqSGD(Compression):
         """
         input_shape = gradient.shape
         gradient = tf.where(tf.math.is_nan(gradient), 0., gradient)
-        #print(gradient.numpy()[0:5])
 
-        l2 = tf.norm(gradient, ord=2)  # tf.sqrt(tf.reduce_sum(tf.square(gradient)) + 1.0e-12)
-        if l2 != 0:
+        l2 = tf.norm(gradient, ord=2)
+        # if l2 != 0:
+        if l2 > 1:
             gradient = tf.reshape(gradient, [-1]) / l2
         else:
             gradient = tf.reshape(gradient, [-1])
@@ -53,7 +55,7 @@ class vqSGD(Compression):
         d = gradient.shape[0]
         d_sqrt = np.sqrt(d)
 
-        a = np.zeros(2*d)
+        a = np.zeros(2 * d)
 
         gamma = 1 - tf.norm(gradient, ord=1) / d_sqrt
         gamma_by_2d = gamma / (2 * d)
@@ -72,19 +74,19 @@ class vqSGD(Compression):
 
         for index in indices:
             if index >= d:
-                compressed_gradient[index-d] -= d_sqrt
+                compressed_gradient[index - d] -= d_sqrt
             else:
                 compressed_gradient[index] += d_sqrt
 
-        #print(sum(compressed_gradient))
+        # print(sum(compressed_gradient))
 
         compressed_gradient = tf.reshape(compressed_gradient, input_shape) / self.s
         compressed_gradient = tf.cast(compressed_gradient, dtype=variable.dtype)
 
         if variable.ref() not in self.cr:
-            self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
+            self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(
+                gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
                 compressed_gradient)
             self.compression_rates.append(self.cr[variable.ref()])
 
         return compressed_gradient * l2
-

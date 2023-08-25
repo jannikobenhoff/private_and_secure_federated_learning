@@ -134,4 +134,5 @@ class MemSGD(Optimizer):
         num_value_bits = tf.constant(tensor.dtype.size * 8, dtype=tf.int64)
 
         total_bits = num_nonzero_entries * (num_index_bits + num_value_bits)
-        return tf.maximum(total_bits, 1)
+        return min(tf.cast(tf.maximum(total_bits, 1), dtype=tf.int32),
+                   tensor.dtype.size * 8 * np.prod(tensor.shape.as_list()))

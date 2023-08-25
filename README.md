@@ -1,0 +1,5 @@
+# Installation
+
+1. conda env create -f tensorflow-apple-metal.yml -n tensorflow
+2. conda activate tensorflow
+3. python -m ipykernel install --user --name tensorflow --display-name "Python 3.10 (tensorflow)"
