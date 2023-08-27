@@ -31,11 +31,22 @@ class bSGD(Compression):
             )
         self._built = True
 
-    @staticmethod
-    def process_tensor(gradient, bucket, sparse_bucket):
+    def process_tensor(self, gradient, bucket, sparse_bucket):
         flat_tensor = tf.abs(tf.reshape(gradient, [-1])).numpy()
 
-        bucket_size = 1 + len(flat_tensor) // bucket
+        d = flat_tensor.size
+        bucket = min(bucket, d)
+
+        bucket_size = max(1, d // bucket)
+
+        if sparse_bucket > d:
+            sparse_bucket = d
+            bucket = sparse_bucket + 1
+
+        if bucket == d:
+            sparse_gradient = self.top_k_sparsification(flat_tensor, bucket - sparse_bucket)
+            sparse_gradient = tf.reshape(sparse_gradient, gradient.shape)
+            return sparse_gradient * tf.sign(gradient)
 
         indices = np.argpartition(np.abs(flat_tensor.ravel()), -(bucket - sparse_bucket) * bucket_size)[
                   -(bucket - sparse_bucket) * bucket_size:]
@@ -46,39 +57,9 @@ class bSGD(Compression):
             start_idx = i * bucket_size
             end_idx = (i + 1) * bucket_size
             output_tensor[indices[start_idx:end_idx]] = np.mean([flat_tensor[indices[start_idx:end_idx]]])
-            # output_tensor[indices[start_idx:end_idx]] = np.mean([flat_tensor[indices[start_idx:end_idx][0]], flat_tensor[indices[start_idx:end_idx][-1]]])
 
         output_tensor = tf.reshape(output_tensor, gradient.shape)
         output_tensor = output_tensor * tf.sign(gradient)
-        return output_tensor
-
-        flat_tensor = tf.abs(tf.reshape(gradient, [-1]))
-        # Get the indices of the highest absolute values for the preserved buckets
-        sorted_indices = tf.argsort(flat_tensor)[::-1]
-
-        # Calculate bucket size
-        bucket_size = 1 + len(flat_tensor) // bucket
-
-        # Create a tensor of zeros
-        output_tensor = tf.zeros_like(flat_tensor)
-
-        # Populate the zeros tensor with the mean values at the original indices
-        for i in range(bucket - sparse_bucket):
-            start_idx = i * bucket_size
-            end_idx = (i + 1) * bucket_size
-            sliced = tf.gather(flat_tensor, indices=sorted_indices[start_idx:end_idx])
-
-            mean_val = tf.math.reduce_mean(sliced) * tf.ones_like(sorted_indices[start_idx:end_idx], dtype=sliced.dtype)
-
-            # Expand dimensions of indices to make it compatible with tf.tensor_scatter_nd_update
-            update_indices = tf.expand_dims(sorted_indices[start_idx:end_idx], axis=-1)
-
-            output_tensor = tf.tensor_scatter_nd_update(output_tensor, update_indices, mean_val)
-
-        # Reshape the tensor back to its original shape
-        output_tensor = tf.reshape(output_tensor, gradient.shape)
-        output_tensor = output_tensor * tf.sign(gradient)
-
         return output_tensor
 
     def compress(self, gradient: Tensor, variable) -> Tensor:
@@ -87,21 +68,21 @@ class bSGD(Compression):
         sparse_gradient = self.process_tensor(gradient, self.buckets, self.sparse_buckets)
 
         if variable.ref() not in self.cr:
-            print("Non zero:", tf.math.count_nonzero(sparse_gradient).numpy())
+            # print("Non zero:", tf.math.count_nonzero(sparse_gradient).numpy())
             bit_sizes = [
                 # (self.buckets - self.sparse_buckets) * len(partitioned_list[-1]) + (
                 #     self.buckets - self.sparse_buckets) * 32 * tf.int32.size * 8,
                 self.get_bucket_tensor_size_in_bits(sparse_gradient, self.buckets, self.sparse_buckets),
                 self.get_sparse_tensor_size_in_bits(sparse_gradient)
             ]
-            print(bit_sizes)
+            # print(bit_sizes)
 
             bit_size = min(bit_sizes)
             self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(
                 gradient.shape.as_list()) / bit_size
 
             self.compression_rates.append(self.cr[variable.ref()])
-            print(np.mean(self.compression_rates))
+            # print(np.mean(self.compression_rates))
 
         # Error Feedback
         error = gradient - sparse_gradient
@@ -166,9 +147,6 @@ class bSGD(Compression):
     def get_bucket_tensor_size_in_bits(tensor, buckets: int, sparse_buckets: int):
         flattened_tensor = tf.reshape(tensor, [-1])
         num_nonzero_entries = tf.math.count_nonzero(flattened_tensor)
-
-        # num_elements = tf.size(flattened_tensor, out_type=tf.float32)
-        # num_index_bits = tf.math.ceil(tf.math.log(num_elements) / tf.math.log(2.0))
 
         num_index_bits = tf.int32.size * 8
         num_value_bits = tf.constant(tensor.dtype.size * 8, dtype=tf.int64)

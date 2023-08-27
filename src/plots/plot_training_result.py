@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from src.compressions.OneBitSGD import OneBitSGD
-from ..strategy import Strategy
 
 
 def plot_training_result(train_acc, train_loss, val_acc, val_loss, title, filename, save=False):
@@ -56,7 +55,7 @@ def plot_training_result(train_acc, train_loss, val_acc, val_loss, title, filena
 
 
 if __name__ == "__main__":
-    #file = "SGD_OneBitSGD_20230720-091040"
+    # file = "SGD_OneBitSGD_20230720-091040"
     for file in os.listdir("../results/compression/"):
         if "json" in file:
             file = file.replace(".json", "")

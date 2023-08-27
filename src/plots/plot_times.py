@@ -23,7 +23,7 @@ names = {
 }
 
 
-def plot_avg_times(parent_folder):
+def plot_avg_times(parent_folder, bsgd: bool):
     def get_all_files_in_directory(root_path):
         all_files = []
         for subdir, dirs, files in os.walk(root_path):
@@ -38,8 +38,8 @@ def plot_avg_times(parent_folder):
     data = {}
 
     for file_path in all_files:
-        # if "Bucket" in file_path:
-        #     continue
+        if "Bucket" in file_path and not bsgd:
+            continue
         file = open(file_path, "r")
         file = json.load(file)
         model = file["args"]["model"]
@@ -102,4 +102,4 @@ def plot_avg_times(parent_folder):
 
 
 if __name__ == "__main__":
-    plot_avg_times("baseline")
+    plot_avg_times("l2", False)

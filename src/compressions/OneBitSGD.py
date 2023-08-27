@@ -3,7 +3,6 @@ from tensorflow import Tensor
 import numpy as np
 
 from .Compression import Compression
-# from ..utilities.huffman import *
 
 
 class OneBitSGD(Compression):
@@ -27,7 +26,7 @@ class OneBitSGD(Compression):
             self.error[var.ref()] = self.add_variable_from_reference(
                 model_variable=var, variable_name="error", initial_value=tf.zeros_like(var)
             )
-        self.compression_rates.append(var_list[0].dtype.size*8)
+        self.compression_rates.append(var_list[0].dtype.size * 8)
         """
         1-bit Tensor is sent, as well as values a and b of the un-quantized Tensor.
         """

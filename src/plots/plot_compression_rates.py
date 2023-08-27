@@ -206,7 +206,7 @@ def extend(array: list, length):
     return array
 
 
-def plot_compare_all(parent_folder: str):
+def plot_compare_all(parent_folder: str, bsgd: bool):
     def get_all_files_in_directory(root_path):
         all_files = []
         for subdir, dirs, files in os.walk(root_path):
@@ -226,8 +226,8 @@ def plot_compare_all(parent_folder: str):
     all_train_loss = {}
     all_strats = {}
     for file_path in all_files:
-        # if "Bucket" in file_path:
-        #     continue
+        if "Bucket" in file_path and not bsgd:
+            continue
         file = open(file_path, "r")
         file = json.load(file)
         strat = ast.literal_eval(file["args"]["strategy"])
@@ -397,6 +397,6 @@ def plot_compare_all(parent_folder: str):
 if __name__ == "__main__":
     # plot_compression_metrics("atomo", "baseline", "sgd/training_SGD_mnist_08_25_13_21.json")
 
-    plot_compare_all("baseline")
+    plot_compare_all("baseline", True)
 
     # plot_compression_rates()

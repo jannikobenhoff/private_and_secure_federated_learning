@@ -46,7 +46,7 @@ if __name__ == "__main__":
     # model = ResNet("resnet18", num_classes, lambda_l2=None)
 
     # strategy = Strategy(compression=bSGD(buckets=100, sparse_buckets=95))
-    strategy = Strategy(compression=Atomo(sparsity_budget=3, svd_rank=3))
+    strategy = Strategy(compression=Atomo(svd_rank=3))
 
     model.compile(optimizer=strategy,
                   loss='sparse_categorical_crossentropy',

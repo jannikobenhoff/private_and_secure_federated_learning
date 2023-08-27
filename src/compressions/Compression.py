@@ -156,9 +156,8 @@ class Compression:
         flattened_tensor = tf.reshape(tensor, [-1])
         num_nonzero_entries = tf.math.count_nonzero(flattened_tensor)
 
-        # num_elements = tf.size(flattened_tensor, out_type=tf.float32)
-        # num_index_bits = tf.math.ceil(tf.math.log(num_elements) / tf.math.log(2.0))
-
+        # int32 -> Index 0 -> Index 2 * 2,147,483,647
+        # int64 > 2 * 2,147,483,647
         num_index_bits = tf.int32.size * 8
         num_value_bits = tf.constant(tensor.dtype.size * 8, dtype=tf.int64)
 

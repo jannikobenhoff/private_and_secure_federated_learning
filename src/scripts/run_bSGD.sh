@@ -1,14 +1,14 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="baseline_resnet"  # search  training  baseline_l2  no_l2  no_l2_resnet  baseline_resnet
+DEFAULT_MODE="baseline_l2"  # search  training  baseline_l2  no_l2  no_l2_resnet  baseline_resnet
 
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
 
-base_strategy='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.01, "buckets": 10000, "sparse_buckets": 9995}'
+base_strategy='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.01, "buckets": 5000, "sparse_buckets": 4999}'
 
-base_strategy_resnet='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.1, "buckets": 10000, "sparse_buckets": 9995}'
+base_strategy_resnet='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.1, "buckets": 10000, "sparse_buckets": 1}'
 
 # 1000 999
 # 2000 1999

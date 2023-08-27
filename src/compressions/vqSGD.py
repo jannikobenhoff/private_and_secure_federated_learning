@@ -1,12 +1,10 @@
 import numpy as np
 import tensorflow as tf
+import torch
 from scipy.optimize import nnls
 from tensorflow import Tensor
 
 from .Compression import Compression
-
-
-# from ..utilities.compression_rate import get_sparse_tensor_size_in_bits
 
 
 class vqSGD(Compression):
@@ -78,8 +76,6 @@ class vqSGD(Compression):
             else:
                 compressed_gradient[index] += d_sqrt
 
-        # print(sum(compressed_gradient))
-
         compressed_gradient = tf.reshape(compressed_gradient, input_shape) / self.s
         compressed_gradient = tf.cast(compressed_gradient, dtype=variable.dtype)
 
@@ -90,3 +86,109 @@ class vqSGD(Compression):
             self.compression_rates.append(self.cr[variable.ref()])
 
         return compressed_gradient * l2
+
+
+code_books = {}
+
+
+def get_code_book(args, dim, ks):
+    if (dim, ks) not in code_books:
+        location = './codebooks/{}/angular_dim_{}_Ks_{}.fvecs'
+        location = location.format('kmeans_codebook', dim, ks)
+        codewords = fvecs_read(location)
+        book = torch.from_numpy(codewords)
+
+        if args.gpus is not None:
+            book = book.cuda()
+        book /= torch.norm(book, dim=1, keepdim=True)[0]
+        code_books[(dim, ks)] = book
+        return book
+    else:
+        return code_books[(dim, ks)]
+
+
+class VQSGD(torch.optim.SGD):
+    def __init__(self, myargs, *args, **kwargs):
+        super(VQSGD, self).__init__(*args, **kwargs)
+        self.args = myargs
+        self.dim = myargs.dim
+        self.ks = myargs.ks
+        self.rate = myargs.rate
+        print('VQSGD, rate = {}'.format(self.rate))
+        self.code_books = get_code_book(self.args, self.dim, self.ks)
+
+    def vq_gd(self, p, lr, d_p):
+        code_books = self.code_books
+        l = 1 / self.rate * lr
+        u = self.rate * lr
+        x = p.data.reshape(-1, self.dim, 1)
+        grad = d_p.reshape(-1, self.dim, 1)
+        M = x.size(0)
+        W = x.expand(-1, -1, self.ks)
+        F = grad.expand(-1, -1, self.ks)
+        C = code_books.t().expand(M, self.dim, self.ks)
+        Tu = C - W + F.mul(u)
+        Tl = C - W + F.mul(l)
+
+        r0 = torch.min(Tu.pow(2), Tl.pow(2))
+        r1 = (torch.sign(Tu) + torch.sign(Tl)).pow(2)
+        result = 1 / 4 * r0.mul(r1)
+        codes = result.sum(dim=1).argmin(dim=1)
+
+        p1 = torch.index_select(
+            code_books, 0, codes).reshape(p.data.shape)
+        return p1
+
+    def step(self, closure=None):
+        """Performs a single optimization step.
+
+        Arguments:
+            closure (callable, optional): A closure that reevaluates the model
+                and returns the loss.
+        """
+        loss = None
+        if closure is not None:
+            loss = closure()
+
+        for group in self.param_groups:
+            weight_decay = group['weight_decay']
+            momentum = group['momentum']
+            dampening = group['dampening']
+            nesterov = group['nesterov']
+            for p in group['params']:
+                if p.grad is None:
+                    continue
+                d_p = p.grad.data
+                if weight_decay != 0:
+                    d_p.add_(weight_decay, p.data)
+                if momentum != 0:
+                    param_state = self.state[p]
+                    if 'momentum_buffer' not in param_state:
+                        buf = param_state['momentum_buffer'] = torch.clone(
+                            d_p).detach()
+                    else:
+                        buf = param_state['momentum_buffer']
+                        buf.mul_(momentum).add_(1 - dampening, d_p)
+                    if nesterov:
+                        d_p = d_p.add(momentum, buf)
+                    else:
+                        d_p = buf
+
+                # p.data.add_(-group['lr'], d_p)
+                if hasattr(p, 'org'):
+                    p.org.copy_(p.data - group['lr'] * d_p)
+                if 'name' in group and group['name'] == 'others':
+                    p.data.add_(-group['lr'], d_p)
+                else:
+                    if group['name'] == 'conv2d':
+                        tensor = p.data.clone().detach().permute(0, 2, 3, 1).contiguous()
+                        p.data = self.vq_gd(
+                            tensor, group['lr'], d_p).permute(0, 3, 1, 2)
+                    else:
+                        p.data = self.vq_gd(p, group['lr'], d_p)
+
+        return loss
+
+
+if __name__ == "__main__":
+    vq = VQSGD()

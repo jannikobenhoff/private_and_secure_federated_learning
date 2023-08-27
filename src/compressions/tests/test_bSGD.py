@@ -2,8 +2,6 @@ import unittest
 from src.compressions.bSGD import *
 import tensorflow as tf
 
-import tensorflow as tf
-
 
 def compress(gradient: Tensor, buckets, sparse_buckets) -> Tensor:
     flattened_gradient = tf.reshape(gradient, [-1])
@@ -43,45 +41,26 @@ def compress(gradient: Tensor, buckets, sparse_buckets) -> Tensor:
 def process_tensor(gradient, bucket, sparse_bucket):
     flat_tensor = tf.abs(tf.reshape(gradient, [-1])).numpy()
 
-    bucket_size = 1 + len(flat_tensor) // bucket
+    bucket = min(bucket, len(flat_tensor))
+    bucket_size = max(1, len(flat_tensor) // bucket)
 
-    print((bucket - sparse_bucket) * bucket_size)
+    if sparse_bucket > len(flat_tensor):
+        sparse_bucket = len(flat_tensor)
+        bucket = sparse_bucket + 1
+
+    # elif bucket - sparse_bucket > len(flat_tensor):
+    #     bucket = len(flat_tensor) + sparse_bucket
+
     indices = np.argpartition(np.abs(flat_tensor.ravel()), -(bucket - sparse_bucket) * bucket_size)[
               -(bucket - sparse_bucket) * bucket_size:]
 
-    print(indices)
     output_tensor = np.zeros_like(flat_tensor)
 
     for i in range(bucket - sparse_bucket):
         start_idx = i * bucket_size
         end_idx = (i + 1) * bucket_size
-        output_tensor[indices[start_idx:end_idx]] = np.mean(flat_tensor[indices[start_idx:end_idx]])
+        output_tensor[indices[start_idx:end_idx]] = np.mean([flat_tensor[indices[start_idx:end_idx]]])
 
-    output_tensor = tf.reshape(output_tensor, gradient.shape)
-    output_tensor = output_tensor * tf.sign(gradient)
-    return output_tensor
-    
-    sorted_indices = tf.argsort(flat_tensor)[::-1]
-    print(sorted_indices)
-    # Calculate bucket size
-
-    # Create a tensor of zeros
-    output_tensor = tf.zeros_like(flat_tensor)
-
-    # Populate the zeros tensor with the mean values at the original indices
-    for i in range(bucket - sparse_bucket):
-        start_idx = i * bucket_size
-        end_idx = (i + 1) * bucket_size
-        sliced = tf.gather(flat_tensor, indices=sorted_indices[start_idx:end_idx])
-
-        mean_val = tf.math.reduce_mean(sliced) * tf.ones_like(sorted_indices[start_idx:end_idx], dtype=sliced.dtype)
-
-        # Expand dimensions of indices to make it compatible with tf.tensor_scatter_nd_update
-        update_indices = tf.expand_dims(sorted_indices[start_idx:end_idx], axis=-1)
-
-        output_tensor = tf.tensor_scatter_nd_update(output_tensor, update_indices, mean_val)
-
-    # Reshape the tensor back to its original shape
     output_tensor = tf.reshape(output_tensor, gradient.shape)
     output_tensor = output_tensor * tf.sign(gradient)
     return output_tensor
@@ -95,13 +74,19 @@ class TestbSGD(unittest.TestCase):
 
         b = bSGD(buckets=3, sparse_buckets=1)
 
-        # grad = tf.constant(np.random.rand(100, 100), dtype=tf.float32)
-        grad = tf.constant([1, 2, 8, -4, 5, -6, -7, 3], dtype=tf.float32)
-        p = process_tensor(grad, 3, 1)
-        c = compress(grad, 3, 1)
+        grad = tf.constant(np.random.rand(10, 100), dtype=tf.float32)
+        # grad = tf.constant([1, 2, 8, -4, 5, -6, -7, 3], dtype=tf.float32)
+        p = process_tensor(grad, 100, 99)
+        # c = compress(grad, 3, 1)
 
-        print(p)
-        print(c)
+        print(tf.unique(tf.reshape(p, [-1]))[0].numpy())
+        print(tf.math.count_nonzero(p))
+
+        grad = tf.constant([1, 2, 8, -4, 5, -6, -7, 3], dtype=tf.float32)
+        p = process_tensor(grad, 10000, 9900)
+
+        print(tf.unique(tf.reshape(p, [-1]))[0].numpy())
+        print(tf.math.count_nonzero(p))
 
 
 if __name__ == '__main__':

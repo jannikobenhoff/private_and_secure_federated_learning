@@ -16,7 +16,7 @@ from src.compressions.TopK import TopK
 from src.models.ResNet import ResNet
 from src.models.MobileNet import MobileNet
 from utilities.datasets import load_dataset
-from strategy import Strategy
+from utilities.strategy import Strategy
 
 if __name__ == "__main__":
     tf.get_logger().setLevel('ERROR')

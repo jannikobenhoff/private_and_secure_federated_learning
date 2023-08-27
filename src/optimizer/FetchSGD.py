@@ -22,6 +22,7 @@ class FetchSGD(Optimizer):
         self.momentum = momentum
         self.r = r
         self.c = c
+        self.blocks = 1  # 20 is defaulted in CommEff GitHub (utils.py)
         self.topk = topk
         self.compression_rates = []
         self.cr = {}
@@ -57,7 +58,7 @@ class FetchSGD(Optimizer):
         input_shape = gradient.shape
 
         d = tf.reshape(gradient, [-1]).shape[0]
-        cs = CSVec(d=d, c=self.c, r=self.r)
+        cs = CSVec(d=d, c=self.c, r=self.r, numBlocks=self.blocks)
 
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
         momentum = tf.cast(self.momentum, variable.dtype.base_dtype)
@@ -90,7 +91,7 @@ class FetchSGD(Optimizer):
             self.momentums[self._index_dict[var_key]].assign(m_new)
 
         # Error feedback
-        cs.table = cs.table * lr.numpy()
+        # cs.table = cs.table * lr.numpy()
         cs.accumulateTable(error.numpy())
         error = cs.table
 
@@ -108,7 +109,7 @@ class FetchSGD(Optimizer):
         # Update
         delta = tf.reshape(delta, input_shape)
         # variable.assign_add(-delta)
-        return delta
+        return delta * lr
 
     def get_config(self):
         config = super().get_config()
@@ -126,7 +127,7 @@ class FetchSGD(Optimizer):
     def get_sparse_tensor_size_in_bits(tensor):
         flattened_tensor = tf.reshape(tensor, [-1])
         num_nonzero_entries = tf.math.count_nonzero(flattened_tensor)
-
+        print("Zeros:", num_nonzero_entries.numpy())
         # num_elements = tf.size(flattened_tensor, out_type=tf.float32)
         # num_index_bits = tf.math.ceil(tf.math.log(num_elements) / tf.math.log(2.0))
 

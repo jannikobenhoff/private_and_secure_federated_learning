@@ -1,19 +1,19 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="no_l2_resnet"  # search  training  baseline_l2  no_l2  no_l2_resnet
+DEFAULT_MODE="baseline_l2"  # search  training  baseline_l2  no_l2  no_l2_resnet
 
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
 
 base_strategy='{"optimizer": "fetchsgd", "compression": "none", "learning_rate": 0.01, "c": C_VALUE, "r": 1,
-                "topk": 1000, "momentum": 0.9}'
+                "topk": 2000, "momentum": 0.9}'
 
 base_strategy_resnet='{"optimizer": "fetchsgd", "compression": "none", "learning_rate": 0.1, "c": C_VALUE, "r": 1,
                       "topk": 10000, "momentum": 0.9}'
 
 #counters=(1000 5000 10000)
-counters=(1000 5000) # 10000)
+counters=(2000) # 5000) # 10000)
 counters_resnet=(10000 50000) # 10000)
 case $mode in
     "search")
@@ -38,7 +38,7 @@ case $mode in
                 --fullset=100 \
                 --stop_patience=10 \
                 --lr_decay=3 \
-                --log=2 \
+                --log=1 \
                 --train_on_baseline=2 \
                 --strategy="${base_strategy//C_VALUE/$c}"
         done

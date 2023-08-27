@@ -12,6 +12,8 @@ base_strategy_resnet='{"optimizer": "memsgd", "compression": "none", "learning_r
 
 top_ks=(10 50 100)
 
+top_ks_resnet=(200 500 1000)
+
 case $mode in
     "search")
         for k in "${top_ks[@]}"; do
@@ -70,7 +72,7 @@ case $mode in
         ;;
 
     "no_l2_resnet")
-        for k in "${top_ks[@]}"; do
+        for k in "${top_ks_resnet[@]}"; do
             python ../model_train.py --model ResNet --dataset cifar10 \
                 --epochs=45 \
                 --gpu=1 \
@@ -85,7 +87,7 @@ case $mode in
         ;;
 
     "baseline_resnet")
-        for k in "${top_ks[@]}"; do
+        for k in "${top_ks_resnet[@]}"; do
             python ../model_train.py --model ResNet --dataset cifar10 \
                 --epochs=45 \
                 --gpu=1 \
