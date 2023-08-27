@@ -13,11 +13,6 @@
     },
     "gradientsparsification": {
       "k": {
-        "0.5": {
-          "max_iter": {
-            "2": 0
-          }
-        },
         "0.1": {
           "max_iter": {
             "2": 0.039663

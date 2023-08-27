@@ -8,7 +8,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 
-from models.LeNet import LeNet
+from ..utilities import Strategy
+from ..models.LeNet import LeNet
 from sklearn.model_selection import KFold
 from keras import models, layers, regularizers
 
@@ -28,25 +29,24 @@ from src.compressions.TopK import TopK
 from src.optimizer.SGD import SGD
 from src.plots.plot_training_result import plot_training_result
 from src.utilities.datasets import load_dataset
-from strategy import Strategy
 
 if __name__ == "__main__":
     # tf.config.set_visible_devices([], 'GPU')
     tf.config.run_functions_eagerly(run_eagerly=True)
     tf.data.experimental.enable_debug_mode()
 
-    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("cifar10", fullset=1)
+    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("mnsit", fullset=100)
 
     chosen_lambda = None  # 0.0001952415460342464
 
-    # model = LeNet(num_classes=num_classes,
-    #               input_shape=input_shape,
-    #               chosen_lambda=chosen_lambda).model
+    model = LeNet(num_classes=num_classes,
+                  input_shape=input_shape,
+                  chosen_lambda=chosen_lambda).model
 
-    model = ResNet("resnet18", num_classes, lambda_l2=None)
+    # model = ResNet("resnet18", num_classes, lambda_l2=None)
 
     # strategy = Strategy(compression=bSGD(buckets=100, sparse_buckets=95))
-    strategy = Strategy(compression=None)
+    strategy = Strategy(compression=Atomo(sparsity_budget=3, svd_rank=3))
 
     model.compile(optimizer=strategy,
                   loss='sparse_categorical_crossentropy',

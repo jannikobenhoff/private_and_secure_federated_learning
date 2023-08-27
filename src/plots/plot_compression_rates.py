@@ -21,6 +21,7 @@ names = {
     "topk": "TopK",
     "sgd ": "SGD",
     "sgd": "SGD",
+    "bsgd2": "BucketSGD",
     "bsgd": "BucketSGD"
 }
 
@@ -93,7 +94,10 @@ def plot_compression_metrics(title: str, parent_folder: str, baseline):
         "naturalcompression": [],
         "efsignsgd": [],
         "onebitsgd": [],
+        "bsgd": ["buckets", "sparse_buckets"],
+        "bsgd2": ["buckets", "sparse_buckets"],
         "terngrad": [],
+        "atomo": ["svd_rank"],
         "sgd": []
     }
     params = plot_configs[title]
@@ -222,6 +226,8 @@ def plot_compare_all(parent_folder: str):
     all_train_loss = {}
     all_strats = {}
     for file_path in all_files:
+        # if "Bucket" in file_path:
+        #     continue
         file = open(file_path, "r")
         file = json.load(file)
         strat = ast.literal_eval(file["args"]["strategy"])
@@ -320,7 +326,7 @@ def plot_compare_all(parent_folder: str):
         sorted_pairs = sorted(zip(*asa), key=lambda pair: pair[0], reverse=True)
         sorted_lists = list(map(list, zip(*sorted_pairs)))
         a = strat_key
-        axes[2].plot(sorted_lists[0], sorted_lists[1], marker=m, markersize=4, label=l, color=c)
+        axes[2].plot(sorted_lists[0], sorted_lists[1], marker=m, label=l, color=c)
         axes[0].plot(np.arange(1, len(training_acc[a]) + 1, 1), training_acc[a], marker=m, markersize=4, color=c,
                      label=l)
         axes[4].plot(np.arange(1, len(val_loss[a]) + 1, 1), val_loss[a], marker=m, markersize=4, label=l,
@@ -360,7 +366,7 @@ def plot_compare_all(parent_folder: str):
 
     table_data = [[names[(name.replace("none", "") if name[-4:] == "none" else name[4:]).replace(
         " ", "").lower()],
-                   round(100 * rate[1], 2),
+                   round(100 * rate[1], 3),
                    round(rate[0], 2)] for name, rate in val_acc_vs_cr.items()]
 
     table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
@@ -384,12 +390,12 @@ def plot_compare_all(parent_folder: str):
             cell.set_fontsize(7)
 
     plt.tight_layout()
-    plt.savefig("../../figures/compare_all.pdf", bbox_inches='tight')
+    plt.savefig(f"../../figures/{parent_folder}.pdf", bbox_inches='tight')
     plt.show()
 
 
 if __name__ == "__main__":
-    # plot_compression_metrics("sparsegradient", "45epochs", "training_SGD_mnist_08_12_10_53.json")
+    # plot_compression_metrics("atomo", "baseline", "sgd/training_SGD_mnist_08_25_13_21.json")
 
     plot_compare_all("baseline")
 

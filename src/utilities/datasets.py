@@ -1,3 +1,4 @@
+import numpy as np
 from keras.utils import to_categorical
 from tensorflow import keras
 
@@ -8,19 +9,43 @@ def load_dataset(dataset_name: str, fullset=100):
     if dataset_name == "mnist":
         (img_train_full, label_train_full), (img_test_full, label_test_full) = keras.datasets.mnist.load_data()
 
+        shuffle_indices_train = np.arange(len(img_train_full))
+        np.random.shuffle(shuffle_indices_train)
+
+        img_train_full = img_train_full[shuffle_indices_train]
+        label_train_full = label_train_full[shuffle_indices_train]
+
+        shuffle_indices_test = np.arange(len(img_test_full))
+        np.random.shuffle(shuffle_indices_test)
+
+        img_test_full = img_test_full[shuffle_indices_test]
+        label_test_full = label_test_full[shuffle_indices_test]
+
         train_len = int(len(img_train_full) * (fullset / 100.0))
         test_len = int(len(img_test_full) * (fullset / 100.0))
 
-        img_train = img_train_full[:train_len].reshape(-1, 28, 28, 1).astype(
-            'float32') / 255.0  # .reshape(-1, 28, 28, 1)
+        img_train = img_train_full[:train_len].reshape(-1, 28, 28, 1).astype('float32') / 255.0
         label_train = label_train_full[:train_len]
-        img_test = img_test_full[:test_len].reshape(-1, 28, 28, 1).astype('float32') / 255.0  #
+        img_test = img_test_full[:test_len].reshape(-1, 28, 28, 1).astype('float32') / 255.0
         label_test = label_test_full[:test_len]
 
         input_shape = img_train[0].shape
         num_classes = 10
     if dataset_name == "cifar10":
         (img_train_full, label_train_full), (img_test_full, label_test_full) = keras.datasets.cifar10.load_data()
+
+        shuffle_indices_train = np.arange(len(img_train_full))
+        np.random.shuffle(shuffle_indices_train)
+
+        img_train_full = img_train_full[shuffle_indices_train]
+        label_train_full = label_train_full[shuffle_indices_train]
+
+        shuffle_indices_test = np.arange(len(img_test_full))
+        np.random.shuffle(shuffle_indices_test)
+
+        img_test_full = img_test_full[shuffle_indices_test]
+        label_test_full = label_test_full[shuffle_indices_test]
+
         train_len = int(len(img_train_full) * (fullset / 100.0))
         test_len = int(len(img_test_full) * (fullset / 100.0))
 
@@ -36,13 +61,6 @@ def load_dataset(dataset_name: str, fullset=100):
 
         input_shape = img_train[0].shape
         num_classes = 10
-
-    # if dataset_name == "cifar100":
-    #     (img_train, label_train), (img_test, label_test) = keras.datasets.cifar100.load_data()
-    #     img_train = img_train.astype('float32') / 255.0
-    #     img_test = img_test.astype('float32') / 255.0
-    #     input_shape = img_train[0].shape
-    #     num_classes = 100
 
     return img_train, label_train, img_test, label_test, input_shape, num_classes
 

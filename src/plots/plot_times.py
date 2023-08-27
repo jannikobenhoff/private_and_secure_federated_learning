@@ -38,6 +38,8 @@ def plot_avg_times(parent_folder):
     data = {}
 
     for file_path in all_files:
+        # if "Bucket" in file_path:
+        #     continue
         file = open(file_path, "r")
         file = json.load(file)
         model = file["args"]["model"]
@@ -100,4 +102,4 @@ def plot_avg_times(parent_folder):
 
 
 if __name__ == "__main__":
-    plot_avg_times("45epochsnol2")
+    plot_avg_times("baseline")

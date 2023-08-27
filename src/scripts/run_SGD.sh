@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="baseline_l2"  # search  search_resnet  training  baseline_l2  no_l2  no_l2_resnet  baseline_l2_resnet
+DEFAULT_MODE="baseline_resnet"  # search  search_resnet  training  baseline_l2  no_l2  no_l2_resnet  baseline_resnet
 
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
@@ -11,7 +11,7 @@ base_strategy_resnet='{"optimizer": "sgd", "compression": "none", "learning_rate
 
 case $mode in
     "search")
-        python model_train.py --model LeNet --dataset mnist \
+        python ../model_train.py --model LeNet --dataset mnist \
           --epochs=200 \
           --n_calls=10 \
           --k_fold=5 \
@@ -23,20 +23,20 @@ case $mode in
         ;;
 
     "search_resnet")
-        python model_train.py --model ResNet --dataset cifar10 \
-          --epochs=50 \
+        python ../model_train.py --model ResNet --dataset cifar10 \
+          --epochs=200 \
           --n_calls=10 \
           --k_fold=5 \
           --gpu=1 \
-          --fullset=10 \
-          --stop_patience=25 \
+          --fullset=2 \
+          --stop_patience=40 \
           --bayesian_search \
           --log=1 \
           --strategy="$base_strategy_resnet"
         ;;
 
     "training")
-        python model_train.py --model LeNet --dataset mnist \
+        python ../model_train.py --model LeNet --dataset mnist \
             --epochs=45 \
             --k_fold=1 \
             --fullset=100 \
@@ -60,7 +60,7 @@ case $mode in
         ;;
 
     "no_l2")
-        python model_train.py --model LeNet --dataset mnist \
+        python ../model_train.py --model LeNet --dataset mnist \
             --epochs=45 \
             --k_fold=1 \
             --fullset=100 \
@@ -71,7 +71,7 @@ case $mode in
             --strategy="$base_strategy"
         ;;
     "no_l2_resnet")
-        python model_train.py --model ResNet --dataset cifar10 \
+        python ../model_train.py --model ResNet --dataset cifar10 \
             --epochs=45 \
             --gpu=1 \
             --k_fold=1 \
@@ -83,8 +83,8 @@ case $mode in
             --strategy="$base_strategy_resnet"
         ;;
 
-    "baseline_l2_resnet")
-        python model_train.py --model ResNet --dataset cifar10 \
+    "baseline_resnet")
+        python ../model_train.py --model ResNet --dataset cifar10 \
             --epochs=45 \
             --gpu=1 \
             --k_fold=1 \

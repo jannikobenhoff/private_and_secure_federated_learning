@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="baseline_l2"  # search  training  baseline_l2  no_l2  no_l2_resnet
+DEFAULT_MODE="baseline_resnet"  # search  training  baseline_l2  no_l2  no_l2_resnet  baseline_resnet
 
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
@@ -78,6 +78,21 @@ case $mode in
                 --fullset=100 \
                 --stop_patience=10 \
                 --train_on_baseline=0 \
+                --lr_decay=3 \
+                --log=1 \
+                --strategy="${base_strategy_resnet//K_VALUE/$k}"
+        done
+        ;;
+
+    "baseline_resnet")
+        for k in "${top_ks[@]}"; do
+            python ../model_train.py --model ResNet --dataset cifar10 \
+                --epochs=45 \
+                --gpu=1 \
+                --k_fold=1 \
+                --fullset=100 \
+                --stop_patience=10 \
+                --train_on_baseline=1 \
                 --lr_decay=3 \
                 --log=1 \
                 --strategy="${base_strategy_resnet//K_VALUE/$k}"
