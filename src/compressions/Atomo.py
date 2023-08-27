@@ -62,7 +62,8 @@ class Atomo(Compression):
             print(np.mean(self.compression_rates))
 
         decoded = tf.convert_to_tensor(np.dot(np.dot(u, np.diag(s)), vT))
-        return tf.reshape(decoded, input_shape)
+        decoded = tf.reshape(decoded, input_shape)
+        return tf.cast(decoded, dtype=gradient.dtype)
 
     def _sample_svd(self, s, rank=0):
         if s[0] < 1e-6:

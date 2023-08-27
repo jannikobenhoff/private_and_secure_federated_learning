@@ -6,11 +6,11 @@ DEFAULT_MODE="baseline_l2"  # search  training  baseline_l2  no_l2  no_l2_resnet
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
 
-base_strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.005, "repetition": REP_VALUE}'
+base_strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.01, "repetition": REP_VALUE}'
 
 base_strategy_resnet='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.1, "repetition": REP_VALUE}'
 
-repetitions=(100 200)
+repetitions=(10000)
 
 case $mode in
     "search")

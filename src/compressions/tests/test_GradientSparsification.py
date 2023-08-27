@@ -13,13 +13,18 @@ class TestGradientSparsification(unittest.TestCase):
         self.assertTrue(True, "Not equal.")
 
     def test_2d(self):
-        gs = GradientSparsification(k=0.1, max_iter=2)
-        calc = gs.compress(gradient=tf.constant([[1, 2, 30, 4, 5],
-                                                 [1, 2, 3, 4, 5]],
-                                                              dtype=tf.float32),variable=tf.constant([[1, 2, 30, 4, 5], [1, 2, 3, 4, 5]],
-                                                              dtype=tf.float32))
-        print(calc)
-        self.assertTrue(True, "Not equal.")
+        gs = GradientSparsification(k=0.1, max_iter=30)
+
+        # grad = tf.constant([[1, 2, 30, 4, 5],
+        #                     [1, 2, 3, 4, 5]],
+        #                    dtype=tf.float32)
+
+        grad = tf.constant(np.random.rand(10, 10) * 10, shape=[1, 20, 5], dtype=tf.float32)
+        #
+        # calc = gs.greedy_algorithm(input_tensor=grad, k=0.1, max_iter=2)
+        # print(calc)
+
+        print(gs.compress(grad, grad))
 
 
 if __name__ == '__main__':
