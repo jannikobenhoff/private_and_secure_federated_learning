@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="baseline_l2"  # search  training  baseline_l2  no_l2  no_l2_resnet
+DEFAULT_MODE="training"  # search  training  baseline_l2  no_l2  no_l2_resnet
 
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
@@ -10,9 +10,8 @@ base_strategy='{"optimizer": "sgd", "compression": "gradientsparsification", "le
 
 base_strategy_resnet='{"optimizer": "sgd", "compression": "gradientsparsification", "learning_rate": 0.1, "k": K_VALUE, "max_iter": "MAX_ITER"}'
 
-k_values=(0.1 0.01)
+k_values=(0.1 0.01 0.005)
 iterations=(2)
-# iterations=(2 3 4)
 
 case $mode in
     "search")

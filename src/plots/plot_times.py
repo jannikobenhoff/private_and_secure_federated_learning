@@ -102,4 +102,4 @@ def plot_avg_times(parent_folder, bsgd: bool):
 
 
 if __name__ == "__main__":
-    plot_avg_times("l2", False)
+    plot_avg_times("baseline", True)

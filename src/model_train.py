@@ -236,6 +236,7 @@ def worker(args):
                 validation_losses_per_epoch[k_step].append(history.history['val_loss'])
 
                 all_scores.append(np.mean(history.history['val_accuracy']))
+                # all_scores.append(np.mean(history.history['val_loss']))
 
             print("Mean val accuracy:", np.mean(all_scores),
                   "Time taken: {:.2f}".format(time.time() - search_step_start_time))
@@ -244,7 +245,7 @@ def worker(args):
             val_acc.append(validation_acc_per_epoch)
             train_loss.append(training_losses_per_epoch)
             val_loss.append(validation_losses_per_epoch)
-            return - np.mean(all_scores)
+            return -np.mean(all_scores)
 
         result = gp_minimize(objective, search_space, n_calls=args.n_calls,  # acq_func='EI',
                              # x0=[[1e-6], [1e-4], [1e-2]],
@@ -340,6 +341,7 @@ def main():
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
     args = parse_args()
+    print(args)
     worker(args)
 
 

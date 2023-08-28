@@ -25,19 +25,21 @@ class GradientSparsification(Compression):
         self._built = True
 
     def compress(self, gradient: Tensor, variable) -> Tensor:
+        """
+        Q(g) = [Z1 * g1/p1, ...]
+        Z1: selector
+        g1: gradient
+        p1: probability calculated with greedy alg.
+        """
         input_shape = gradient.shape
         gradient = tf.reshape(gradient, [-1])
-        gradient = tf.where(tf.math.is_nan(gradient), 0., gradient)
 
-        probabilities = self.greedy_algorithm(input_tensor=gradient, max_iter=self.max_iter, k=self.k)
+        probabilities = self.greedy_algorithm(input_tensor=gradient, max_iter=self.max_iter, kappa=self.k)
 
-        # rand = tf.random.uniform(shape=probabilities.shape, minval=0, maxval=1)
-        # selectors = tf.where(probabilities > rand, 1.0, 0.0)
         random_tensor = tf.random.uniform(probabilities.shape, 0, 1)
         selectors = tf.cast(tf.less(random_tensor, probabilities), gradient.dtype)
 
         gradient_spars = tf.multiply(selectors, gradient) / probabilities
-        # gradient_spars = tf.where(probabilities > 0, gradient_spars / probabilities, 0)
         gradient_spars = tf.where(tf.math.is_nan(gradient_spars), 0., gradient_spars)
 
         if True:  # variable.ref() not in self.cr:
@@ -45,38 +47,39 @@ class GradientSparsification(Compression):
                 gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
                 gradient_spars)
             self.compression_rates.append(self.cr[variable.ref()])
-
+            # print(np.mean(self.compression_rates))
         gradient_spars = tf.reshape(gradient_spars, input_shape)
 
         return gradient_spars
 
     @staticmethod
-    def greedy_algorithm(input_tensor: Tensor, k: float, max_iter: int) -> Tensor:
+    def greedy_algorithm(input_tensor: Tensor, kappa: float, max_iter: int) -> Tensor:
         """
         Finds the optimal probability vector p in max_iter iterations.
 
         Returns:
           The optimal probability vector p.
         """
-        p = tf.ones_like(input_tensor)
-        d = tf.cast(tf.shape(input_tensor)[0], dtype=input_tensor.dtype)
-        k_d = tf.multiply(k, d)
+        g = input_tensor.numpy()
+        d = len(g)
+        p = np.minimum(kappa * d * np.abs(g) / np.sum(np.abs(g)), 1)
+        j = 0
 
-        comp = k_d * tf.abs(input_tensor) / tf.reduce_sum(tf.abs(input_tensor))
-        # comp = tf.where(tf.math.is_nan(comp), 0., comp)
-        p = tf.where(comp < 1,
-                     comp, p)
-        c = tf.constant(2, dtype=input_tensor.dtype)
-        j = tf.constant(0, dtype=input_tensor.dtype)
+        while j < max_iter:
+            # Identify active set I
+            active_set = np.where(p != 1)[0]
 
-        while j < max_iter and c > 1:
-            # print("ITER")
-            active_set = tf.where(p != 1, 1.0, 0)
-            cardinality = tf.cast(tf.math.count_nonzero(active_set), dtype=input_tensor.dtype)
-            sum_active_set = tf.reduce_sum(active_set)
+            # If active set is empty, break
+            if len(active_set) == 0:
+                break
 
-            c = (k_d - d + cardinality) / sum_active_set
-            p = tf.minimum(c * p, 1)
-            # print(c)
-            j = tf.add(j, 1)
+            c = (kappa * d - d + len(active_set)) / np.sum(p[active_set])
+
+            p = np.minimum(c * p, 1)
+
+            j += 1
+
+            # Check termination condition
+            if c <= 1:
+                break
         return p

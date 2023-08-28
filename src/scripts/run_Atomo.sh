@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="search"  # search  training  baseline_l2  no_l2  no_l2_resnet
+DEFAULT_MODE="training"  # search  training  baseline_l2  no_l2  no_l2_resnet
 
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}

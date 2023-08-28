@@ -21,21 +21,13 @@ class TernGrad(Compression):
         """
         if hasattr(self, "_built") and self._built:
             return
-        self.compression_rates.append(var_list[0].dtype.size*8/np.log2(3))
+        self.compression_rates.append(var_list[0].dtype.size * 8 / np.log2(3))
         self._built = True
 
     def compress(self, gradient: Tensor, variable):
         gradient_clip = self.gradient_clipping(gradient, self.clip)
         gradient_tern = self.ternarize(gradient_clip)
-        # huffman
-        # rle = run_length_encoding(gradient_tern)
-        # vc = count_tensor_values(rle)
-        # huf = generate_huffman(vc)
-        # enc = encode_huffman(rle, huf)
-        # print(enc, huf)
-        # print((32+len(tf.reshape(gradient_tern, [-1])) * 2) / (len("".join(enc)) + len(huf) * 4+32), 16)
-        #
-        # return enc, huf, gradient_tern.shape
+
         return gradient_tern
 
     @staticmethod

@@ -309,7 +309,8 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
             val_acc_vs_cr[a][1].append(all_strats[key][1])
 
     marker = itertools.cycle(('+', 'v', 'o', '*'))
-    colors = itertools.cycle(('r', 'g', 'b', 'y', 'm', 'c'))
+    colors = itertools.cycle(
+        ('r', 'g', "#32CD32", 'y', 'm', 'c', 'grey', 'orange', 'pink', "#D2691E", 'b', "#FFD700", "#a6bddb"))
 
     fig, axes = plt.subplots(2, 3, figsize=(14, 8))
     axes = axes.flatten()
@@ -326,7 +327,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
         sorted_pairs = sorted(zip(*asa), key=lambda pair: pair[0], reverse=True)
         sorted_lists = list(map(list, zip(*sorted_pairs)))
         a = strat_key
-        axes[2].plot(sorted_lists[0], sorted_lists[1], marker=m, label=l, color=c)
+        axes[2].plot(sorted_lists[0], sorted_lists[1], marker=m, label=l, color=c, markersize=4)
         axes[0].plot(np.arange(1, len(training_acc[a]) + 1, 1), training_acc[a], marker=m, markersize=4, color=c,
                      label=l)
         axes[4].plot(np.arange(1, len(val_loss[a]) + 1, 1), val_loss[a], marker=m, markersize=4, label=l,
@@ -348,7 +349,8 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
     # axes[2].set_title("Validation Acc / Compression Rate", fontsize=10)
     axes[2].set_xlabel("Overall Compression", fontsize=10)
     axes[2].set_ylabel("Test Accuracy", fontsize=10)
-    axes[2].legend(fontsize=8)
+    # axes[2].legend(fontsize=7)
+    axes[2].set_xscale('log')
 
     axes[0].grid(alpha=0.2)
     axes[0].set_title("Training Accuracy", fontsize=10)
@@ -397,6 +399,6 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 if __name__ == "__main__":
     # plot_compression_metrics("atomo", "baseline", "sgd/training_SGD_mnist_08_25_13_21.json")
 
-    plot_compare_all("baseline", True)
+    plot_compare_all("l2", True)
 
     # plot_compression_rates()

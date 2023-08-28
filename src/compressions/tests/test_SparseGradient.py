@@ -5,9 +5,11 @@ from src.compressions.SparseGradient import *
 class TestSparseGradient(unittest.TestCase):
     def test_gradDrop(self):
         sg = SparseGradient(drop_rate=50)
-        grad = tf.random.uniform((4, 5), minval=-3, maxval=3)
+        grad = tf.random.uniform((40, 50), minval=-3, maxval=3)
+
         calc = sg.gradDrop(grad, 99)
         calc = tf.cast(calc, dtype=tf.float32)
+        print(32 * 2000 / sg.get_sparse_tensor_size_in_bits(calc))
         print(grad, calc)
 
     def test_gradDrop2d(self):

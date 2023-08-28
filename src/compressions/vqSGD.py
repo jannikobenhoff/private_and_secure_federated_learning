@@ -80,7 +80,7 @@ class vqSGD(Compression):
         if gradient.dtype != compressed_gradient.dtype:
             compressed_gradient = tf.cast(compressed_gradient, dtype=gradient.dtype)
 
-        if variable.ref() not in self.cr:
+        if True:  # variable.ref() not in self.cr:
             # self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(
             #     gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
             #     compressed_gradient)
@@ -88,6 +88,6 @@ class vqSGD(Compression):
                 gradient.shape.as_list()) / self.s * np.log2(2 * d)
             self.compression_rates.append(self.cr[variable.ref()])
 
-            print(np.mean(self.compression_rates))
+            # print(np.mean(self.compression_rates))
 
         return tf.multiply(compressed_gradient, l2)
