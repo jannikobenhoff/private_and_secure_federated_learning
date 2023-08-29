@@ -1,109 +1,60 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="baseline_l2"  # search  training  baseline_l2  no_l2  no_l2_resnet  baseline_resnet
+DEFAULT_MODE="l2_lenet"
+
+# LeNet: search_lenet  l2_lenet  baseline_l2_lenet  no_l2_lenet
+# ResNet18: search_resnet18  no_l2_resnet18  baseline_l2_resnet18
+# VGG11: baseline_l2_vgg11
 
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
 
 base_strategy='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.01, "buckets": 5000, "sparse_buckets": 4999}'
-
 base_strategy_resnet='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.1, "buckets": 10000, "sparse_buckets": 1}'
+base_strategy_vgg11='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.1, "buckets": 10000, "sparse_buckets": 1}'
 
-buckets=(       10000 2000 5000)
-sparse_buckets=( 9950 1999 4999)
+#buckets=(       10000 2000 5000)
+#sparse_buckets=( 9950 1999 4999)
+
+buckets=(      1000 100 50) #1000 100 1000 100 1000 100)
+sparse_buckets=( 900 90 49) #999 99 999 99 999 99)
+
+# best for resnet was 1000/9000
 
 case $mode in
-    "search")
+    "search_lenet"|"l2_lenet"|"baseline_l2_lenet"|"no_l2_lenet")
         for i in "${!buckets[@]}"; do
             bucket="${buckets[$i]}"
             sparse_bucket="${sparse_buckets[$i]}"
 
             modified_strategy=$(python -c "import json; strategy=json.loads('$base_strategy'); strategy['buckets']=$bucket; strategy['sparse_buckets']=$sparse_bucket; print(json.dumps(strategy))")
 
-            python ../model_train.py --model LeNet --dataset mnist \
-              --epochs=100 \
-              --n_calls=10 \
-              --k_fold=5 \
-              --fullset=1 \
-              --stop_patience=10 \
-              --bayesian_search \
-              --log=1 \
-              --strategy="$modified_strategy"
+            ./run_main.sh "$modified_strategy" "$mode"
         done
         ;;
 
-    "training")
+    "search_resnet18"|"no_l2_resnet18"|"baseline_l2_resnet18")
         for i in "${!buckets[@]}"; do
             bucket="${buckets[$i]}"
             sparse_bucket="${sparse_buckets[$i]}"
 
-            modified_strategy=$(python -c "import json; strategy=json.loads('$base_strategy'); strategy['buckets']=$bucket; strategy['sparse_buckets']=$sparse_bucket; print(json.dumps(strategy))")
-          python ../model_train.py --model LeNet --dataset mnist \
-                --epochs=45 \
-                --k_fold=1 \
-                --fullset=100 \
-                --stop_patience=10 \
-                --train_on_baseline=2 \
-                --lr_decay=3 \
-                --log=1 \
-                --gpu=0 \
-              --strategy="$modified_strategy"
+            modified_strategy=$(python -c "import json; strategy=json.loads('$base_strategy_resnet'); strategy['buckets']=$bucket; strategy['sparse_buckets']=$sparse_bucket; print(json.dumps(strategy))")
+
+            ./run_main.sh "$modified_strategy" "$mode"
         done
         ;;
 
-    "baseline_l2")
+    "baseline_l2_vgg11")
         for i in "${!buckets[@]}"; do
             bucket="${buckets[$i]}"
             sparse_bucket="${sparse_buckets[$i]}"
 
-            modified_strategy=$(python -c "import json; strategy=json.loads('$base_strategy'); strategy['buckets']=$bucket; strategy['sparse_buckets']=$sparse_bucket; print(json.dumps(strategy))")
-          python ../model_train.py --model LeNet --dataset mnist \
-                --epochs=45 \
-                --k_fold=1 \
-                --fullset=100 \
-                --stop_patience=10 \
-                --train_on_baseline=1 \
-                --lr_decay=3 \
-                --log=1 \
-                --gpu=0 \
-              --strategy="$modified_strategy"
+            modified_strategy=$(python -c "import json; strategy=json.loads('$base_strategy_vgg11'); strategy['buckets']=$bucket; strategy['sparse_buckets']=$sparse_bucket; print(json.dumps(strategy))")
+
+            ./run_main.sh "$modified_strategy" "$mode"
         done
         ;;
-
-    "no_l2_resnet")
-        for i in "${!buckets[@]}"; do
-                bucket="${buckets[$i]}"
-                sparse_bucket="${sparse_buckets[$i]}"
-
-                modified_strategy=$(python -c "import json; strategy=json.loads('$base_strategy_resnet'); strategy['buckets']=$bucket; strategy['sparse_buckets']=$sparse_bucket; print(json.dumps(strategy))")
-
-            python ../model_train.py --model ResNet --dataset cifar10 \
-                --epochs=45 \
-                --gpu=1 \
-                --k_fold=1 \
-                --fullset=100 \
-                --stop_patience=10 \
-                --train_on_baseline=0 \
-                --lr_decay=3 \
-                --log=1 \
-                --strategy="$base_strategy_resnet"
-        done
-        ;;
-
-    "baseline_resnet")
-        python ../model_train.py --model ResNet --dataset cifar10 \
-            --epochs=45 \
-            --gpu=1 \
-            --k_fold=1 \
-            --fullset=100 \
-            --stop_patience=10 \
-            --train_on_baseline=1 \
-            --lr_decay=3 \
-            --log=1 \
-            --strategy="$base_strategy_resnet"
-        ;;
-
     *)
         echo "Invalid mode provided. Please use: search, training, baseline_l2, or no_l2"
         exit 1

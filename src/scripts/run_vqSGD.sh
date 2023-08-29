@@ -1,91 +1,48 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="training"  # search  training  baseline_l2  no_l2  no_l2_resnet
+DEFAULT_MODE="l2_lenet"
+
+# LeNet: search_lenet  l2_lenet  baseline_l2_lenet  no_l2_lenet
+# ResNet18: search_resnet18  no_l2_resnet18  baseline_l2_resnet18
+# VGG11: baseline_l2_vgg11
 
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
 
-base_strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.01, "repetition": REP_VALUE}'
+base_strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.01, "repetition": K_VALUE}'
+base_strategy_resnet='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.1, "repetition": K_VALUE}'
+base_strategy_vgg11='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.1, "repetition": K_VALUE}'
 
-base_strategy_resnet='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.1, "repetition": REP_VALUE}'
-
-repetitions=(5000 10000)
+#repetitions=(1500 200 500 200)
+repetitions=(2000)
+repetitions_resnet=(10000 20000 50000)
+repetitions_vgg11=(10000 20000 50000)
 
 case $mode in
-    "search")
+    "search_lenet"|"l2_lenet"|"baseline_l2_lenet"|"no_l2_lenet")
         for k in "${repetitions[@]}"; do
-            python ../model_train.py --model LeNet --dataset mnist \
-              --epochs=100 \
-              --n_calls=10 \
-              --k_fold=5 \
-              --fullset=1 \
-              --stop_patience=10 \
-              --bayesian_search \
-              --log=1 \
-              --strategy="${base_strategy//REP_VALUE/$k}"
+            modified_strategy="${base_strategy//K_VALUE/$k}"
+            ./run_main.sh "$modified_strategy" "$mode"
         done
         ;;
 
-    "training")
-        for k in "${repetitions[@]}"; do
-            python ../model_train.py --model LeNet --dataset mnist \
-                --epochs=45 \
-                --k_fold=1 \
-                --fullset=100 \
-                --stop_patience=10 \
-                --lr_decay=3 \
-                --log=1 \
-                --train_on_baseline=2 \
-                --strategy="${base_strategy//REP_VALUE/$k}"
+    "search_resnet18"|"no_l2_resnet18"|"baseline_l2_resnet18")
+        for k in "${repetitions_resnet[@]}"; do
+            modified_strategy="${base_strategy_resnet//K_VALUE/$k}"
+            ./run_main.sh "$modified_strategy" "$mode"
         done
         ;;
 
-    "baseline_l2")
-        for k in "${repetitions[@]}"; do
-            python ../model_train.py --model LeNet --dataset mnist \
-                --epochs=45 \
-                --k_fold=1 \
-                --fullset=100 \
-                --stop_patience=20 \
-                --train_on_baseline=1 \
-                --lr_decay=3 \
-                --log=1 \
-                --strategy="${base_strategy//REP_VALUE/$k}"
+    "baseline_l2_vgg11")
+        for k in "${repetitions_vgg11[@]}"; do
+            modified_strategy="${base_strategy_vgg11//K_VALUE/$k}"
+            ./run_main.sh "$modified_strategy" "$mode"
         done
-        ;;
-
-    "no_l2")
-        for k in "${repetitions[@]}"; do
-            python ../model_train.py --model LeNet --dataset mnist \
-                --epochs=45 \
-                --k_fold=1 \
-                --fullset=100 \
-                --stop_patience=10 \
-                --train_on_baseline=0 \
-                --lr_decay=3 \
-                --log=1 \
-                --strategy="${base_strategy//REP_VALUE/$k}"
-        done
-        ;;
-
-    "no_l2_resnet")
-        for k in "${repetitions[@]}"; do
-            python ../model_train.py --model ResNet --dataset cifar10 \
-                --epochs=45 \
-                --gpu=1 \
-                --k_fold=1 \
-                --fullset=100 \
-                --stop_patience=10 \
-                --train_on_baseline=0 \
-                --lr_decay=3 \
-                --log=1 \
-                --strategy="${base_strategy_resnet//REP_VALUE/$k}"
-        done
-        ;;
+    ;;
 
     *)
-        echo "Invalid mode provided. Please use: search, training, baseline_l2, or no_l2"
+        echo "Invalid mode provided."
         exit 1
         ;;
 esac

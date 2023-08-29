@@ -10,26 +10,44 @@ class TestFetchSGD(unittest.TestCase):
     def test_sketch(self):
         # gradient = tf.constant([[1, 1, -3, 1, 5], [-1, 2, 1, 4, 5]],
         #                                dtype=tf.float32)
-        gradient = tf.random.uniform((4000000, 1))
 
-        le = LeNet(search=True).search_model(lambda_l2=None)
-        re = ResNet("resnet18", 10, lambda_l2=None)
-        re.build(input_shape=(None, 32, 32, 3))
-        print(le.summary())
+        gradient = tf.random.uniform((4000, 1))
+
+        # le = LeNet(search=True).search_model(lambda_l2=None)
+        # re = ResNet("resnet18", 10, lambda_l2=None)
+        # re.build(input_shape=(None, 32, 32, 3))
+        # print(le.summary())
         # print(re.summary())
-        re = ResNet("resnet34", 10, lambda_l2=None)
-        re.build(input_shape=(None, 32, 32, 3))
+
+        # re = ResNet("resnet34", 10, lambda_l2=None)
+        # re.build(input_shape=(None, 32, 32, 3))
         # print(re.summary())
         input_shape = gradient.shape
         d = tf.reshape(gradient, [-1]).shape[0]
 
-        cs = CSVec(d=d, c=1000000, r=1)
+        cs = CSVec(d=d, c=10000, r=1)
+        d = 5000
+        c = 10000
+        r = 1
+        a = CSVec(d, c, r)
+        vec = torch.rand(d)
+
+        a.accumulateVec(vec)
+
+        with self.subTest(method="topk"):
+            recovered = a.unSketch(k=d)
+            self.assertTrue(torch.allclose(recovered, vec))
+
+        with self.subTest(method="epsilon"):
+            thr = vec.abs().min() * 0.9
+            recovered = a.unSketch(epsilon=thr / vec.norm())
+            self.assertTrue(torch.allclose(recovered, vec))
 
         cs.accumulateVec(tf.reshape(gradient, [-1]).numpy())
         # Access sketch
         sketch = cs.table
         sketch = tf.convert_to_tensor(sketch.numpy(), dtype=gradient.dtype)
-
+        print("Zeros:", tf.math.count_nonzero(sketch))
         print(gradient.dtype.size * 8 * np.prod(
             gradient.shape.as_list()) / FetchSGD.get_sparse_tensor_size_in_bits(sketch))
 
@@ -38,17 +56,13 @@ class TestFetchSGD(unittest.TestCase):
         print("Alt:", gradient.dtype.size * 8 * np.prod(
             gradient.shape.as_list()) / (sketch.dtype.size * 8 * np.prod(sketch.shape.as_list())))
 
-        k = 5000
+        k = 10000
         if k > d:
             k = d
         delta = cs.unSketch(k=k)
         delta = tf.reshape(delta, input_shape)
-        print("topk", gradient.dtype.size * 8 * np.prod(
-            gradient.shape.as_list()) / FetchSGD.get_sparse_tensor_size_in_bits(
-            delta))
-        print(tf.math.reduce_sum(tf.abs(delta)))
-        print(tf.math.reduce_sum(tf.abs(gradient)))
-        print("unsketch:", delta - gradient)
+
+        print("diff", tf.math.reduce_sum(tf.abs(delta - gradient)))
 
 
 if __name__ == '__main__':

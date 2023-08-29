@@ -74,13 +74,13 @@ class TestbSGD(unittest.TestCase):
 
         b = bSGD(buckets=3, sparse_buckets=1)
 
-        grad = tf.constant(np.random.rand(10, 100), dtype=tf.float32)
+        grad = tf.constant(np.random.rand(1, 100), dtype=tf.float32)
         # grad = tf.constant([1, 2, 8, -4, 5, -6, -7, 3], dtype=tf.float32)
-        p = process_tensor(grad, 100, 99)
+        p = process_tensor(grad, 60, 49)
         # c = compress(grad, 3, 1)
 
         print(tf.unique(tf.reshape(p, [-1]))[0].numpy())
-        print(tf.math.count_nonzero(p))
+        print("non zero:", tf.math.count_nonzero(p))
 
         grad = tf.constant([1, 2, 8, -4, 5, -6, -7, 3], dtype=tf.float32)
         p = process_tensor(grad, 10000, 9900)

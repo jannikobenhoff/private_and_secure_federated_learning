@@ -18,6 +18,7 @@ from models.ResNet import ResNet
 from models.MobileNet import MobileNet
 from models.DenseNet import DenseNet
 from compressions.bSGD import bSGD
+from models.VGG import VGG
 from utilities import Strategy
 
 from utilities.custom_callbacks import TimeHistory, CosineDecayCallback
@@ -58,14 +59,14 @@ def model_factory(model_name, lambda_l2, input_shape, num_classes):
     if model_name == "lenet":
         model = LeNet(search=True).search_model(lambda_l2=lambda_l2)
         return model
-    elif model_name == "resnet":
+    elif model_name == "resnet18":
         model = ResNet("resnet18", num_classes, lambda_l2=lambda_l2)
-        # model = ResNet18(num_classes=num_classes, lambda_l2=lambda_l2)
-        # input shape for cifar10
-        # model.build(input_shape=(None, 32, 32, 3))
         return model
     elif model_name == "mobilenet":
         model = MobileNet(num_classes, lambda_l2=lambda_l2)
+        return model
+    elif model_name == "vgg11":
+        model = VGG(vgg_name="vgg11", num_classes=num_classes, lambda_l2=lambda_l2)
         return model
     elif model_name == "densenet":
         model = DenseNet('densenet121', num_classes)  # , lambda_l2=lambda_l2)
@@ -110,10 +111,12 @@ def strategy_factory(**params) -> Strategy:
 
 def get_l2_lambda(args, **params) -> float:
     lambdas = None
-    if args.model == "LeNet":
+    if args.model.lower() == "lenet":
         lambdas = json.load(open("../results/lambda_lookup.json", "r"))
-    elif args.model == "ResNet":
-        lambdas = json.load(open("../results/lambda_lookup_resnet.json", "r"))
+    elif args.model.lower() == "resnet18":
+        lambdas = json.load(open("../results/lambda_lookup_resnet18.json", "r"))
+    elif args.model.lower() == "vgg11":
+        lambdas = json.load(open("../results/lambda_lookup_vgg11.json", "r"))
 
     opt = params["optimizer"]
     comp = params["compression"]
@@ -165,8 +168,8 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
                                            alpha=strategy_params["learning_rate"] * 0.001)
 
         reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1,
-                                      patience=args.lr_decay,
-                                      min_lr=strategy_params["learning_rate"] * 0.001)
+                                      patience=args.lr_decay, cooldown=2 * args.lr_decay,
+                                      min_lr=1e-04)  # strategy_params["learning_rate"] * 0.001)
 
         callbacks.append(reduce_lr)
 
@@ -327,7 +330,6 @@ def worker(args):
             "time_per_epoch": time_history.epoch_times,
             "time_per_step": np.mean(time_history.times)
         }
-
         file = open('../results/compression/training_{}_{}_'
                     '{}.json'.format(strategy.get_file_name(), args.dataset, datetime.now().strftime('%m_%d_%H_%M')),
                     "w")

@@ -80,7 +80,7 @@ class FetchSGD(Optimizer):
                                                   sketch.dtype.size * 8 * np.prod(sketch.shape.as_list()))
                                           )
             self.compression_rates.append(self.cr[variable.ref()])
-            print(np.mean(self.compression_rates))
+            print("CR:", np.mean(self.compression_rates))
 
         if momentum > 0:
             # Momentum
@@ -127,7 +127,7 @@ class FetchSGD(Optimizer):
     def get_sparse_tensor_size_in_bits(tensor):
         flattened_tensor = tf.reshape(tensor, [-1])
         num_nonzero_entries = tf.math.count_nonzero(flattened_tensor)
-        print("Zeros:", num_nonzero_entries.numpy())
+
         # num_elements = tf.size(flattened_tensor, out_type=tf.float32)
         # num_index_bits = tf.math.ceil(tf.math.log(num_elements) / tf.math.log(2.0))
 
@@ -135,7 +135,8 @@ class FetchSGD(Optimizer):
         num_value_bits = tf.constant(tensor.dtype.size * 8, dtype=tf.int64)
 
         total_bits = num_nonzero_entries * (num_index_bits + num_value_bits)
-        return tf.maximum(total_bits, 1)
+        return min(tf.cast(tf.maximum(total_bits, 1), dtype=tf.int32),
+                   tensor.dtype.size * 8 * np.prod(tensor.shape.as_list()))
 
 
 class CSVec(object):

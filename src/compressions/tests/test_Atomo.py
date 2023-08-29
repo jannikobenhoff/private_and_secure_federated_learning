@@ -25,11 +25,11 @@ def r2d(x):
 
 class TestAtomo(unittest.TestCase):
     def test_compress(self):
-        at = Atomo(svd_rank=1)
-        # grad = tf.constant([[2, 4, 6, 5], [2, 4, 6, 5]],
-        #                    dtype=tf.float32)
+        at = Atomo(svd_rank=10, random_sample=True)
+        grad = tf.constant([[2, -6, 4, 5, 2, -6, 4, 5, 2, -6, 4, 5], [2, -6, 4, 5, 2, -6, 4, 5, - 4, 5, 2, -1]],
+                           dtype=tf.float32)
 
-        grad = tf.constant(np.random.rand(1000, 100), shape=[1000, 20, 5], dtype=tf.float32)
+        # grad = tf.constant(np.random.rand(100, 100), dtype=tf.float32)
 
         calc = at.compress(grad, grad)
         print("Diff:", tf.reduce_sum(tf.abs(calc - grad)))

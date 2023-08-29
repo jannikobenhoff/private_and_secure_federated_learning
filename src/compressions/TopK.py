@@ -31,14 +31,6 @@ class TopK(Compression):
                 gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
                 sparse_gradient)
             self.compression_rates.append(self.cr[variable.ref()])
-
-        # huffman
-        # rle = run_length_encoding(sparse_gradient)
-        # vc = count_tensor_values(rle)
-        # huf = generate_huffman(vc)
-        # enc = encode_huffman(rle, huf)
-        # print((len("".join(enc)) + len(huf)*40), get_sparse_tensor_size_in_bits(sparse_gradient))
-        #
-        # return enc, huf, sparse_gradient.shape
+            # print(np.mean(self.compression_rates))
 
         return sparse_gradient

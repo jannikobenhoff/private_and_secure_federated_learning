@@ -344,6 +344,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 
     axes[1].grid(alpha=0.2)
     axes[1].set_title("Test Accuracy", fontsize=10)
+    axes[1].legend(fontsize=8)
 
     axes[2].grid(alpha=0.2)
     # axes[2].set_title("Validation Acc / Compression Rate", fontsize=10)
@@ -397,7 +398,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 
 
 if __name__ == "__main__":
-    # plot_compression_metrics("atomo", "baseline", "sgd/training_SGD_mnist_08_25_13_21.json")
+    # plot_compression_metrics("sparsegradient", "baseline", "sgd/training_SGD_mnist_08_25_13_21.json")
 
     plot_compare_all("l2", True)
 

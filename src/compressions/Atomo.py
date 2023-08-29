@@ -7,11 +7,11 @@ from .Compression import Compression
 
 
 class Atomo(Compression):
-    def __init__(self, svd_rank: int, name="Atomo"):
+    def __init__(self, svd_rank: int, random_sample=True, name="Atomo"):
         super().__init__(name=name)
 
         self.svd_rank = svd_rank
-        self.random_sample = True
+        self.random_sample = random_sample
 
     def build(self, var_list):
         """Initialize optimizer variables.
@@ -72,17 +72,40 @@ class Atomo(Compression):
         for i, p in enumerate(probs):
             if p > 1:
                 probs[i] = 1
+        # print("Probs:", np.sum(probs))  # =!= rank
         sampled_idx = []
         sample_probs = []
         for i, p in enumerate(probs):
+            # if np.random.rand() < p:
             # random sampling from bernulli distribution
             if np.random.binomial(1, p):
                 sampled_idx += [i]
                 sample_probs += [p]
         rank_hat = len(sampled_idx)
-        if rank_hat == 0:
+        if rank_hat == 0:  # or (rank != 0 and np.abs(rank_hat - rank) >= 3):
             return self._sample_svd(s, rank=rank)
         return np.array(sampled_idx, dtype=int), np.array(sample_probs)
+
+    # def _sample_svd2(self, s, rank=0):
+    #     i = 0
+    #     idx = [0]
+    #     ps = []
+    #     n = len(s) - 1
+    #     p = np.zeros(len(s))
+    #     while i < n:
+    #         if s[i] * rank <= np.sum(s[i:]):
+    #             for k in range(i, n):
+    #                 p[k] = s[k] * rank / (
+    #                     np.sum(s[i:])
+    #                 )
+    #             i = n
+    #             idx.append(i)
+    #         else:
+    #             p[i] = 1
+    #             s = s - 1
+    #             i = i + 1
+    #             idx.append(i)
+    #     return idx, p[idx]
 
     @staticmethod
     def _resize_to_2d(x: Tensor):

@@ -1,97 +1,41 @@
-from keras import regularizers
-from tensorflow import keras
+"""
+AlexNet in TensorFlow2.
+
+Reference:
+[1] Krizhevsky, Alex, Ilya Sutskever, and Geoffrey E. Hinton. 
+    "Imagenet classification with deep convolutional neural networks." 
+    Advances in neural information processing systems 25 (2012): 1097-1105.
+"""
 import tensorflow as tf
-from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout
+from keras import layers
 
 
-# def alexnet(input_shape=(227, 227, 3), num_classes=1000):
-#     model = Sequential([
-#         # 1st Conv Layer
-#         Conv2D(96, (11, 11), strides=(4, 4), activation='relu', input_shape=input_shape, padding='valid'),
-#         MaxPooling2D(pool_size=(3, 3), strides=(2, 2)),
-#         tf.keras.layers.BatchNormalization(),
-#
-#         # 2nd Conv Layer
-#         Conv2D(256, (5, 5), activation='relu', padding='same'),
-#         MaxPooling2D(pool_size=(3, 3), strides=(2, 2)),
-#         tf.keras.layers.BatchNormalization(),
-#
-#         # 3rd Conv Layer
-#         Conv2D(384, (3, 3), activation='relu', padding='same'),
-#         tf.keras.layers.BatchNormalization(),
-#
-#         # 4th Conv Layer
-#         Conv2D(384, (3, 3), activation='relu', padding='same'),
-#         tf.keras.layers.BatchNormalization(),
-#
-#         # 5th Conv Layer
-#         Conv2D(256, (3, 3), activation='relu', padding='same'),
-#         MaxPooling2D(pool_size=(3, 3), strides=(2, 2)),
-#         tf.keras.layers.BatchNormalization(),
-#
-#         Flatten(),
-#
-#         # 1st Fully Connected Layer
-#         Dense(4096, activation='relu'),
-#         Dropout(0.5),
-#
-#         # 2nd Fully Connected Layer
-#         Dense(4096, activation='relu'),
-#         Dropout(0.5),
-#
-#         # 3rd Fully Connected Layer (Output Layer)
-#         Dense(num_classes, activation='softmax')
-#     ])
-#
-#     return model
+class AlexNet(tf.keras.Model):
+    def __init__(self, num_classes):
+        super(AlexNet, self).__init__()
+        self.conv1 = layers.Conv2D(96, kernel_size=11, strides=4, padding='same', activation='relu')
+        self.max_pool2d1 = layers.MaxPooling2D(pool_size=3, strides=2, padding='same')
+        self.conv2 = layers.Conv2D(256, kernel_size=5, padding='same', activation='relu')
+        self.max_pool2d2 = layers.MaxPooling2D(pool_size=3, strides=2, padding='same')
+        self.conv3 = layers.Conv2D(384, kernel_size=3, padding='same', activation='relu')
+        self.conv4 = layers.Conv2D(384, kernel_size=3, padding='same', activation='relu')
+        self.conv5 = layers.Conv2D(256, kernel_size=3, padding='same', activation='relu')
+        self.max_pool2d3 = layers.MaxPooling2D(pool_size=3, strides=2, padding='same')
+        self.flatten = layers.Flatten()
+        self.fc1 = layers.Dense(4096, activation='relu')
+        self.dropout1 = layers.Dropout(0.5)
+        self.fc2 = layers.Dense(4096, activation='relu')
+        self.dropout2 = layers.Dropout(0.5)
+        self.fc3 = layers.Dense(num_classes, activation='softmax')
 
-def alexnet(lambda_l2, input_shape):
-    model = keras.models.Sequential([
-        Conv2D(filters=128, kernel_size=(11, 11), strides=(4, 4), activation='relu',
-                            input_shape=input_shape, kernel_regularizer=regularizers.l2(lambda_l2)),
-        keras.layers.BatchNormalization(),
-        keras.layers.MaxPool2D(pool_size=(2, 2)),
-        keras.layers.Conv2D(filters=256, kernel_size=(5, 5), strides=(1, 1), activation='relu', padding="same", kernel_regularizer=regularizers.l2(lambda_l2)),
-        keras.layers.BatchNormalization(),
-        keras.layers.MaxPool2D(pool_size=(3, 3)),
-        keras.layers.Conv2D(filters=256, kernel_size=(3, 3), strides=(1, 1), activation='relu', padding="same", kernel_regularizer=regularizers.l2(lambda_l2)),
-        keras.layers.BatchNormalization(),
-        keras.layers.Conv2D(filters=256, kernel_size=(1, 1), strides=(1, 1), activation='relu', padding="same", kernel_regularizer=regularizers.l2(lambda_l2)),
-        keras.layers.BatchNormalization(),
-        keras.layers.Conv2D(filters=256, kernel_size=(1, 1), strides=(1, 1), activation='relu', padding="same", kernel_regularizer=regularizers.l2(lambda_l2)),
-        keras.layers.BatchNormalization(),
-        keras.layers.MaxPool2D(pool_size=(2, 2)),
-        keras.layers.Flatten(),
-        keras.layers.Dense(1024, activation='relu', kernel_regularizer=regularizers.l2(lambda_l2)),
-        keras.layers.Dropout(0.5),
-        keras.layers.Dense(1024, activation='relu', kernel_regularizer=regularizers.l2(lambda_l2)),
-        keras.layers.Dropout(0.5),
-        keras.layers.Dense(10, activation='softmax')
-
-    ])
-
-    return model
-
-def AlexnetModel(input_shape,num_classes):
-  model = Sequential()
-  model.add(Conv2D(filters=96,kernel_size=(3,3),strides=(4,4),input_shape=input_shape, activation='relu'))
-  model.add(MaxPooling2D(pool_size=(2,2),strides=(2,2)))
-  model.add(Conv2D(256,(5,5),padding='same',activation='relu'))
-  model.add(MaxPooling2D(pool_size=(2,2),strides=(2,2)))
-  model.add(Conv2D(384,(3,3),padding='same',activation='relu'))
-  model.add(Conv2D(384,(3,3),padding='same',activation='relu'))
-  model.add(Conv2D(256,(3,3),padding='same',activation='relu'))
-  model.add(MaxPooling2D(pool_size=(2,2),strides=(2,2)))
-
-  model.add(Flatten())
-  model.add(Dense(4096, activation='relu'))
-  model.add(Dropout(0.4))
-  model.add(Dense(4096, activation='relu'))
-  model.add(Dropout(0.4))
-  model.add(Dense(num_classes,activation='softmax'))
-
-  #model.compile(optimizer='adam',loss='categorical_crossentropy',metrics=['accuracy'])
-
-  #model.summary()
-  return model
+    def call(self, x):
+        out = self.max_pool2d1(self.conv1(x))
+        out = self.max_pool2d2(self.conv2(out))
+        out = self.conv3(out)
+        out = self.conv4(out)
+        out = self.max_pool2d3(self.conv5(out))
+        out = self.flatten(out)
+        out = self.dropout1(self.fc1(out))
+        out = self.dropout2(self.fc2(out))
+        out = self.fc3(out)
+        return out
