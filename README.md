@@ -2,9 +2,9 @@
 
 Using Conda (for Apple M1/M2):
 
-1. ```conda env create -f tensorflow-apple-metal.yml -n tensorflow```
-2. ```conda activate tensorflow```
-3. ```python -m ipykernel install --user --name tensorflow --display-name "Python 3.10 (tensorflow)"```
+1. ```conda env create -f tensorflow-apple-metal.yml -n tensorflow_fed```
+2. ```conda activate tensorflow_fed```
+3. ```python -m ipykernel install --user --name tensorflow_fed --display-name "Python 3.10 (tensorflow_fed)"```
 
 ## Run Compression Method
 

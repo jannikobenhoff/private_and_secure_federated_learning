@@ -11,38 +11,55 @@ DEFAULT_MODE="baseline_l2_resnet18"
 mode=${1:-$DEFAULT_MODE}
 
 base_strategy='{"optimizer": "memsgd", "compression": "none", "learning_rate": 0.01, "top_k": K_VALUE, "rand_k": "None"}'
-base_strategy_resnet='{"optimizer": "memsgd", "compression": "none", "learning_rate": 0.1, "top_k": K_VALUE, "rand_k": "None"}'
-base_strategy_vgg11='{"optimizer": "sgd", "memsgd": "none", "learning_rate": 0.1, "top_k": K_VALUE, "rand_k": "None"}'
+base_strategy_resnet='{"optimizer": "memsgd", "compression": "none", "learning_rate": 0.01, "top_k": K_VALUE, "rand_k": "None"}'
+base_strategy_vgg11='{"optimizer":  "memsgd","compression":  "none", "learning_rate": 0.01, "top_k": K_VALUE, "rand_k": "None"}'
 
-top_ks=(10 50 100)
+top_ks=(250 500 250)  #(10 50 100)
 top_ks_resnet=(200 500 1000)
-top_ks_vgg11=(200 500 1000)
+top_ks_vgg11=(500 1000 1500)
 
+parallel=0
+runs=3
+for ((i=1; i<=runs; i++))
+do
+    case $mode in
+        "search_lenet"|"l2_lenet"|"baseline_l2_lenet"|"no_l2_lenet")
+            for k in "${top_ks[@]}"; do
+                modified_strategy="${base_strategy//K_VALUE/$k}"
+                if [ "$parallel" -eq 1 ]; then
+                    ./run_main.sh "$modified_strategy" "$mode" &
+                else
+                    ./run_main.sh "$modified_strategy" "$mode"
+                fi
+            done
+            wait
+            ;;
 
-case $mode in
-    "search_lenet"|"l2_lenet"|"baseline_l2_lenet"|"no_l2_lenet")
-        for k in "${top_ks[@]}"; do
-            modified_strategy="${base_strategy//K_VALUE/$k}"
-            ./run_main.sh "$modified_strategy" "$mode"
-        done
+        "search_resnet18"|"no_l2_resnet18"|"baseline_l2_resnet18")
+            for k in "${top_ks_resnet[@]}"; do
+                modified_strategy="${base_strategy_resnet//K_VALUE/$k}"
+               if [ "$parallel" -eq 1 ]; then
+                    ./run_main.sh "$modified_strategy" "$mode" &
+                else
+                    ./run_main.sh "$modified_strategy" "$mode"
+                fi
+            done
+            ;;
+
+        "baseline_l2_vgg11")
+            for k in "${top_ks_vgg11[@]}"; do
+                modified_strategy="${base_strategy_vgg11//K_VALUE/$k}"
+                if [ "$parallel" -eq 1 ]; then
+                    ./run_main.sh "$modified_strategy" "$mode" &
+                else
+                    ./run_main.sh "$modified_strategy" "$mode"
+                fi
+            done
         ;;
 
-    "search_resnet18"|"no_l2_resnet18"|"baseline_l2_resnet18")
-        for k in "${top_ks_resnet[@]}"; do
-            modified_strategy="${base_strategy_resnet//K_VALUE/$k}"
-            ./run_main.sh "$modified_strategy" "$mode"
-        done
-        ;;
-
-    "baseline_l2_vgg11")
-        for k in "${top_ks_vgg11[@]}"; do
-            modified_strategy="${base_strategy_vgg11//K_VALUE/$k}"
-            ./run_main.sh "$modified_strategy" "$mode"
-        done
-    ;;
-
-    *)
-        echo "Invalid mode provided."
-        exit 1
-        ;;
-esac
+        *)
+            echo "Invalid mode provided."
+            exit 1
+            ;;
+    esac
+done

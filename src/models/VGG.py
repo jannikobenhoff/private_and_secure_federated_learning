@@ -6,6 +6,7 @@ Reference:
     "Very deep convolutional networks for large-scale image recognition."
     arXiv preprint arXiv:1409.1556 (2014).
 """
+import asyncio
 from datetime import datetime
 
 import tensorflow as tf
@@ -50,7 +51,7 @@ class VGG(tf.keras.Model):
 
 
 if __name__ == "__main__":
-    vgg = VGG(vgg_name="vgg11", num_classes=10, lambda_l2=None)
-    vgg.build(input_shape=(None, 32, 32, 3))
-    vgg.summary()
-    print(datetime.now().timestamp())
+    # vgg = VGG(vgg_name="vgg11", num_classes=10, lambda_l2=None)
+    # vgg.build(input_shape=(None, 32, 32, 3))
+    # vgg.summary()
+    print(datetime.now().strftime('%m_%d_%H_%M_%S'))

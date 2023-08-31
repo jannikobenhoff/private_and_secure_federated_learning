@@ -1,6 +1,6 @@
 import numpy as np
 from keras.utils import to_categorical
-from tensorflow import keras
+import keras
 
 
 def load_dataset(dataset_name: str, fullset=100):

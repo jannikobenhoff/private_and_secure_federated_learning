@@ -61,7 +61,6 @@ class MemSGD(Optimizer):
 
         self.memory[self._index_dict[var_key]].assign(m + lr * gradient - g)
 
-        # variable.assign_add(-g)
         return g
 
     @staticmethod
@@ -70,8 +69,6 @@ class MemSGD(Optimizer):
         Returns a sparse tensor of the input tensor, with the top k elements.
         k = 2: [1, 2, 3] -> [0, 2, 3]
         """
-        # k = tf.cast(k, tf.int32.base_dtype)
-
         input_shape = input_tensor.shape
         flattened_tensor: Tensor = tf.reshape(input_tensor, [-1])
 
@@ -126,9 +123,6 @@ class MemSGD(Optimizer):
     def get_sparse_tensor_size_in_bits(tensor):
         flattened_tensor = tf.reshape(tensor, [-1])
         num_nonzero_entries = tf.math.count_nonzero(flattened_tensor)
-
-        # num_elements = tf.size(flattened_tensor, out_type=tf.float32)
-        # num_index_bits = tf.math.ceil(tf.math.log(num_elements) / tf.math.log(2.0))
 
         num_index_bits = tf.int32.size * 8
         num_value_bits = tf.constant(tensor.dtype.size * 8, dtype=tf.int64)

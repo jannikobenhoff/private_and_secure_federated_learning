@@ -6,7 +6,7 @@ from skopt import load
 from skopt.plots import plot_gaussian_process
 
 if __name__ == "__main__":
-    filename = "bayesian_result_SGD_cifar10_vgg11.pkl"
+    filename = "bayesian_result_SGD_resnet18_08_31_02_37_30.pkl"
 
     result = load('../results/bayesian/' + filename)
     metrics = result["metrics"]
@@ -17,7 +17,6 @@ if __name__ == "__main__":
     print("lambda iterations:  ", xiter)
     print("validation accuracy:    ", result.func_vals)
 
-    # fig, axs = plt.subplots(int(np.ceil(len(xiter)/3))+1, 3, figsize=(12, 10))
     fig, axs = plt.subplots(1, 1, figsize=(9, 6))
 
     # axs = axs.flatten()

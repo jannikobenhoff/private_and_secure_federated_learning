@@ -200,10 +200,32 @@ def plot_compression_metrics(title: str, parent_folder: str, baseline):
 
 
 def extend(array: list, length):
+    return array
     if len(array) < length:
         for _ in range(length - len(array)):
-            array.append(array[-1])
+            array.append(0)  # array[-1])
     return array
+
+
+def mean_of_arrays_with_padding(arr1, arr2):
+    # Determine the length of the longer array
+    max_len = max(len(arr1), len(arr2))
+
+    # Pad the shorter array to the length of the longer array
+    if len(arr1) < max_len:
+        padding = arr2[len(arr1):]
+        arr1_padded = np.concatenate((arr1, padding))
+        arr2_padded = arr2
+    elif len(arr2) < max_len:
+        padding = arr1[len(arr2):]
+        arr2_padded = np.concatenate((arr2, padding))
+        arr1_padded = arr1
+    else:
+        arr1_padded, arr2_padded = arr1, arr2
+
+    # Compute the mean
+    mean_arr = (arr1_padded + arr2_padded) / 2
+    return mean_arr
 
 
 def plot_compare_all(parent_folder: str, bsgd: bool):
@@ -226,6 +248,9 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
     all_train_loss = {}
     all_strats = {}
     for file_path in all_files:
+        if "DS" in file_path:
+            continue
+        print(file_path)
         if "Bucket" in file_path and not bsgd:
             continue
         file = open(file_path, "r")
@@ -235,23 +260,18 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
         strat_key = f"{strat}"
         lean_strat_key = f"{strat['optimizer']} {strat['compression']}"
         if strat_key in all_train_acc:
-            # if all_acc[strat_key][1] < np.mean(ast.literal_eval(file["val_acc"])):
-            # all_acc[strat_key] = [file["compression_rates"][0], np.mean(ast.literal_eval(file["val_acc"]))]
-            all_train_acc[strat_key] += np.array(extend(ast.literal_eval(file["training_acc"]), file["args"]["epochs"]))
-            all_train_acc[strat_key] /= 2
+            all_train_acc[strat_key] = mean_of_arrays_with_padding(np.array(ast.literal_eval(file["training_acc"])),
+                                                                   all_train_acc[strat_key])
+            all_val_loss[strat_key] = mean_of_arrays_with_padding(np.array(ast.literal_eval(file["val_loss"])),
+                                                                  all_val_loss[strat_key])
+            all_train_loss[strat_key] = mean_of_arrays_with_padding(np.array(ast.literal_eval(file["training_loss"])),
+                                                                    all_train_loss[strat_key])
+            all_val_acc[strat_key] = mean_of_arrays_with_padding(np.array(ast.literal_eval(file["val_acc"])),
+                                                                 all_val_acc[strat_key])
 
-            all_val_loss[strat_key] += np.array(extend(ast.literal_eval(file["val_loss"]), file["args"]["epochs"]))
-            all_val_loss[strat_key] /= 2
-
-            all_train_loss[strat_key] += np.array(
-                extend(ast.literal_eval(file["training_loss"]), file["args"]["epochs"]))
-            all_train_loss[strat_key] /= 2
-
-            all_val_acc[strat_key] += np.array(extend(ast.literal_eval(file["val_acc"]), file["args"]["epochs"]))
-            all_val_acc[strat_key] /= 2
         else:
             all_acc[strat_key] = [file["compression_rates"][0], np.mean(ast.literal_eval(file["val_acc"]))]
-            all_train_acc[strat_key] = np.array(extend(ast.literal_eval(file["training_acc"]), file["args"]["epochs"]))
+            all_train_acc[strat_key] = np.array(ast.literal_eval(file["training_acc"]))
             all_val_loss[strat_key] = np.array(extend(ast.literal_eval(file["val_loss"]), file["args"]["epochs"]))
             all_train_loss[strat_key] = np.array(
                 extend(ast.literal_eval(file["training_loss"]), file["args"]["epochs"]))
@@ -259,7 +279,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 
         if lean_strat_key in all_cr:
             # if all_cr[strat_key][0] < np.mean(file["compression_rates"]):
-            all_cr[lean_strat_key][0] += file["compression_rates"][0]
+            all_cr[lean_strat_key][0] = file["compression_rates"][0]
             all_cr[lean_strat_key][0] /= 2
             all_cr[lean_strat_key][1] += np.mean(ast.literal_eval(file["val_acc"]))
             all_cr[lean_strat_key][1] /= 2
@@ -348,8 +368,8 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 
     axes[2].grid(alpha=0.2)
     # axes[2].set_title("Validation Acc / Compression Rate", fontsize=10)
-    axes[2].set_xlabel("Overall Compression", fontsize=10)
-    axes[2].set_ylabel("Test Accuracy", fontsize=10)
+    axes[2].set_xlabel("Overall Compression", fontsize=8)
+    axes[2].set_ylabel("Test Accuracy", fontsize=8)
     # axes[2].legend(fontsize=7)
     axes[2].set_xscale('log')
 
@@ -392,14 +412,20 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
         if col == 0 and row > 0:
             cell.set_fontsize(7)
 
+    plt.suptitle(parent_folder.upper())
     plt.tight_layout()
-    plt.savefig(f"../../figures/{parent_folder}.pdf", bbox_inches='tight')
     plt.show()
+    plt.savefig(f"../../figures/{parent_folder}.pdf", bbox_inches='tight')
 
 
 if __name__ == "__main__":
     # plot_compression_metrics("sparsegradient", "baseline", "sgd/training_SGD_mnist_08_25_13_21.json")
 
-    plot_compare_all("l2", True)
-
+    plot_compare_all("vgg11new", True)
+    # TODO Max or Mean ???
     # plot_compression_rates()
+    #
+    # a = np.array([1, 2, ])
+    # b = np.array([3, 2, 1])
+    #
+    # print(mean_of_arrays_with_padding(a, b))

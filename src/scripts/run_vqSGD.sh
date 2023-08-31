@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="l2_lenet"
+DEFAULT_MODE="baseline_l2_resnet18"
 
 # LeNet: search_lenet  l2_lenet  baseline_l2_lenet  no_l2_lenet
 # ResNet18: search_resnet18  no_l2_resnet18  baseline_l2_resnet18
@@ -11,14 +11,17 @@ DEFAULT_MODE="l2_lenet"
 mode=${1:-$DEFAULT_MODE}
 
 base_strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.01, "repetition": K_VALUE}'
-base_strategy_resnet='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.1, "repetition": K_VALUE}'
-base_strategy_vgg11='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.1, "repetition": K_VALUE}'
+base_strategy_resnet='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.01, "repetition": K_VALUE}'
+base_strategy_vgg11='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.01, "repetition": K_VALUE}'
 
 #repetitions=(1500 200 500 200)
 repetitions=(2000)
 repetitions_resnet=(10000 20000 50000)
-repetitions_vgg11=(10000 20000 50000)
+repetitions_vgg11=(1500 50000 10000)
 
+runs=3
+for ((i=1; i<=runs; i++))
+do
 case $mode in
     "search_lenet"|"l2_lenet"|"baseline_l2_lenet"|"no_l2_lenet")
         for k in "${repetitions[@]}"; do
@@ -46,3 +49,4 @@ case $mode in
         exit 1
         ;;
 esac
+done

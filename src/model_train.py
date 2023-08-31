@@ -5,13 +5,13 @@ from datetime import datetime
 import json
 from pprint import pprint
 
-from keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import numpy as np
 import tensorflow as tf
 from sklearn.model_selection import KFold
 from skopt import dump, gp_minimize
 from skopt.space import Real
 from skopt.utils import use_named_args
+from tensorflow.python.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 from models.LeNet import LeNet
 from models.ResNet import ResNet
@@ -143,7 +143,7 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
     strategy = strategy_factory(**strategy_params)
     strategy.summary()
 
-    BATCH_SIZE = 32
+    BATCH_SIZE = None  # 32
     if args.dataset == "cifar10":
         BATCH_SIZE = 128
 
@@ -193,6 +193,7 @@ def worker(args):
                                                                                           fullset=args.fullset)
     strategy_params = json.loads(args.strategy)
     strategy = strategy_factory(**strategy_params)
+    print(strategy_params)
 
     if args.bayesian_search:
         print("--- Bayesian Search ---")
@@ -267,7 +268,10 @@ def worker(args):
             "args": args
         }
         result["metrics"] = metrics
-        dump(result, f'../results/bayesian/bayesian_result_{strategy.get_file_name()}_{args.dataset}.pkl',
+        dump(result,
+             '../results/bayesian/bayesian_result_{}_{}_{}.pkl'.format(strategy.get_file_name(), args.model.lower(),
+                                                                       datetime.now().strftime(
+                                                                           '%m_%d_%H_%M_%S')),
              store_objective=False)
         print(f"Finished search for {strategy.get_plot_title()}")
 
@@ -331,7 +335,8 @@ def worker(args):
             "time_per_step": np.mean(time_history.times)
         }
         file = open('../results/compression/training_{}_{}_'
-                    '{}.json'.format(strategy.get_file_name(), args.dataset, datetime.now().strftime('%m_%d_%H_%M')),
+                    '{}.json'.format(strategy.get_file_name(), args.model.lower(),
+                                     datetime.now().strftime('%m_%d_%H_%M_%S')),
                     "w")
         json.dump(metrics, file, indent=4)
         file.close()
@@ -343,7 +348,6 @@ def main():
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
     args = parse_args()
-    print(args)
     worker(args)
 
 
