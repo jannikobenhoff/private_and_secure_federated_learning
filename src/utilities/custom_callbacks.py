@@ -1,5 +1,10 @@
+import math
 import time
 import tensorflow as tf
+
+
+def step_decay(epoch, initial_lrate, drop_factor, epochs_drop):
+    return initial_lrate * math.pow(drop_factor, math.floor((1 + epoch) / epochs_drop))
 
 
 class TimeHistory(tf.keras.callbacks.Callback):

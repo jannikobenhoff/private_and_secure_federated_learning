@@ -11,7 +11,7 @@ from sklearn.model_selection import KFold
 from skopt import dump, gp_minimize
 from skopt.space import Real
 from skopt.utils import use_named_args
-from tensorflow.python.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.python.keras.callbacks import EarlyStopping, ReduceLROnPlateau, LearningRateScheduler
 
 from models.LeNet import LeNet
 from models.ResNet import ResNet
@@ -21,7 +21,7 @@ from compressions.bSGD import bSGD
 from models.VGG import VGG
 from utilities import Strategy
 
-from utilities.custom_callbacks import TimeHistory, CosineDecayCallback
+from utilities.custom_callbacks import TimeHistory, CosineDecayCallback, step_decay
 from utilities.datasets import load_dataset
 
 from compressions.TernGrad import TernGrad
@@ -162,16 +162,23 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
                       loss='sparse_categorical_crossentropy',
                       metrics=['accuracy'])
 
-        cosine_decay = CosineDecayCallback(strategy_params["learning_rate"],
-                                           decay_steps=int(args.epochs * len(train_images) / BATCH_SIZE),
-                                           data_length=len(train_images), batch_size=BATCH_SIZE,
-                                           alpha=strategy_params["learning_rate"] * 0.001)
+        # cosine_decay = CosineDecayCallback(strategy_params["learning_rate"],
+        #                                    decay_steps=int(args.epochs * len(train_images) / BATCH_SIZE),
+        #                                    data_length=len(train_images), batch_size=BATCH_SIZE,
+        #                                    alpha=strategy_params["learning_rate"] * 0.001)
 
         reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1,
                                       patience=args.lr_decay, cooldown=2 * args.lr_decay,
                                       min_lr=1e-04)  # strategy_params["learning_rate"] * 0.001)
 
-        callbacks.append(reduce_lr)
+        initial_lrate = strategy_params["learning_rate"]
+        drop_factor = 0.5
+        epochs_drop = 10
+
+        lr_scheduler = LearningRateScheduler(lambda epoch: step_decay(epoch, initial_lrate, drop_factor, epochs_drop))
+
+        callbacks.append(lr_scheduler)
+        # callbacks.append(reduce_lr)
 
     history = model.fit(train_images, train_labels, epochs=args.epochs,
                         batch_size=BATCH_SIZE,
