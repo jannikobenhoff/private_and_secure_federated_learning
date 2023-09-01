@@ -98,6 +98,8 @@ def plot_compression_metrics(title: str, parent_folder: str, baseline):
         "bsgd2": ["buckets", "sparse_buckets"],
         "terngrad": [],
         "atomo": ["svd_rank"],
+        "bucketsgd": ["buckets", "sparse_buckets"],
+        "bsgd": ["buckets", "sparse_buckets"],
         "sgd": []
     }
     params = plot_configs[title]
@@ -114,8 +116,26 @@ def plot_compression_metrics(title: str, parent_folder: str, baseline):
     all_val_loss = [ast.literal_eval(baseline_metrics["val_loss"])]
     all_val_acc_plots = [ast.literal_eval(baseline_metrics["val_acc"])]
 
-    for res in os.listdir(f"../results/compression/{parent_folder}/" + title):
-        file = open(f"../results/compression/{parent_folder}/" + title + "/" + res, "r")
+    def get_all_files_in_directory(root_path):
+        all_files = []
+        for subdir, dirs, files in os.walk(root_path):
+            for file_name in files:
+                file_path = os.path.join(subdir, file_name)
+                all_files.append(file_path)
+        return all_files
+
+    directory_path = '../results/compression/' + parent_folder
+    all_files = get_all_files_in_directory(directory_path)
+
+    for file in all_files:  # os.listdir(f"../results/compression/{parent_folder}/"):
+        print(file)
+        if title == "bsgd":
+            title2 = "BucketSGD"
+        else:
+            title2 = title
+        if title2 not in file:
+            continue
+        file = open(file, "r")
         metrics = json.load(file)
         param_value = []
         if len(params) > 0:
@@ -419,12 +439,12 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 
 
 if __name__ == "__main__":
-    # plot_compression_metrics("sparsegradient", "baseline", "sgd/training_SGD_mnist_08_25_13_21.json")
+    # plot_compression_metrics("bsgd", "vgg11new2", "training_SGD_vgg11_09_01_00_15_34.json")
 
-    plot_compare_all("vgg11new2", True)
+    plot_compare_all("vgg11baseline", True)
     # TODO Max und Mean plotten ???
     # plot_compression_rates()
-    #
+
     # a = np.array([1, 2, ])
     # b = np.array([3, 2, 1])
     #

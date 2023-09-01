@@ -19,6 +19,7 @@ from models.MobileNet import MobileNet
 from models.DenseNet import DenseNet
 from compressions.bSGD import bSGD
 from models.VGG import VGG
+from models.MobileNetV2 import MobileNetV2
 from utilities import Strategy
 
 from utilities.custom_callbacks import TimeHistory, CosineDecayCallback, step_decay
@@ -63,7 +64,7 @@ def model_factory(model_name, lambda_l2, input_shape, num_classes):
         model = ResNet("resnet18", num_classes, lambda_l2=lambda_l2)
         return model
     elif model_name == "mobilenet":
-        model = MobileNet(num_classes, lambda_l2=lambda_l2)
+        model = MobileNetV2(num_classes, lambda_l2=lambda_l2)
         return model
     elif model_name == "vgg11":
         model = VGG(vgg_name="vgg11", num_classes=num_classes, lambda_l2=lambda_l2)

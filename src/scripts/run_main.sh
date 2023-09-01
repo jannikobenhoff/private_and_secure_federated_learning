@@ -17,6 +17,7 @@ case $mode in
           --log=1 \
           --strategy="$compression_strategy"
         ;;
+
 #      python ../model_train.py --model LeNet --dataset mnist \
 #          --epochs=200 \
 #          --n_calls=10 \
@@ -27,6 +28,7 @@ case $mode in
 #          --log=1 \
 #          --strategy="$compression_strategy"
 #        ;;
+
     "search_resnet18")
         python ../model_train.py --model ResNet18 --dataset cifar10 \
           --epochs=100 \

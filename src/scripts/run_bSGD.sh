@@ -20,11 +20,9 @@ sparse_buckets=( 9950 1999 4999)
 #buckets=(      1000 100 50) #1000 100 1000 100 1000 100)
 #sparse_buckets=( 900 90 49) #999 99 999 99 999 99)
 
-# best for resnet was 1000/9000
+parallel=1
 
-parallel=0
-
-runs=3
+runs=1
 for ((r=1; r<=runs; r++))
 do
 case $mode in
