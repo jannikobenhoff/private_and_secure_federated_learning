@@ -153,6 +153,12 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
         early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
         callbacks.append(early_stopping)
 
+        initial_lrate = strategy_params["learning_rate"]
+        drop_factor = 0.5
+        epochs_drop = 10
+        lr_scheduler = LearningRateScheduler(lambda epoch: step_decay(epoch, initial_lrate, drop_factor, epochs_drop))
+        callbacks.append(lr_scheduler)
+
     if args.bayesian_search:
         model.compile(optimizer=strategy,
                       loss='sparse_categorical_crossentropy',
@@ -176,7 +182,7 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
         epochs_drop = 10
 
         lr_scheduler = LearningRateScheduler(lambda epoch: step_decay(epoch, initial_lrate, drop_factor, epochs_drop))
-
+        # TODO mac air umbenennen
         callbacks.append(lr_scheduler)
         # callbacks.append(reduce_lr)
 

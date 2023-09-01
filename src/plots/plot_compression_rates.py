@@ -414,14 +414,14 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 
     plt.suptitle(parent_folder.upper())
     plt.tight_layout()
-    plt.show()
     plt.savefig(f"../../figures/{parent_folder}.pdf", bbox_inches='tight')
+    plt.show()
 
 
 if __name__ == "__main__":
     # plot_compression_metrics("sparsegradient", "baseline", "sgd/training_SGD_mnist_08_25_13_21.json")
 
-    plot_compare_all("vgg11new", True)
+    plot_compare_all("vgg11new2", True)
     # TODO Max und Mean plotten ???
     # plot_compression_rates()
     #
