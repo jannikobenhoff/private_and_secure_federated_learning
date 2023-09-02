@@ -46,11 +46,14 @@ class vqSGD(Compression):
         l2 = tf.norm(flat_gradient, ord=2)
         if l2 != 0:
             flat_gradient = tf.divide(flat_gradient, l2)
+        else:
+            print("L2 ZERO")
 
         d = flat_gradient.shape[0]
         d_sqrt = np.sqrt(d)
 
-        gamma = 1 - tf.norm(flat_gradient, ord=1) / d_sqrt
+        gamma = 1 - (tf.norm(flat_gradient, ord=1) / d_sqrt)
+
         gamma = gamma.numpy()
         gamma_by_2d = gamma / (2 * d)
 
@@ -86,7 +89,10 @@ class vqSGD(Compression):
                 compressed_gradient))  # tf.int32.size * 8)  #
 
             self.compression_rates.append(self.cr[variable.ref()])
-            print(tf.reduce_sum(tf.abs(compressed_gradient - gradient)))
+            print(tf.unique_with_counts(
+                tf.sign(tf.reshape(compressed_gradient, [-1])) * tf.sign(tf.reshape(gradient, [-1])))[0])
+            print(tf.unique_with_counts(
+                tf.sign(tf.reshape(compressed_gradient, [-1])) * tf.sign(tf.reshape(gradient, [-1])))[2])
             print(np.mean(self.compression_rates))
 
-        return compressed_gradient  # / tf.norm(compressed_gradient, ord=2))
+        return compressed_gradient

@@ -47,7 +47,7 @@ class Atomo(Compression):
             s = s[:self.svd_rank]
             vT = vT[:self.svd_rank, :]
 
-        if True:  # variable.ref() not in self.cr:
+        if variable.ref() not in self.cr:
             grad_type = gradient.dtype.size
             bit_size = (np.prod(
                 u.shape) + np.prod(
@@ -58,8 +58,8 @@ class Atomo(Compression):
                 gradient.shape.as_list()) / bit_size
 
             self.compression_rates.append(self.cr[variable.ref()])
-
-            # print(np.mean(self.compression_rates))
+            self.compression_rates = [np.mean(self.compression_rates)]
+            print(np.mean(self.compression_rates))
 
         decoded = tf.convert_to_tensor(np.dot(np.dot(u, np.diag(s)), vT))
         decoded = tf.reshape(decoded, input_shape)

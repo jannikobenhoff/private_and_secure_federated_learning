@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="baseline_l2_resnet18"
+DEFAULT_MODE="baseline_l2_vgg11"
 
 # LeNet: search_lenet  l2_lenet  baseline_l2_lenet  no_l2_lenet
 # ResNet18: search_resnet18  no_l2_resnet18  baseline_l2_resnet18
@@ -17,9 +17,9 @@ base_strategy_vgg11='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate
 #repetitions=(1500 200 500 200)
 repetitions=(2000)
 repetitions_resnet=(10000 20000 50000)
-repetitions_vgg11=(1500 50000 10000)
+repetitions_vgg11=(5000 10000 20000)
 
-runs=3
+runs=2
 for ((i=1; i<=runs; i++))
 do
 case $mode in

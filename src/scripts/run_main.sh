@@ -75,7 +75,7 @@ case $mode in
             --stop_patience=10 \
             --train_on_baseline=1 \
             --lr_decay=3 \
-            --log=2 \
+            --log=1 \
             --strategy="$compression_strategy"
         ;;
 

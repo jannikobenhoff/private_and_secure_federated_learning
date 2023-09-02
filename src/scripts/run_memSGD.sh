@@ -16,9 +16,9 @@ base_strategy_vgg11='{"optimizer":  "memsgd","compression":  "none", "learning_r
 
 top_ks=(250 500 250)  #(10 50 100)
 top_ks_resnet=(200 500 1000)
-top_ks_vgg11=(500 1000 1500)
+top_ks_vgg11=(1000 1500 1500 5000)
 
-parallel=1
+parallel=0
 runs=3
 for ((i=1; i<=runs; i++))
 do

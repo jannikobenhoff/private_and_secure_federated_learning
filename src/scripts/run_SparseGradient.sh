@@ -14,11 +14,11 @@ base_strategy='{"optimizer": "sgd", "compression": "sparsegradient", "learning_r
 base_strategy_resnet='{"optimizer": "sgd", "compression": "sparsegradient", "learning_rate": 0.01, "drop_rate": K_VALUE}'
 base_strategy_vgg11='{"optimizer": "sgd", "compression": "sparsegradient", "learning_rate": 0.01, "drop_rate": K_VALUE}'
 
-drop_rates=(90 95 99)
+drop_rates=(85 90 95 99)
 #drop_rates=(85 85 85)
 
 #iterations=(2)
-runs=3
+runs=2
 for ((i=1; i<=runs; i++))
 do
     case $mode in

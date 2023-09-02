@@ -14,15 +14,20 @@ base_strategy='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.01
 base_strategy_resnet='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.01, "buckets": 10000, "sparse_buckets": 1}'
 base_strategy_vgg11='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.01, "buckets": 10000, "sparse_buckets": 1}'
 
-buckets=(       10000 2000 5000)
-sparse_buckets=( 9950 1999 4999)
+#buckets=(       10000 2000 5000)
+#sparse_buckets=( 9950 1999 4999)
 
+buckets=(       2000 5000 10000)
+sparse_buckets=( 1999 4999 9950)
+
+#buckets=(       1000)
+#sparse_buckets=( 900)
 #buckets=(      1000 100 50) #1000 100 1000 100 1000 100)
 #sparse_buckets=( 900 90 49) #999 99 999 99 999 99)
 
-parallel=1
+parallel=0
 
-runs=1
+runs=2
 for ((r=1; r<=runs; r++))
 do
 case $mode in
