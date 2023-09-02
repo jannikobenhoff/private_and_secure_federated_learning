@@ -42,12 +42,15 @@ class GradientSparsification(Compression):
         gradient_spars = tf.multiply(selectors, gradient) / probabilities
         gradient_spars = tf.where(tf.math.is_nan(gradient_spars), 0., gradient_spars)
 
-        if True:  # variable.ref() not in self.cr:
+        if variable.ref() not in self.cr:
             self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(
                 gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
                 gradient_spars)
             self.compression_rates.append(self.cr[variable.ref()])
+            self.compression_rates = [np.mean(self.compression_rates)]
+
             # print(np.mean(self.compression_rates))
+
         gradient_spars = tf.reshape(gradient_spars, input_shape)
 
         return gradient_spars

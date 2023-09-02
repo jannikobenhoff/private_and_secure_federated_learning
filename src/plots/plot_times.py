@@ -23,15 +23,16 @@ names = {
 }
 
 
-def plot_avg_times(parent_folder, bsgd: bool):
-    def get_all_files_in_directory(root_path):
-        all_files = []
-        for subdir, dirs, files in os.walk(root_path):
-            for file_name in files:
-                file_path = os.path.join(subdir, file_name)
-                all_files.append(file_path)
-        return all_files
+def get_all_files_in_directory(root_path):
+    all_files = []
+    for subdir, dirs, files in os.walk(root_path):
+        for file_name in files:
+            file_path = os.path.join(subdir, file_name)
+            all_files.append(file_path)
+    return all_files
 
+
+def plot_avg_times(parent_folder, bsgd: bool):
     directory_path = '../results/compression/' + parent_folder
     all_files = get_all_files_in_directory(directory_path)
 
@@ -101,5 +102,23 @@ def plot_avg_times(parent_folder, bsgd: bool):
     plt.show()
 
 
+def plot_total_run_time():
+    directory_path = '../results/compression/'
+    all_files = get_all_files_in_directory(directory_path)
+    total_time = 0
+
+    for file_path in all_files:
+        if "DS" in file_path:
+            continue
+        file = open(file_path, "r")
+        file = json.load(file)
+        if "time_per_epoch" in file:
+            total_time += np.sum(file["time_per_epoch"])
+
+    print("Total Run Time:\n", round(total_time / 3600, 1), "h\n", round(total_time / 3600 / 24, 1), "days")
+
+
 if __name__ == "__main__":
-    plot_avg_times("baseline", True)
+    # plot_avg_times("baseline", True)
+
+    plot_total_run_time()

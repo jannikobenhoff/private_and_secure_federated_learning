@@ -150,14 +150,18 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
 
     time_callback = TimeHistory()
     callbacks = [time_callback]
+
+    initial_lrate = strategy_params["learning_rate"]
+    drop_factor = 0.1
+    epochs_drop = 10
+    min_lr = initial_lrate * 0.1 * 0.1
+
     if args.stop_patience < args.epochs:
         early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
         callbacks.append(early_stopping)
 
-        initial_lrate = strategy_params["learning_rate"]
-        drop_factor = 0.5
-        epochs_drop = 10
-        lr_scheduler = LearningRateScheduler(lambda epoch: step_decay(epoch, initial_lrate, drop_factor, epochs_drop))
+        lr_scheduler = LearningRateScheduler(lambda epoch: step_decay(epoch, initial_lrate, drop_factor, epochs_drop,
+                                                                      min_lr))
         callbacks.append(lr_scheduler)
 
     if args.bayesian_search:
@@ -169,23 +173,14 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
                       loss='sparse_categorical_crossentropy',
                       metrics=['accuracy'])
 
-        # cosine_decay = CosineDecayCallback(strategy_params["learning_rate"],
-        #                                    decay_steps=int(args.epochs * len(train_images) / BATCH_SIZE),
-        #                                    data_length=len(train_images), batch_size=BATCH_SIZE,
-        #                                    alpha=strategy_params["learning_rate"] * 0.001)
-
         reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1,
                                       patience=args.lr_decay, cooldown=2 * args.lr_decay,
-                                      min_lr=1e-04)  # strategy_params["learning_rate"] * 0.001)
+                                      min_lr=1e-04)
 
-        initial_lrate = strategy_params["learning_rate"]
-        drop_factor = 0.5
-        epochs_drop = 10
+        lr_scheduler = LearningRateScheduler(lambda epoch: step_decay(epoch, initial_lrate, drop_factor, epochs_drop,
+                                                                      min_lr))
 
-        lr_scheduler = LearningRateScheduler(lambda epoch: step_decay(epoch, initial_lrate, drop_factor, epochs_drop))
-        # TODO mac air umbenennen
         callbacks.append(lr_scheduler)
-        # callbacks.append(reduce_lr)
 
     history = model.fit(train_images, train_labels, epochs=args.epochs,
                         batch_size=BATCH_SIZE,
@@ -198,6 +193,7 @@ def worker(args):
     if args.gpu != 1:
         print("Using CPU")
         tf.config.set_visible_devices([], 'GPU')
+        print(tf.config.get_visible_devices())
     else:
         print("Using GPU")
     tf.config.run_functions_eagerly(run_eagerly=True)

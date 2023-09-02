@@ -4,6 +4,8 @@ from src.compressions.vqSGD import *
 
 class TestvqSGD(unittest.TestCase):
     def test_compress(self):
+        # tf.config.set_visible_devices([], 'GPU')
+
         vq = vqSGD(repetition=10)
         grad = tf.constant([[1, -20, -1], [3, 5.5, 2]], dtype=tf.float32)
 
@@ -13,7 +15,7 @@ class TestvqSGD(unittest.TestCase):
         #                    dtype=tf.float32)
 
         calc = vq.compress(grad, grad)
-
+        print(calc)
         print(tf.unique_with_counts(tf.abs(calc) > tf.abs(grad))[0])
         print(tf.unique_with_counts(tf.abs(calc) > tf.abs(grad))[2])
         # print(tf.unique_with_counts(tf.sign(calc) * tf.sign(grad))[2])

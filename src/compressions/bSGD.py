@@ -68,14 +68,12 @@ class bSGD(Compression):
         sparse_gradient = self.process_tensor(gradient, self.buckets, self.sparse_buckets)
 
         if variable.ref() not in self.cr:
-            # print("Non zero:", tf.math.count_nonzero(sparse_gradient).numpy())
             bit_sizes = [
                 # (self.buckets - self.sparse_buckets) * len(partitioned_list[-1]) + (
                 #     self.buckets - self.sparse_buckets) * 32 * tf.int32.size * 8,
                 self.get_bucket_tensor_size_in_bits(sparse_gradient, self.buckets, self.sparse_buckets),
                 self.get_sparse_tensor_size_in_bits(sparse_gradient)
             ]
-            # print(bit_sizes)
 
             bit_size = min(bit_sizes)
             self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(

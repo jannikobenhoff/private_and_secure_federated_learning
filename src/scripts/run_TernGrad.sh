@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="baseline_l2_lenet"
+DEFAULT_MODE="baseline_l2_resnet18"
 
 # LeNet: search_lenet  l2_lenet  baseline_l2_lenet  no_l2_lenet
 # ResNet18: search_resnet18  no_l2_resnet18  baseline_l2_resnet18
