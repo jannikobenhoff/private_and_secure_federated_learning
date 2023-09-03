@@ -8,7 +8,7 @@ from skopt.plots import plot_gaussian_process
 from plot_compression_rates import names
 
 if __name__ == "__main__":
-    filename = "bayesian_result_SGD_vgg11_09_03_18_54_20.pkl"
+    filename = "recent/bayesian_result_SGD_resnet18_08_31_02_37_30.pkl"
 
     result = load('../results/bayesian/' + filename)
     metrics = result["metrics"]

@@ -132,7 +132,7 @@ case $mode in
 
     "baseline_l2_resnet18")
         python ../model_train.py --model ResNet18 --dataset cifar10 \
-            --epochs=45 \
+            --epochs=40 \
             --gpu=1 \
             --k_fold=1 \
             --fullset=100 \

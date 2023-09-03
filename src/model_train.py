@@ -153,7 +153,7 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
     if args.dataset == "cifar10" and args.model.lower() == "resnet18":
         BATCH_SIZE = 256
         initial_lr = strategy_params["learning_rate"]
-        drop_factor = 0.1
+        drop_factor = 0.2
         drop_epochs = [15, 30]
         min_lr = initial_lr * 0.1 * 0.1
 

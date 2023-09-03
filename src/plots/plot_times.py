@@ -119,6 +119,6 @@ def plot_total_run_time():
 
 
 if __name__ == "__main__":
-    plot_avg_times("baseline_vgg", True)
+    # plot_avg_times("baseline_vgg", True)
 
-    # plot_total_run_time()
+    plot_total_run_time()

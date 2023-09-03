@@ -190,11 +190,13 @@ def plot_compression_metrics(title: str, parent_folder: str):
             m = next(marker)
             c = next(colors)
 
+            WINDOW_SIZE = 5
+
             axes[0].plot(np.arange(1, len(met["train_acc"]) + 1, 1), met["train_acc"],
                          markersize=4, color=c,  # marker=m,
                          label=label_name)
 
-            axes[1].plot(np.arange(1, len(met["val_acc"]) + 1, 1), met["val_acc"],
+            axes[1].plot(np.arange(1, len(met["val_acc"]) + 1, 1), list(moving_average(met["val_acc"], WINDOW_SIZE)),
                          markersize=4, label=label_name,  # marker=m,
                          color=c)
 
@@ -204,7 +206,7 @@ def plot_compression_metrics(title: str, parent_folder: str):
             axes[3].plot(np.arange(1, len(met["train_loss"]) + 1, 1), met["train_loss"],
                          markersize=4, label=label_name,  # marker=m,
                          color=c)
-            axes[4].plot(np.arange(1, len(met["val_loss"]) + 1, 1), met["val_loss"],
+            axes[4].plot(np.arange(1, len(met["val_loss"]) + 1, 1), list(moving_average(met["val_loss"], WINDOW_SIZE)),
                          markersize=4, label=label_name,  # marker=m,
                          color=c)
 
@@ -262,6 +264,17 @@ def plot_compression_metrics(title: str, parent_folder: str):
     plt.show()
 
 
+def moving_average(data, window_size):
+    cumsum = [0]
+    for i, x in enumerate(data, 1):
+        cumsum.append(cumsum[i - 1] + x)
+        if i >= window_size:
+            moving_ave = (cumsum[i] - cumsum[i - window_size]) / window_size
+            yield moving_ave
+        else:
+            yield cumsum[i] / i
+
+
 def mean_of_arrays_with_padding(arr1, arr2):
     # Determine the length of the longer array
     max_len = max(len(arr1), len(arr2))
@@ -285,7 +298,7 @@ def mean_of_arrays_with_padding(arr1, arr2):
     return mean_arr
 
 
-def plot_compare_all(parent_folder: str, bsgd: bool):
+def plot_compare_all(parent_folder: str, bsgd: bool, epochs: int):
     directory_path = '../results/compression/' + parent_folder
     all_files = get_all_files_in_directory(directory_path)
 
@@ -363,21 +376,27 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 
         sorted_data = sorted(cr_acc_pairs, key=lambda x: x[0], reverse=True)
 
-        axes[0].plot(np.arange(1, len(best_param_metrics["train_acc"]) + 1, 1), best_param_metrics["train_acc"],
+        WINDOW_SIZE = 5
+
+        axes[0].plot(np.arange(1, min(len(best_param_metrics["train_acc"]) + 1, epochs + 1), 1),
+                     best_param_metrics["train_acc"][:epochs],
                      markersize=4, color=c,  # marker=m,
                      label=label_name)
 
-        axes[1].plot(np.arange(1, len(best_param_metrics["val_acc"]) + 1, 1), best_param_metrics["val_acc"],
+        axes[1].plot(np.arange(1, min(len(best_param_metrics["val_acc"]) + 1, epochs + 1), 1),
+                     list(moving_average(best_param_metrics["val_acc"], WINDOW_SIZE))[:epochs],
                      markersize=4, label=label_name,  # marker=m,
                      color=c)
 
         axes[2].plot([x[0] for x in sorted_data], [x[1] for x in sorted_data], marker=m, label=label_name, color=c,
                      markersize=4)
 
-        axes[3].plot(np.arange(1, len(best_param_metrics["train_loss"]) + 1, 1), best_param_metrics["train_loss"],
+        axes[3].plot(np.arange(1, min(len(best_param_metrics["train_loss"]) + 1, epochs + 1), 1),
+                     best_param_metrics["train_loss"][:epochs],
                      markersize=4, label=label_name,  # marker=m,
                      color=c)
-        axes[4].plot(np.arange(1, len(best_param_metrics["val_loss"]) + 1, 1), best_param_metrics["val_loss"],
+        axes[4].plot(np.arange(1, min(len(best_param_metrics["val_loss"]) + 1, epochs + 1), 1),
+                     list(moving_average(best_param_metrics["val_loss"], WINDOW_SIZE))[:epochs],
                      markersize=4, label=label_name,  # marker=m,
                      color=c)
 
@@ -437,8 +456,8 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 
 
 if __name__ == "__main__":
-    # plot_compression_metrics("sgd", "vggnew")
+    # plot_compression_metrics("fetchsgd", "baseline_lenet")
 
-    plot_compare_all("vggnew", True)
+    plot_compare_all("vggnew", True, 40)
 
     # plot_compression_rates()
