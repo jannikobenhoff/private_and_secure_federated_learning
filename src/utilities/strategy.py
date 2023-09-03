@@ -105,12 +105,12 @@ class Strategy(optimizer_v2.OptimizerV2):
             self._apply_dense_other(grad, var, apply_state)
 
     def _apply_dense_other(self, grad, var, apply_state=None):
-        delta = self.optimizer.update_step(grad, var)
-
         var_device, var_dtype = var.device, var.dtype.base_dtype
         coefficients = (apply_state or {}).get(
             (var_device, var_dtype)
         ) or self._fallback_apply_state(var_device, var_dtype)
+
+        delta = self.optimizer.update_step(grad, var, coefficients["lr_t"])
 
         return tf.raw_ops.ResourceApplyGradientDescent(
             var=var.handle,

@@ -51,16 +51,18 @@ class FetchSGD(Optimizer):
             )
         self._built = True
 
-    def update_step(self, gradient: Tensor, variable) -> Tensor:
+    def update_step(self, gradient: Tensor, variable, lr) -> Tensor:
         """
         Compression rate based on c and r.
         """
+        self.lr = lr
+        lr = tf.cast(self.lr, variable.dtype.base_dtype)
+
         input_shape = gradient.shape
 
         d = tf.reshape(gradient, [-1]).shape[0]
         cs = CSVec(d=d, c=self.c, r=self.r, numBlocks=self.blocks)
 
-        lr = tf.cast(self.lr, variable.dtype.base_dtype)
         momentum = tf.cast(self.momentum, variable.dtype.base_dtype)
         var_key = self._var_key(variable)
         m_old = self.momentums[self._index_dict[var_key]]

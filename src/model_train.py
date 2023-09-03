@@ -145,24 +145,24 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
     strategy.summary()
 
     BATCH_SIZE = 32
-    initial_lrate = strategy_params["learning_rate"]
+    initial_lr = strategy_params["learning_rate"]
     drop_factor = 0.5
     drop_epochs = [25, 37]
-    min_lr = initial_lrate * 0.1 * 0.1
+    min_lr = initial_lr * 0.1 * 0.1
 
     if args.dataset == "cifar10" and args.model.lower() == "resnet18":
         BATCH_SIZE = 256
-        initial_lrate = strategy_params["learning_rate"]
-        drop_factor = 0.1
-        # epochs_drop = 10
-        min_lr = initial_lrate * 0.1 * 0.1
-
-    elif args.dataset == "cifar10" and args.model.lower() == "vgg11":
-        BATCH_SIZE = 128  # 256  # 128
-        initial_lrate = strategy_params["learning_rate"]
+        initial_lr = strategy_params["learning_rate"]
         drop_factor = 0.1
         drop_epochs = [15, 30]
-        min_lr = initial_lrate * 0.1 * 0.1
+        min_lr = initial_lr * 0.1 * 0.1
+
+    elif args.dataset == "cifar10" and args.model.lower() == "vgg11":
+        BATCH_SIZE = 128
+        initial_lr = strategy_params["learning_rate"]
+        drop_factor = 0.2
+        drop_epochs = [15, 30]
+        min_lr = initial_lr * 0.1 * 0.1
 
     print("BATCH SIZE:", BATCH_SIZE)
     time_callback = TimeHistory()
@@ -172,7 +172,7 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
         early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
         callbacks.append(early_stopping)
 
-        lr_scheduler = LearningRateScheduler(lambda epoch: step_decay(epoch, initial_lrate, drop_factor, drop_epochs,
+        lr_scheduler = LearningRateScheduler(lambda epoch: step_decay(epoch, initial_lr, drop_factor, drop_epochs,
                                                                       min_lr))
         callbacks.append(lr_scheduler)
 
@@ -190,7 +190,7 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
                                       min_lr=1e-04)
 
         lr_scheduler = LearningRateScheduler(
-            lambda epoch: step_decay(epoch, initial_lrate, drop_factor, drop_epochs, min_lr))
+            lambda epoch: step_decay(epoch, initial_lr, drop_factor, drop_epochs, min_lr))
 
         callbacks.append(lr_scheduler)
 
@@ -355,6 +355,8 @@ def worker(args):
                 compression_rates = [np.mean(strategy.compression.compression_rates)]
             elif strategy.optimizer_name != "sgd":
                 compression_rates = [np.mean(strategy.optimizer.compression_rates)]
+            else:
+                compression_rates = [1]
 
         metrics = {
             "training_loss": str(training_losses_per_epoch),

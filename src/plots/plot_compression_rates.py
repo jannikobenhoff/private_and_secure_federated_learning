@@ -182,7 +182,8 @@ def plot_compression_metrics(title: str, parent_folder: str):
                 label_name = names[method]
             else:
                 label_name = ', '.join(
-                    f"{key}: {value}" for key, value in param.items())  # param[plot_configs[title][0]]
+                    f"{key}: {value}" for key, value in param.items() if
+                    value != "None")  # param[plot_configs[title][0]]
 
             table_data.append(
                 [label_name, round(100 * met["max_val_acc"], 2), round(met["cr"], 1)])
@@ -394,7 +395,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
     axes[2].set_title("Test Accuracy vs Overall Compression", fontsize=10, fontweight='bold')
     # axes[2].set_xlabel("Overall Compression", fontsize=8, fontweight='bold')
     # axes[2].set_ylabel("Test Accuracy", fontsize=8, fontweight='bold')
-    axes[2].legend(fontsize=7, bbox_to_anchor=(0.75, 0.6))
+    axes[2].legend(fontsize=7, bbox_to_anchor=(0.75, 0.7))
     axes[2].set_xscale('log')
     axes[2].tick_params(axis='both', which='major', labelsize=8)
 
@@ -436,8 +437,8 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 
 
 if __name__ == "__main__":
-    # plot_compression_metrics("sgd_vgg", "baseline_vgg")
+    # plot_compression_metrics("sgd", "vggnew")
 
-    plot_compare_all("baseline_lenet", True)
+    plot_compare_all("vggnew", True)
 
     # plot_compression_rates()

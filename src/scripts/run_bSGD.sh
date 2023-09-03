@@ -12,7 +12,7 @@ mode=${1:-$DEFAULT_MODE}
 
 base_strategy='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.01, "buckets": 5000, "sparse_buckets": 4999}'
 base_strategy_resnet='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.01, "buckets": 10000, "sparse_buckets": 1}'
-base_strategy_vgg11='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.01, "buckets": 10000, "sparse_buckets": 1}'
+base_strategy_vgg11='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.05, "buckets": 10000, "sparse_buckets": 1}'
 
 # LeNet
 #buckets=(       1000)

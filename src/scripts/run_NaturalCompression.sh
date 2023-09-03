@@ -12,7 +12,7 @@ mode=${1:-$DEFAULT_MODE}
 
 base_strategy='{"optimizer": "sgd", "compression": "naturalcompression", "learning_rate": 0.01}'
 base_strategy_resnet='{"optimizer": "sgd", "compression": "naturalcompression", "learning_rate": 0.01}'
-base_strategy_vgg11='{"optimizer": "sgd", "compression": "naturalcompression", "learning_rate": 0.01}'
+base_strategy_vgg11='{"optimizer": "sgd", "compression": "naturalcompression", "learning_rate": 0.05}'
 
 runs=2
 for ((i=1; i<=runs; i++))

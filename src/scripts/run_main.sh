@@ -31,12 +31,12 @@ case $mode in
 
     "search_resnet18")
         python ../model_train.py --model ResNet18 --dataset cifar10 \
-          --epochs=100 \
+          --epochs=50 \
           --n_calls=10 \
           --k_fold=3 \
           --gpu=1 \
           --fullset=100 \
-          --stop_patience=5 \
+          --stop_patience=7 \
           --bayesian_search \
           --log=1 \
           --strategy="$compression_strategy"
@@ -82,7 +82,7 @@ case $mode in
 
     "baseline_l2_vgg11")
         python ../model_train.py --model VGG11 --dataset cifar10 \
-            --epochs=50 \
+            --epochs=40 \
             --gpu=1 \
             --k_fold=1 \
             --fullset=100 \

@@ -38,7 +38,8 @@ class MemSGD(Optimizer):
             )
         self._built = True
 
-    def update_step(self, gradient: Tensor, variable) -> Tensor:
+    def update_step(self, gradient: Tensor, variable, lr) -> Tensor:
+        self.lr = lr
         lr = tf.cast(self.lr, variable.dtype.base_dtype)
 
         var_key = self._var_key(variable)
