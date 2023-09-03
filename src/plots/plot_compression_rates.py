@@ -29,6 +29,7 @@ names = {
     "sgd topk": "Top-K",
     "sgd ": "SGD",
     "sgd": "SGD",
+    "sgd_vgg": "SGD",
     "sgd none": "SGD",
     "sgd bsgd": "BucketSGD",
     "bsgd": "BucketSGD",
@@ -278,6 +279,8 @@ def mean_of_arrays_with_padding(arr1, arr2):
 
     # Compute the mean
     mean_arr = (arr1_padded + arr2_padded) / 2
+    return np.mean([arr1_padded, arr2_padded], axis=0)
+
     return mean_arr
 
 
@@ -433,8 +436,8 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 
 
 if __name__ == "__main__":
-    # plot_compression_metrics("fetchsgd", "baseline_lenet")
+    # plot_compression_metrics("sgd_vgg", "baseline_vgg")
 
-    plot_compare_all("baseline_resnet", True)
+    plot_compare_all("baseline_lenet", True)
 
     # plot_compression_rates()

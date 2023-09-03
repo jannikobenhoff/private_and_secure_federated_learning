@@ -8,7 +8,7 @@ mode=$2
 case $mode in
     "search_lenet")
         python ../model_train.py --model LeNet --dataset mnist \
-          --epochs=100 \
+          --epochs=50 \
           --n_calls=10 \
           --k_fold=5 \
           --fullset=100 \
@@ -44,12 +44,12 @@ case $mode in
 
     "search_vgg11")
         python ../model_train.py --model VGG11 --dataset cifar10 \
-          --epochs=100 \
+          --epochs=50 \
           --n_calls=10 \
           --k_fold=3 \
           --gpu=1 \
           --fullset=100 \
-          --stop_patience=5 \
+          --stop_patience=7 \
           --bayesian_search \
           --log=1 \
           --strategy="$compression_strategy"
@@ -88,6 +88,19 @@ case $mode in
             --fullset=100 \
             --stop_patience=15 \
             --train_on_baseline=1 \
+            --lr_decay=3 \
+            --log=1 \
+            --strategy="$compression_strategy"
+        ;;
+
+    "no_l2_vgg11")
+        python ../model_train.py --model VGG11 --dataset cifar10 \
+            --epochs=50 \
+            --gpu=1 \
+            --k_fold=1 \
+            --fullset=100 \
+            --stop_patience=15 \
+            --train_on_baseline=0 \
             --lr_decay=3 \
             --log=1 \
             --strategy="$compression_strategy"

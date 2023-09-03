@@ -144,23 +144,35 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
     strategy = strategy_factory(**strategy_params)
     strategy.summary()
 
-    BATCH_SIZE = None  # 32
-    if args.dataset == "cifar10":
-        BATCH_SIZE = 128
+    BATCH_SIZE = 32
+    initial_lrate = strategy_params["learning_rate"]
+    drop_factor = 0.5
+    drop_epochs = [25, 37]
+    min_lr = initial_lrate * 0.1 * 0.1
 
+    if args.dataset == "cifar10" and args.model.lower() == "resnet18":
+        BATCH_SIZE = 256
+        initial_lrate = strategy_params["learning_rate"]
+        drop_factor = 0.1
+        # epochs_drop = 10
+        min_lr = initial_lrate * 0.1 * 0.1
+
+    elif args.dataset == "cifar10" and args.model.lower() == "vgg11":
+        BATCH_SIZE = 128  # 256  # 128
+        initial_lrate = strategy_params["learning_rate"]
+        drop_factor = 0.1
+        drop_epochs = [15, 30]
+        min_lr = initial_lrate * 0.1 * 0.1
+
+    print("BATCH SIZE:", BATCH_SIZE)
     time_callback = TimeHistory()
     callbacks = [time_callback]
-
-    initial_lrate = strategy_params["learning_rate"]
-    drop_factor = 0.1
-    epochs_drop = 10
-    min_lr = initial_lrate * 0.1 * 0.1
 
     if args.stop_patience < args.epochs:
         early_stopping = EarlyStopping(monitor='val_loss', patience=args.stop_patience, verbose=1)
         callbacks.append(early_stopping)
 
-        lr_scheduler = LearningRateScheduler(lambda epoch: step_decay(epoch, initial_lrate, drop_factor, epochs_drop,
+        lr_scheduler = LearningRateScheduler(lambda epoch: step_decay(epoch, initial_lrate, drop_factor, drop_epochs,
                                                                       min_lr))
         callbacks.append(lr_scheduler)
 
@@ -177,8 +189,8 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
                                       patience=args.lr_decay, cooldown=2 * args.lr_decay,
                                       min_lr=1e-04)
 
-        lr_scheduler = LearningRateScheduler(lambda epoch: step_decay(epoch, initial_lrate, drop_factor, epochs_drop,
-                                                                      min_lr))
+        lr_scheduler = LearningRateScheduler(
+            lambda epoch: step_decay(epoch, initial_lrate, drop_factor, drop_epochs, min_lr))
 
         callbacks.append(lr_scheduler)
 
@@ -186,7 +198,8 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
                         batch_size=BATCH_SIZE,
                         validation_data=(val_images, val_labels), verbose=args.log, callbacks=callbacks)
 
-    return history, strategy, time_callback
+    train_metrics = {"batch_size": BATCH_SIZE, "lr_decay": drop_epochs, "drop_factor": drop_factor, "min_lr": min_lr}
+    return history, strategy, time_callback, train_metrics
 
 
 def worker(args):
@@ -212,7 +225,7 @@ def worker(args):
         val_loss = []
         val_acc = []
         train_acc = []
-
+        train_metrics_list = [{}]
         n_iter_step = [0]
 
         strategy = strategy_factory(**strategy_params)
@@ -240,16 +253,19 @@ def worker(args):
                 train_labels, val_labels = label_train[train_index], label_train[val_index]
                 k_step += 1
 
-                history, strategy, time_history = train_model(train_images, train_labels, val_images, val_labels,
-                                                              params["lambda_l2"],
-                                                              input_shape, num_classes, strategy_params, args)
+                history, strategy, time_history, train_metrics = train_model(train_images, train_labels, val_images,
+                                                                             val_labels,
+                                                                             params["lambda_l2"],
+                                                                             input_shape, num_classes, strategy_params,
+                                                                             args)
 
                 training_acc_per_epoch[k_step].append(history.history['accuracy'])
                 validation_acc_per_epoch[k_step].append(history.history['val_accuracy'])
                 training_losses_per_epoch[k_step].append(history.history['loss'])
                 validation_losses_per_epoch[k_step].append(history.history['val_loss'])
+                train_metrics_list[0] = train_metrics
 
-                all_scores.append(np.mean(history.history['val_accuracy']))
+                all_scores.append(np.max(history.history['val_accuracy']))
                 # all_scores.append(np.mean(history.history['val_loss']))
 
             print("Mean val accuracy:", np.mean(all_scores),
@@ -259,6 +275,7 @@ def worker(args):
             val_acc.append(validation_acc_per_epoch)
             train_loss.append(training_losses_per_epoch)
             val_loss.append(validation_losses_per_epoch)
+
             return -np.mean(all_scores)
 
         result = gp_minimize(objective, search_space, n_calls=args.n_calls,  # acq_func='EI',
@@ -275,7 +292,8 @@ def worker(args):
             "training_acc": train_acc,
             "val_loss": val_loss,
             "val_acc": val_acc,
-            "args": args
+            "args": args,
+            "setup": train_metrics_list[0]
         }
         result["metrics"] = metrics
         dump(result,
@@ -310,9 +328,11 @@ def worker(args):
                 train_labels, val_labels = label_train[train_index], label_train[val_index]
                 k_step += 1
 
-                history, strategy, time_history = train_model(train_images, train_labels, val_images, val_labels,
-                                                              lambda_l2,
-                                                              input_shape, num_classes, strategy_params, args)
+                history, strategy, time_history, train_metrics = train_model(train_images, train_labels, val_images,
+                                                                             val_labels,
+                                                                             lambda_l2,
+                                                                             input_shape, num_classes, strategy_params,
+                                                                             args)
 
                 training_acc_per_epoch[k_step] = history.history['accuracy']
                 validation_acc_per_epoch[k_step] = history.history['val_accuracy']
@@ -322,8 +342,10 @@ def worker(args):
         else:
             compression_rates = []
 
-            history, strategy, time_history = train_model(img_train, label_train, img_test, label_test, lambda_l2,
-                                                          input_shape, num_classes, strategy_params, args)
+            history, strategy, time_history, train_metrics = train_model(img_train, label_train, img_test, label_test,
+                                                                         lambda_l2,
+                                                                         input_shape, num_classes, strategy_params,
+                                                                         args)
 
             training_acc_per_epoch = history.history['accuracy']
             validation_acc_per_epoch = history.history['val_accuracy']
@@ -341,8 +363,10 @@ def worker(args):
             "val_acc": str(validation_acc_per_epoch),
             "args": vars(args),
             "compression_rates": compression_rates,
+            "setup": train_metrics,
             "time_per_epoch": time_history.epoch_times,
-            "time_per_step": np.mean(time_history.times)
+            "time_per_step": np.mean(time_history.times),
+
         }
         file = open('../results/compression/training_{}_{}_'
                     '{}.json'.format(strategy.get_file_name(), args.model.lower(),

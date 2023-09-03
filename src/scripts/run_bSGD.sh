@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="baseline_l2_lenet"
+DEFAULT_MODE="baseline_l2_vgg11"
 
 # LeNet: search_lenet  l2_lenet  baseline_l2_lenet  no_l2_lenet
 # ResNet18: search_resnet18  no_l2_resnet18  baseline_l2_resnet18
@@ -15,18 +15,18 @@ base_strategy_resnet='{"optimizer": "sgd", "compression": "bsgd", "learning_rate
 base_strategy_vgg11='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.01, "buckets": 10000, "sparse_buckets": 1}'
 
 # LeNet
-buckets=(       1000)
-sparse_buckets=( 975)
+#buckets=(       1000)
+#sparse_buckets=( 975)
 
 # VGG11
-#buckets=(       2000 5000 10000)
-#sparse_buckets=( 1999 4999 9950)
+buckets=(       100 2000 5000 10000)
+sparse_buckets=( 99 1999 4999 9950)
 
 # ResNet18
 #buckets=(       2000 5000 10000)
 #sparse_buckets=( 1999 4999 9950)
 
-parallel=1
+parallel=0
 
 runs=2
 for ((r=1; r<=runs; r++))
