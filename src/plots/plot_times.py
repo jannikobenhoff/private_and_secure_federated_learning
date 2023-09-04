@@ -133,6 +133,6 @@ def plot_total_run_time():
 
 
 if __name__ == "__main__":
-    plot_avg_times(["l2"], True)
+    plot_avg_times(["baseline_resnet"], True)
 
     # plot_total_run_time()
