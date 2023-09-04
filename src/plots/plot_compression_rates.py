@@ -179,7 +179,7 @@ def plot_compression_metrics(title: str, parent_folder: str):
             param.pop("compression")
             param.pop("learning_rate")
             if param == {}:
-                label_name = names[method]
+                label_name = names[method.replace(" none", "")]
             else:
                 label_name = ', '.join(
                     f"{key}: {value}" for key, value in param.items() if
@@ -260,7 +260,7 @@ def plot_compression_metrics(title: str, parent_folder: str):
 
     plt.suptitle(names[title.lower()], fontsize=14, fontweight="bold")
     plt.tight_layout()
-    # plt.savefig("../../figures/methods/" + title + ".pdf", bbox_inches='tight')
+    plt.savefig("../../figures/" + title + "_" + parent_folder + ".pdf", bbox_inches='tight')
     plt.show()
 
 
@@ -273,6 +273,16 @@ def moving_average(data, window_size):
             yield moving_ave
         else:
             yield cumsum[i] / i
+
+
+def moving_std(data, window_size):
+    ret = np.cumsum(data, dtype=float)
+    ret[window_size:] = ret[window_size:] - ret[:-window_size]
+    moving_avg = ret[window_size - 1:] / window_size
+    moving_var = (np.cumsum(np.power(data, 2), dtype=float)[window_size - 1:] - np.power(moving_avg,
+                                                                                         2) * window_size) / (
+                         window_size - 1)
+    return np.sqrt(moving_var)
 
 
 def mean_of_arrays_with_padding(arr1, arr2):
@@ -383,10 +393,17 @@ def plot_compare_all(parent_folder: str, bsgd: bool, epochs: int):
                      markersize=4, color=c,  # marker=m,
                      label=label_name)
 
-        axes[1].plot(np.arange(1, min(len(best_param_metrics["val_acc"]) + 1, epochs + 1), 1),
-                     list(moving_average(best_param_metrics["val_acc"], WINDOW_SIZE))[:epochs],
-                     markersize=4, label=label_name,  # marker=m,
-                     color=c)
+        x_values = np.arange(1, min(len(best_param_metrics["val_acc"]) + 1, epochs + 1), 1)
+        y_values = list(moving_average(best_param_metrics["val_acc"], WINDOW_SIZE))[:epochs]
+        deviations = np.array(best_param_metrics["val_acc"])[:epochs] - np.array(y_values)
+
+        # Compute the upper and lower bounds
+        upper_bound = y_values + deviations
+        lower_bound = y_values - deviations
+
+        # Plot the fill between
+        # axes[1].fill_between(x_values, lower_bound[:epochs], upper_bound[:epochs], color=c, alpha=0.3)
+        axes[1].plot(x_values, y_values, markersize=4, label=label_name, color=c)
 
         axes[2].plot([x[0] for x in sorted_data], [x[1] for x in sorted_data], marker=m, label=label_name, color=c,
                      markersize=4)
@@ -456,7 +473,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool, epochs: int):
 
 
 if __name__ == "__main__":
-    # plot_compression_metrics("fetchsgd", "baseline_lenet")
+    # plot_compression_metrics("efsignsgd", "vggnew")
 
     plot_compare_all("vggnew", True, 40)
 

@@ -72,6 +72,7 @@ class FetchSGD(Optimizer):
         cs.accumulateVec(tf.reshape(gradient, [-1]).numpy())
         # Access sketch
         sketch = cs.table
+
         if variable.ref() not in self.cr:
             sketch = tf.convert_to_tensor(sketch.numpy(), dtype=gradient.dtype)
             self.cr[variable.ref()] = max(gradient.dtype.size * 8 * np.prod(

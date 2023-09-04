@@ -28,7 +28,7 @@ sparse_buckets=( 99 1999 4999 9950)
 
 parallel=0
 
-runs=2
+runs=1
 for ((r=1; r<=runs; r++))
 do
 case $mode in
