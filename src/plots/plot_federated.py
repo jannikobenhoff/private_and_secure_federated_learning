@@ -379,6 +379,6 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 if __name__ == "__main__":
     # plot_compression_metrics("efsignsgd", "vggnew")
 
-    plot_compare_all("lenet", True)
+    plot_compare_all("le", True)
 
     # plot_compression_rates()

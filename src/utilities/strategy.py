@@ -104,10 +104,10 @@ class Strategy(optimizer_v2.OptimizerV2):
         elif self.optimizer_name != "sgd":
             for client in client_data:
                 client_grads = tf.cond(tf.equal(client, "client_1"),
-                                       lambda: self.optimizer.federated_decompress(client_data[client], var_list),
+                                       lambda: self.optimizer.federated_decompress(client_data[client], var_list, lr),
                                        lambda: tf.nest.map_structure(lambda x, y: x + y, client_grads,
                                                                      self.optimizer.federated_decompress(
-                                                                         client_data[client], var_list)))
+                                                                         client_data[client], var_list, lr)))
             # Average Gradients
             client_grads = tf.nest.map_structure(lambda x: x / len(client_data.keys()), client_grads)
         else:

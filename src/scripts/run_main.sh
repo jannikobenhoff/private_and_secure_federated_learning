@@ -7,7 +7,7 @@ mode=$2
 # Case logic for modes
 case $mode in
     "search_lenet")
-        python ../model_train.py --model LeNet --dataset mnist \
+        python ../main_local.py --model LeNet --dataset mnist \
           --epochs=50 \
           --n_calls=10 \
           --k_fold=5 \
@@ -18,7 +18,7 @@ case $mode in
           --strategy="$compression_strategy"
         ;;
 
-#      python ../model_train.py --model LeNet --dataset mnist \
+#      python ../main_local.py --model LeNet --dataset mnist \
 #          --epochs=200 \
 #          --n_calls=10 \
 #          --k_fold=5 \
@@ -30,7 +30,7 @@ case $mode in
 #        ;;
 
     "search_resnet18")
-        python ../model_train.py --model ResNet18 --dataset cifar10 \
+        python ../main_local.py --model ResNet18 --dataset cifar10 \
           --epochs=50 \
           --n_calls=10 \
           --k_fold=3 \
@@ -43,7 +43,7 @@ case $mode in
         ;;
 
     "search_vgg11")
-        python ../model_train.py --model VGG11 --dataset cifar10 \
+        python ../main_local.py --model VGG11 --dataset cifar10 \
           --epochs=50 \
           --n_calls=10 \
           --k_fold=3 \
@@ -56,7 +56,7 @@ case $mode in
         ;;
 
     "l2_lenet")
-        python ../model_train.py --model LeNet --dataset mnist \
+        python ../main_local.py --model LeNet --dataset mnist \
             --epochs=45 \
             --k_fold=1 \
             --fullset=100 \
@@ -68,7 +68,7 @@ case $mode in
         ;;
 
     "baseline_l2_lenet")
-        python ../model_train.py --model LeNet --dataset mnist \
+        python ../main_local.py --model LeNet --dataset mnist \
             --epochs=45 \
             --k_fold=1 \
             --fullset=100 \
@@ -81,7 +81,7 @@ case $mode in
         ;;
 
     "baseline_l2_vgg11")
-        python ../model_train.py --model VGG11 --dataset cifar10 \
+        python ../main_local.py --model VGG11 --dataset cifar10 \
             --epochs=40 \
             --gpu=1 \
             --k_fold=1 \
@@ -94,7 +94,7 @@ case $mode in
         ;;
 
     "no_l2_vgg11")
-        python ../model_train.py --model VGG11 --dataset cifar10 \
+        python ../main_local.py --model VGG11 --dataset cifar10 \
             --epochs=50 \
             --gpu=1 \
             --k_fold=1 \
@@ -107,7 +107,7 @@ case $mode in
         ;;
 
     "no_l2_lenet")
-        python ../model_train.py --model LeNet --dataset mnist \
+        python ../main_local.py --model LeNet --dataset mnist \
             --epochs=45 \
             --k_fold=1 \
             --fullset=100 \
@@ -118,7 +118,7 @@ case $mode in
             --strategy="$compression_strategy"
         ;;
     "no_l2_resnet18")
-        python ../model_train.py --model ResNet18 --dataset cifar10 \
+        python ../main_local.py --model ResNet18 --dataset cifar10 \
             --epochs=45 \
             --gpu=1 \
             --k_fold=1 \
@@ -131,7 +131,7 @@ case $mode in
         ;;
 
     "baseline_l2_resnet18")
-        python ../model_train.py --model ResNet18 --dataset cifar10 \
+        python ../main_local.py --model ResNet18 --dataset cifar10 \
             --epochs=40 \
             --gpu=1 \
             --k_fold=1 \

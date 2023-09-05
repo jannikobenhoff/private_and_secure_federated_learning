@@ -117,6 +117,11 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
         client_data = {}
 
         iter_start_time = time.time()
+
+        # lr decay
+        # if num_iter == max_iter / 2:
+        #     learning_rate = learning_rate / 5
+
         for k in range(number_clients):
 
             if varying_local_iter and k:

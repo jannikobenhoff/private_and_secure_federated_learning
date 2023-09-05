@@ -3,7 +3,7 @@ from datetime import datetime
 import os
 
 from optimizer.FetchSGD import FetchSGD
-from model_train import strategy_factory, model_factory
+from main_local import strategy_factory, model_factory
 from utilities.federator import *
 from utilities.parameters import get_parameters_federated
 from models.LeNet import LeNet

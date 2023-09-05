@@ -94,3 +94,70 @@ class vqSGD(Compression):
                 print(np.mean(self.compression_rates), self.s * np.log2(2 * d))
 
             return compressed_gradient
+
+    def federated_compress(self, gradients: list[Tensor], variables: list[Tensor], client_id: int):
+        indices_list = []
+        l2_scale = []
+        for i, gradient in enumerate(gradients):
+            input_shape = gradient.shape
+            flat_gradient = tf.reshape(gradient, [-1])
+
+            l2 = tf.norm(flat_gradient, ord=2)
+            if l2 != 0:
+                flat_gradient = tf.divide(flat_gradient, l2)
+            else:
+                print("L2 ZERO")
+
+            d = flat_gradient.shape[0]
+            d_sqrt = np.sqrt(d)
+
+            gamma = 1 - (tf.norm(flat_gradient, ord=1) / d_sqrt)
+
+            gamma = gamma.numpy()
+            gamma_by_2d = gamma / (2 * d)
+
+            a = np.zeros(2 * d)
+            a[:d] = (flat_gradient > 0).numpy() * ((flat_gradient.numpy() / d_sqrt) + gamma_by_2d)
+            a[d:] = (flat_gradient <= 0).numpy() * ((-flat_gradient.numpy() / d_sqrt) + gamma_by_2d)
+
+            a = np.where(a == 0, gamma_by_2d, a)
+
+            np.divide(a, a.sum(), out=a)
+
+            indices = np.random.choice(np.arange(2 * d), self.s, p=a)
+            indices_list.append(indices)
+            l2_scale.append(l2)
+
+            if variables[i].ref() not in self.cr:
+                self.cr[variables[i].ref()] = flat_gradient.dtype.size * 8 * np.prod(
+                    flat_gradient.shape.as_list()) / (self.s * np.log2(2 * d))  # tf.int32.size * 8)  #
+
+                self.compression_rates.append(self.cr[variables[i].ref()])
+
+                print(np.mean(self.compression_rates), self.s * np.log2(2 * d))
+
+        return {
+            "compressed_grad": indices_list,
+            "decompress_info": l2_scale
+        }
+
+    def federated_decompress(self, info, variables):
+        decompressed_cradients = []
+        for i, indices in enumerate(info["compressed_grad"]):
+            l2 = info["decompress_info"][i]
+            d = tf.size(variables[i]).numpy()
+            d_sqrt = np.sqrt(d)
+            decompressed_gradient = np.zeros(d)
+
+            np.add.at(decompressed_gradient, indices[indices < d], d_sqrt)
+            np.add.at(decompressed_gradient, indices[indices >= d] - d, -d_sqrt)
+
+            decompressed_gradient = tf.reshape(decompressed_gradient, variables[i].shape) / self.s
+
+            if variables[i].dtype != decompressed_gradient.dtype:
+                decompressed_gradient = tf.cast(decompressed_gradient, dtype=variables[i].dtype)
+
+            decompressed_gradient = tf.multiply(decompressed_gradient, l2)
+            decompressed_cradients.append(decompressed_gradient)
+
+        return decompressed_cradients

@@ -9,7 +9,7 @@ class EFsignSGD(Optimizer):
         self._learning_rate = self._build_learning_rate(learning_rate)
         self.compression_rates = []
 
-    def build(self, var_list):
+    def build(self, var_list, clients=1):
         """Initialize optimizer variables.
 
         EFsignSGD optimizer has one variable `quantization error`
@@ -20,13 +20,22 @@ class EFsignSGD(Optimizer):
         super().build(var_list)
         if hasattr(self, "_built") and self._built:
             return
-        self.errors = []
-        for var in var_list:
-            self.errors.append(
-                self.add_variable_from_reference(
-                    model_variable=var, variable_name="error"
+        if clients == 1:
+            self.errors = []
+            for var in var_list:
+                self.errors.append(
+                    self.add_variable_from_reference(
+                        model_variable=var, variable_name="error"
+                    )
                 )
-            )
+        else:
+            self.errors = {}
+            # Federated Setup
+            for client_id in range(1, clients + 1):
+                for var in var_list:
+                    self.errors[var.name + str(client_id)] = self.add_variable_from_reference(
+                        model_variable=var, variable_name="error", initial_value=tf.zeros_like(var)
+                    )
         self.compression_rates.append(var_list[0].dtype.size * 8)
         self._built = True
 
@@ -42,35 +51,49 @@ class EFsignSGD(Optimizer):
 
         error = self.errors[self._index_dict[var_key]]
 
-        d = variable.shape.as_list()[0]
-        p_t = lr * gradient + error
+        d = tf.size(gradient)
+        d = tf.cast(d, dtype=gradient.dtype)
 
-        norm = tf.norm(p_t, ord=1, axis=0, keepdims=True) / d
-        # print(norm)
-        # TODO nan check
-        # delta_t = (tf.norm(p_t, ord=1, keepdims=True, axis=1)/d) * tf.sign(p_t)
+        p_t = lr * gradient + error
+        norm = tf.divide(tf.norm(p_t, ord=1), d)
         delta_t = tf.multiply(norm, tf.sign(p_t))
 
         # update residual error
-        error.assign(p_t - delta_t)
-        # update iterate
-        # variable.assign_add(-delta_t)
+        self.errors[self._index_dict[var_key]].assign(p_t - delta_t)
 
         return delta_t
 
-    def federated_compress(self, grads, var_list):
+    def federated_compress(self, gradients, variables, client_id, lr):
+        compressed_gradients = []
+        norm_d = []
+        for i, gradient in enumerate(gradients):
+            error = self.errors[variables[i].name + str(client_id)]
 
-        return {"compressed_grad": sketch}
+            d = tf.size(gradient)
+            d = tf.cast(d, dtype=gradient.dtype)
 
-    def federated_decompress(self, client_data, variables, lr):
-        d = self.d
-        avg_sketch = 0
-        for client in client_data:
-            avg_sketch = tf.cond(tf.equal(client, "client_1"),
-                                 lambda: client_data[client]["compressed_grad"],
-                                 lambda: tf.nest.map_structure(lambda x, y: x + y, avg_sketch,
-                                                               client_data[client]["compressed_grad"]))
-        avg_sketch = tf.nest.map_structure(lambda x: x / len(client_data.keys()), avg_sketch)
+            p_t = lr * gradient + error
+            norm = tf.divide(tf.norm(p_t, ord=1), d)
+            delta_t = tf.multiply(norm, tf.sign(p_t))
+
+            # update residual error
+            self.errors[variables[i].name + str(client_id)].assign(p_t - delta_t)
+
+            compressed_gradients.append(tf.sign(p_t))
+            norm_d.append(norm)
+
+        return {
+            "compressed_grad": compressed_gradients,
+            "decompress_info": norm_d
+        }
+
+    def federated_decompress(self, info, variables, lr):
+        decompressed_gradients = []
+        for i, gradient in enumerate(info["compressed_grad"]):
+            norm_d = info["decompress_info"][i]
+            decompressed_gradients.append(tf.multiply(gradient, norm_d) / lr)
+
+        return decompressed_gradients
 
     def get_config(self):
         config = super().get_config()

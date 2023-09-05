@@ -105,13 +105,15 @@ class MemSGD(Optimizer):
                 self.compression_rates.append(self.cr[variables[i].ref()])
 
             self.memory[str(client_id)][self._index_dict[var_key]].assign(m + lr * gradient - g)
-            quantized_gradients.append(g / lr)
+            quantized_gradients.append(g)
         return {
             'compressed_grad': quantized_gradients,
             'decompress_info': None
         }
 
-    def federated_decompress(self, client_data, variables):
+    def federated_decompress(self, client_data, variables, lr):
+        for i, gradient in client_data["compressed_grad"]:
+            client_data["compressed_grad"] = gradient / lr
         return client_data["compressed_grad"]
 
     @staticmethod

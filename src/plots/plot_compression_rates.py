@@ -781,10 +781,10 @@ def plot_time_all(parent_folder: str, bsgd: bool):
 if __name__ == "__main__":
     # plot_compression_metrics("efsignsgd", "vggnew")
 
-    # plot_compare_all("baseline_resnet", True, 40)
+    plot_compare_all("baseline_resnet", True, 40)
 
     # plot_compression_rates()
 
-    plot_bit_all("baseline_resnet", True, 0.1)
+    # plot_bit_all("baseline_resnet", True, 0.1)
 
     # plot_time_all("baseline_resnet", True)
