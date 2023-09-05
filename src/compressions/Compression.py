@@ -15,7 +15,7 @@ class Compression:
         self._built = False
 
     @abc.abstractmethod
-    def build(self, var_list):
+    def build(self, var_list, clients=1):
         """Initialize the optimizer's variables, such as momemtum variables.
 
         This function has to be implemented by subclass optimizers, and subclass
@@ -25,6 +25,7 @@ class Compression:
           var_list: List of model variables to build optimizers on. For example,
             SGD optimizer with momentum will store one momentum variable
             corresponding to each model variable.
+          clients: Number of clients in federated learning
         """
         if getattr(self, "_built", False):
             return
@@ -86,6 +87,17 @@ class Compression:
     def decompress(self, compressed_gradient: Tensor):
         raise NotImplementedError("Subclasses must implement decompress method")
 
+    def federated_compress(self, gradients: list[Tensor], variables: list[Tensor], client_id: int):
+        for i, gradient in enumerate(gradients):
+            gradients[i] = self.compress(gradient, variables[i])
+        return {
+            'compressed_grad': gradients,
+            'decompress_info': None
+        }
+
+    def federated_decompress(self, info, variables):
+        return info["compressed_grad"]
+
     @staticmethod
     def top_k_sparsification(input_tensor: Tensor, k: int) -> Tensor:
         """
@@ -103,44 +115,6 @@ class Compression:
         ft_np = tf.abs(flattened_tensor).numpy()
 
         indices = np.argpartition(np.abs(ft_np.ravel()), -k)[-k:]
-        mask = tf.zeros(flattened_tensor.shape, dtype=flattened_tensor.dtype)
-        mask = tf.tensor_scatter_nd_update(mask, tf.expand_dims(indices, axis=1),
-                                           tf.ones_like(indices, dtype=tf.float32))
-
-        spars_tensor = flattened_tensor * mask
-
-        spars_tensor = tf.reshape(spars_tensor, input_shape)
-
-        return spars_tensor
-
-        # sorted_tensor = -tf.sort(-tf.abs(flattened_tensor))
-        #
-        # # binary search
-        # low, high = 0, k
-        # while low < high:
-        #     mid = (low + high) // 2
-        #     if sorted_tensor[mid] >= sorted_tensor[k]:
-        #         low = mid + 1
-        #     else:
-        #         high = mid
-        # threshold = sorted_tensor[high - 1]
-        #
-        # mask = tf.math.greater(tf.abs(flattened_tensor), threshold)
-        # gradient_dropped = flattened_tensor * tf.cast(mask, flattened_tensor.dtype)
-        # gradient_dropped = tf.reshape(gradient_dropped, input_shape)
-        # return gradient_dropped
-
-        abs_tensor = tf.abs(flattened_tensor)
-        # s = tf.sort(tf.reshape(abs_tensor, [-1]), direction="DESCENDING")
-        #
-        # bool_mask = tf.reduce_any(tf.equal(tf.reshape(abs_tensor, [-1, 1]), s[0:k]), axis=-1)
-        # bool_mask = tf.reshape(bool_mask, tf.shape(input_tensor))
-        #
-        # result = input_tensor * tf.cast(bool_mask, input_tensor.dtype)
-        # return result
-
-        indices = tf.math.top_k(abs_tensor, k=k, sorted=True).indices
-
         mask = tf.zeros(flattened_tensor.shape, dtype=flattened_tensor.dtype)
         mask = tf.tensor_scatter_nd_update(mask, tf.expand_dims(indices, axis=1),
                                            tf.ones_like(indices, dtype=tf.float32))

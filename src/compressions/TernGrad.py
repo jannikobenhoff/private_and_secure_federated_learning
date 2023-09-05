@@ -11,7 +11,7 @@ class TernGrad(Compression):
         self.clip = clip
         self.compression_rates = []
 
-    def build(self, var_list):
+    def build(self, var_list, clients=1):
         """Initialize optimizer variables.
 
         TernGrad optimizer has no additional variables.
@@ -30,6 +30,40 @@ class TernGrad(Compression):
 
         return gradient_tern
 
+    def federated_compress(self, gradients: list[Tensor], variables: list[Tensor], client_id: int):
+        quantized_gradients = []
+        decomp = []
+        for i, gradient in enumerate(gradients):
+            gradient_clip = self.gradient_clipping(gradient, self.clip)
+            gradient_tern, scale = self.ternarize_federated(gradient_clip)
+            quantized_gradients.append(gradient_tern)
+            decomp.append(scale)
+        return {
+            'compressed_grad': quantized_gradients,
+            'decompress_info': decomp
+        }
+
+    def federated_decompress(self, info, variables):
+        decompressed_gradients = []
+        for i, gradient in enumerate(info["compressed_grad"]):
+            scale = info["decompress_info"][i]
+            decompressed_gradients.append(gradient * scale)
+
+        return decompressed_gradients
+
+    @staticmethod
+    def ternarize_federated(input_tensor):
+        if len(input_tensor.shape) == 1:
+            abs_input = tf.abs(input_tensor)
+            s_t = tf.reduce_max(abs_input, axis=0, keepdims=True)
+            b_t = tf.cast(abs_input / s_t >= 0.5, input_tensor.dtype)
+            return tf.sign(input_tensor) * b_t, s_t
+        abs_input = tf.abs(input_tensor)
+        s_t = tf.reduce_max(abs_input, axis=1, keepdims=True)
+        b_t = tf.cast(abs_input / s_t >= 0.5, dtype=input_tensor.dtype)
+
+        return tf.sign(input_tensor) * b_t, s_t
+
     @staticmethod
     def ternarize(input_tensor: Tensor) -> Tensor:
         """
@@ -43,7 +77,9 @@ class TernGrad(Compression):
             abs_input = tf.abs(input_tensor)
             s_t = tf.reduce_max(abs_input, axis=0, keepdims=True)
             b_t = tf.cast(abs_input / s_t >= 0.5, input_tensor.dtype)
+
             return s_t * tf.sign(input_tensor) * b_t
+
         abs_input = tf.abs(input_tensor)
         s_t = tf.reduce_max(abs_input, axis=1, keepdims=True)
         b_t = tf.cast(abs_input / s_t >= 0.5, dtype=input_tensor.dtype)

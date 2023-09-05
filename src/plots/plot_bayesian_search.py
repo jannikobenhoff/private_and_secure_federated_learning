@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from skopt import load
 from skopt.plots import plot_gaussian_process
-from plot_compression_rates import names
+from plot_utils import names
 
 if __name__ == "__main__":
     filename = "mnist/bayesian_result_SGD_mnist.pkl"

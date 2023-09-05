@@ -73,6 +73,52 @@ class Strategy(optimizer_v2.OptimizerV2):
             self._get_hyper("momentum", var_dtype)
         )
 
+    def federated_compress(self, grads, var_list, client_id, number_clients, lr):
+        if self.compression is not None:
+            self.compression.build(var_list, number_clients)
+            data = self.compression.federated_compress(grads, var_list, client_id)
+            return data
+        elif self.optimizer_name != "sgd":
+            self.optimizer.build(var_list, number_clients)
+            data = self.optimizer.federated_compress(grads, var_list, client_id=client_id, lr=lr)
+            return data
+        else:
+            return {"compressed_grad": grads}
+
+    def federated_decompress(self, client_data, var_list, lr):
+        client_grads = 0
+
+        if self.compression is not None:
+            for client in client_data:
+                client_grads = tf.cond(tf.equal(client, "client_1"),
+                                       lambda: self.compression.federated_decompress(client_data[client], var_list),
+                                       lambda: tf.nest.map_structure(lambda x, y: x + y, client_grads,
+                                                                     self.compression.federated_decompress(
+                                                                         client_data[client], var_list)))
+            # Average Gradients
+            client_grads = tf.nest.map_structure(lambda x: x / len(client_data.keys()), client_grads)
+
+        elif self.optimizer_name == "fetchsgd":
+            client_grads = self.optimizer.federated_decompress(client_data, var_list, lr)
+
+        elif self.optimizer_name != "sgd":
+            for client in client_data:
+                client_grads = tf.cond(tf.equal(client, "client_1"),
+                                       lambda: self.optimizer.federated_decompress(client_data[client], var_list),
+                                       lambda: tf.nest.map_structure(lambda x, y: x + y, client_grads,
+                                                                     self.optimizer.federated_decompress(
+                                                                         client_data[client], var_list)))
+            # Average Gradients
+            client_grads = tf.nest.map_structure(lambda x: x / len(client_data.keys()), client_grads)
+        else:
+            for client in client_data:
+                client_grads = tf.cond(tf.equal(client, "client_1"), lambda: client_data[client]["compressed_grad"],
+                                       lambda: tf.nest.map_structure(lambda x, y: x + y, client_grads,
+                                                                     client_data[client]["compressed_grad"]))
+            # Average Gradients
+            client_grads = tf.nest.map_structure(lambda x: x / len(client_data.keys()), client_grads)
+        return client_grads
+
     def _resource_apply_dense(self, grad, var, apply_state=None):
         if self.compression is not None:
             grad = self.compression.compress(grad, var)

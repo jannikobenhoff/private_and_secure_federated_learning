@@ -18,7 +18,7 @@ class MemSGD(Optimizer):
         self.compression_rates = []
         self.cr = {}
 
-    def build(self, var_list):
+    def build(self, var_list, clients=1):
         """Initialize optimizer variables.
 
         MemSGD optimizer has one variable `momentum`
@@ -29,13 +29,28 @@ class MemSGD(Optimizer):
         super().build(var_list)
         if hasattr(self, "_built") and self._built:
             return
-        self.memory = []
-        for var in var_list:
-            self.memory.append(
-                self.add_variable_from_reference(
-                    model_variable=var, variable_name="m", initial_value=tf.zeros(shape=var.shape)
+
+        if clients == 1:
+            # Local Setup
+            self.memory = []
+
+            for var in var_list:
+                self.memory.append(
+                    self.add_variable_from_reference(
+                        model_variable=var, variable_name="m", initial_value=tf.zeros(shape=var.shape)
+                    )
                 )
-            )
+        else:
+            self.memory = {}
+            # Federated Setup
+            for client_id in range(1, clients + 1):
+                self.memory[str(client_id)] = []
+                for var in var_list:
+                    self.memory[str(client_id)].append(
+                        self.add_variable_from_reference(
+                            model_variable=var, variable_name="m", initial_value=tf.zeros(shape=var.shape)
+                        )
+                    )
         self._built = True
 
     def update_step(self, gradient: Tensor, variable, lr) -> Tensor:
@@ -63,6 +78,41 @@ class MemSGD(Optimizer):
         self.memory[self._index_dict[var_key]].assign(m + lr * gradient - g)
 
         return g
+
+    def federated_compress(self, gradients: list[Tensor], variables: list[Tensor], client_id: int, lr):
+        self.lr = lr
+        lr = tf.cast(self.lr, variables[0].dtype.base_dtype)
+        quantized_gradients = []
+        for i, gradient in enumerate(gradients):
+
+            var_key = self._var_key(variables[i])
+
+            m = self.memory[str(client_id)][self._index_dict[var_key]]
+
+            if gradient.dtype != variables[i].dtype:
+                gradient = tf.cast(gradient, dtype=variables[i].dtype)
+
+            if self.top_k is None:
+                g = self.rand_k_sparsification(input_tensor=m + lr * gradient,
+                                               k=self.rand_k)
+            else:
+                g = self.top_k_sparsification(input_tensor=m + lr * gradient,
+                                              k=self.top_k)
+            if variables[i].ref() not in self.cr:
+                self.cr[variables[i].ref()] = gradient.dtype.size * 8 * np.prod(
+                    gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
+                    g)
+                self.compression_rates.append(self.cr[variables[i].ref()])
+
+            self.memory[str(client_id)][self._index_dict[var_key]].assign(m + lr * gradient - g)
+            quantized_gradients.append(g / lr)
+        return {
+            'compressed_grad': quantized_gradients,
+            'decompress_info': None
+        }
+
+    def federated_decompress(self, client_data, variables):
+        return client_data["compressed_grad"]
 
     @staticmethod
     def top_k_sparsification(input_tensor: Tensor, k: int) -> Tensor:

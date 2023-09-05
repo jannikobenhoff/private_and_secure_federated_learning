@@ -46,6 +46,7 @@ class EFsignSGD(Optimizer):
         p_t = lr * gradient + error
 
         norm = tf.norm(p_t, ord=1, axis=0, keepdims=True) / d
+        # print(norm)
         # TODO nan check
         # delta_t = (tf.norm(p_t, ord=1, keepdims=True, axis=1)/d) * tf.sign(p_t)
         delta_t = tf.multiply(norm, tf.sign(p_t))
@@ -56,6 +57,20 @@ class EFsignSGD(Optimizer):
         # variable.assign_add(-delta_t)
 
         return delta_t
+
+    def federated_compress(self, grads, var_list):
+
+        return {"compressed_grad": sketch}
+
+    def federated_decompress(self, client_data, variables, lr):
+        d = self.d
+        avg_sketch = 0
+        for client in client_data:
+            avg_sketch = tf.cond(tf.equal(client, "client_1"),
+                                 lambda: client_data[client]["compressed_grad"],
+                                 lambda: tf.nest.map_structure(lambda x, y: x + y, avg_sketch,
+                                                               client_data[client]["compressed_grad"]))
+        avg_sketch = tf.nest.map_structure(lambda x: x / len(client_data.keys()), avg_sketch)
 
     def get_config(self):
         config = super().get_config()

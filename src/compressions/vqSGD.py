@@ -13,7 +13,7 @@ class vqSGD(Compression):
         self.s = repetition
         self.compression_rates = []
 
-    def build(self, var_list):
+    def build(self, var_list, clients=1):
         """Initialize optimizer variables.
 
         vqSGD optimizer has no variables.
@@ -90,59 +90,7 @@ class vqSGD(Compression):
                     compressed_gradient))  # tf.int32.size * 8)  #
 
                 self.compression_rates.append(self.cr[variable.ref()])
-                print(tf.unique_with_counts(
-                    tf.sign(tf.reshape(compressed_gradient, [-1])) * tf.sign(tf.reshape(gradient, [-1])))[0])
-                print(tf.unique_with_counts(
-                    tf.sign(tf.reshape(compressed_gradient, [-1])) * tf.sign(tf.reshape(gradient, [-1])))[2])
-                print(np.mean(self.compression_rates))
 
-            return compressed_gradient
-        else:
-
-            input_shape = gradient.shape
-            flat_gradient = tf.reshape(gradient, [-1])
-
-            l2 = tf.norm(flat_gradient, ord=2)
-            flat_gradient = tf.where(l2 != 0, flat_gradient / l2, 0.0)
-            # tf.where will handle the condition for each element of the tensor.
-
-            d = flat_gradient.shape[0]
-            d_sqrt = tf.sqrt(tf.cast(d, tf.float32))
-
-            gamma = 1 - (tf.norm(flat_gradient, ord=1) / d_sqrt)
-            gamma_by_2d = gamma / (2 * d)
-
-            a_positive = tf.where(flat_gradient > 0, flat_gradient / d_sqrt + gamma_by_2d, gamma_by_2d)
-            a_negative = tf.where(flat_gradient <= 0, -flat_gradient / d_sqrt + gamma_by_2d, gamma_by_2d)
-
-            a = tf.concat([a_positive, a_negative], 0)
-            a /= tf.reduce_sum(a)
-
-            indices = tf.random.categorical(tf.math.log([a]), self.s)
-
-            with tf.device('/CPU:0'):
-                indices = indices[0].numpy()
-
-                compressed_gradient = np.zeros(d)
-
-                np.add.at(compressed_gradient, indices[indices < d], d_sqrt)
-                np.add.at(compressed_gradient, indices[indices >= d] - d, -d_sqrt)
-
-                compressed_gradient = tf.convert_to_tensor(compressed_gradient)
-
-            compressed_gradient = tf.reshape(compressed_gradient, input_shape) / self.s
-
-            if flat_gradient.dtype != compressed_gradient.dtype:
-                compressed_gradient = tf.cast(compressed_gradient, dtype=flat_gradient.dtype)
-
-            compressed_gradient *= l2
-
-            if variable.ref() not in self.cr:
-                self.cr[variable.ref()] = flat_gradient.dtype.size * 8 * np.prod(
-                    flat_gradient.shape.as_list()) / min((self.s * np.log2(2 * d)), self.get_sparse_tensor_size_in_bits(
-                    compressed_gradient))  # tf.int32.size * 8)  #
-
-                self.compression_rates.append(self.cr[variable.ref()])
-                print(np.mean(self.compression_rates))
+                print(np.mean(self.compression_rates), self.s * np.log2(2 * d))
 
             return compressed_gradient

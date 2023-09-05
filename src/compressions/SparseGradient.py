@@ -16,7 +16,7 @@ class SparseGradient(Compression):
         self.drop_rate = drop_rate
         self.compression_rates = []
 
-    def build(self, var_list):
+    def build(self, var_list, clients=1):
         """Initialize optimizer variables.
 
         SparseGradient optimizer has one variable:`residuals`.

@@ -19,13 +19,16 @@ class FetchSGD(Optimizer):
         self.error = None
         self.momentums = None
         self._learning_rate = self._build_learning_rate(learning_rate)
-        self.momentum = momentum
+        self.momentum_parameter = momentum
         self.r = r
         self.c = c
+        self.d = None
         self.blocks = 1  # 20 is defaulted in CommEff GitHub (utils.py)
         self.topk = topk
         self.compression_rates = []
         self.cr = {}
+        self.momentum = None
+        self.error_federated = None
 
     def build(self, var_list):
         """Initialize optimizer variables.
@@ -40,6 +43,8 @@ class FetchSGD(Optimizer):
             return
         self.momentums = []
         self.error = {}
+        self.error_federated = tf.zeros(shape=[self.r, self.c], dtype=tf.float32)
+        self.momentum = tf.zeros(shape=[self.r, self.c], dtype=tf.float32)
         for var in var_list:
             self.momentums.append(
                 self.add_variable_from_reference(
@@ -61,9 +66,10 @@ class FetchSGD(Optimizer):
         input_shape = gradient.shape
 
         d = tf.reshape(gradient, [-1]).shape[0]
+        self.d = d
         cs = CSVec(d=d, c=self.c, r=self.r, numBlocks=self.blocks)
 
-        momentum = tf.cast(self.momentum, variable.dtype.base_dtype)
+        momentum = tf.cast(self.momentum_parameter, variable.dtype.base_dtype)
         var_key = self._var_key(variable)
         m_old = self.momentums[self._index_dict[var_key]]
         error = self.error[variable.ref()]
@@ -113,6 +119,81 @@ class FetchSGD(Optimizer):
         delta = tf.reshape(delta, input_shape)
         # variable.assign_add(-delta)
         return delta * lr
+
+    def federated_compress(self, grads, var_list):
+        flattened_arrays = [tf.reshape(arr, [-1]) for arr in grads]
+        flattened_arrays = np.concatenate(flattened_arrays)
+        d = len(flattened_arrays)
+        self.d = d
+        cs = CSVec(d=d, c=self.c, r=self.r, numBlocks=self.blocks)
+
+        # Create sketch
+        cs.accumulateVec(flattened_arrays)
+        # Access sketch
+        sketch = cs.table
+        if var_list[0].ref() not in self.cr:
+            self.cr[var_list[0].ref()] = d / (self.c * self.r)
+            self.compression_rates.append(self.cr[var_list[0].ref()])
+            print("CR:", np.mean(self.compression_rates))
+        return {"compressed_grad": sketch}
+
+    def federated_decompress(self, client_data, variables, lr):
+        d = self.d
+        avg_sketch = 0
+        for client in client_data:
+            avg_sketch = tf.cond(tf.equal(client, "client_1"),
+                                 lambda: client_data[client]["compressed_grad"],
+                                 lambda: tf.nest.map_structure(lambda x, y: x + y, avg_sketch,
+                                                               client_data[client]["compressed_grad"]))
+        avg_sketch = tf.nest.map_structure(lambda x: x / len(client_data.keys()), avg_sketch)
+        self.lr = lr
+
+        momentum = tf.cast(self.momentum_parameter,
+                           tf.float32)  # tf.cast(self.momentum_parameter, var_list[0].dtype.base_dtype)
+
+        m_old = self.momentum * self.momentum_parameter
+        error = self.error_federated
+
+        cs = CSVec(d=d, c=self.c, r=self.r, numBlocks=self.blocks)
+
+        cs.accumulateTable(avg_sketch)
+
+        if momentum > 0:
+            # Momentum
+            print(m_old)
+            cs.accumulateTable(m_old.numpy())
+            m_new = cs.table
+
+            # Store new momentum
+            self.momentum = m_new
+
+        # Error feedback
+        # cs.table = cs.table * lr.numpy()
+        cs.accumulateTable(error.numpy())
+        error = cs.table
+
+        # UnSketch with top-k
+        k = self.topk
+        if k > d:
+            k = d
+        flat_delta = cs.unSketch(k=k)
+
+        # Error accumulation
+        cs.accumulateVec(tf.reshape(flat_delta, [-1]).numpy())
+        sketched_delta = cs.table
+        self.error_federated = error - sketched_delta
+
+        # Update
+        reshaped_deltas = []
+        start = 0
+        for var in variables:
+            size = tf.reduce_prod(var.shape).numpy()
+            segment = tf.Variable(flat_delta[start: start + size])
+            reshaped_deltas.append(tf.reshape(segment, var.shape))
+            start += size
+
+        # Return reshaped deltas multiplied by learning rate
+        return [delta for delta in reshaped_deltas]  # [delta * lr for delta in reshaped_deltas]
 
     def get_config(self):
         config = super().get_config()
@@ -379,6 +460,7 @@ class CSVec(object):
         """
         if table.shape != self.table.shape:
             msg = "Passed in table has size {}, expecting {}"
+            print(table.shape, self.table.shape)
             raise ValueError(msg.format(table.size(), self.table.size()))
 
         self.table += table

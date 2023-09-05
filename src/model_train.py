@@ -20,6 +20,7 @@ from models.DenseNet import DenseNet
 from compressions.bSGD import bSGD
 from models.VGG import VGG
 from models.MobileNetV2 import MobileNetV2
+from utilities.parameters import parse_args
 from utilities import Strategy
 
 from utilities.custom_callbacks import TimeHistory, CosineDecayCallback, step_decay
@@ -34,25 +35,6 @@ from compressions.SparseGradient import SparseGradient
 from compressions.Atomo import Atomo
 from compressions.TopK import TopK
 from compressions.vqSGD import vqSGD
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description='Training script')
-    parser.add_argument('--model', type=str, help='Model name')
-    parser.add_argument('--dataset', type=str, help='Dataset name')
-    parser.add_argument('--strategy', type=str, help='Strategy')
-    parser.add_argument('--epochs', type=int, help='Epochs')
-    parser.add_argument('--n_calls', type=int, help='Bayesian Search iterations')
-    parser.add_argument('--stop_patience', type=int, help='Early stopping patience')
-    parser.add_argument('--lr_decay', type=int, help='Lr decay')
-    parser.add_argument('--k_fold', type=int, help='K-Fold')
-    parser.add_argument('--lambda_l2', type=float, help='L2 regularization lambda')
-    parser.add_argument('--fullset', type=float, help='% of dataset')
-    parser.add_argument('--log', type=int, help='Log')
-    parser.add_argument('--gpu', type=int, help='GPU')
-    parser.add_argument('--train_on_baseline', type=int, help='Take baseline L2')
-    parser.add_argument('--bayesian_search', action='store_true', help='Apply Bayesian search')
-    return parser.parse_args()
 
 
 def model_factory(model_name, lambda_l2, input_shape, num_classes):
@@ -77,6 +59,7 @@ def model_factory(model_name, lambda_l2, input_shape, num_classes):
 
 
 def strategy_factory(**params) -> Strategy:
+    print(params)
     if params["compression"].lower() == "terngrad":
         return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=TernGrad(params["clip"]))

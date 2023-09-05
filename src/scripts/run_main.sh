@@ -136,7 +136,7 @@ case $mode in
             --gpu=1 \
             --k_fold=1 \
             --fullset=100 \
-            --stop_patience=10 \
+            --stop_patience=20 \
             --train_on_baseline=1 \
             --lr_decay=3 \
             --log=1 \

@@ -11,7 +11,7 @@ class NaturalCompression(Compression):
         self.clip_min = clip_min
         self.compression_rates = []
 
-    def build(self, var_list):
+    def build(self, var_list, clients=1):
         """Initialize optimizer variables.
         NaturalCompression optimizer has no additional variables.
 

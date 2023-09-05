@@ -11,7 +11,7 @@ class TopK(Compression):
         self.k = k
         self.compression_rates = []
 
-    def build(self, var_list):
+    def build(self, var_list, clients=1):
         """Initialize optimizer variables.
 
         TernGrad optimizer has no additional variables.
@@ -31,6 +31,6 @@ class TopK(Compression):
                 gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
                 sparse_gradient)
             self.compression_rates.append(self.cr[variable.ref()])
-            # print(np.mean(self.compression_rates))
+            print(np.mean(self.compression_rates))
 
         return sparse_gradient

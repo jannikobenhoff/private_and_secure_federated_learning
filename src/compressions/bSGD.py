@@ -10,12 +10,13 @@ from .Compression import Compression
 class bSGD(Compression):
     def __init__(self, buckets, sparse_buckets, name="BucketSGD"):
         super().__init__(name=name)
+        print(name)
         self.buckets = buckets
         self.sparse_buckets = sparse_buckets
         self.compression_rates = []
         self.error = {}
 
-    def build(self, var_list):
+    def build(self, var_list, clients=1):
         """Initialize optimizer variables.
 
         bSGD optimizer has one variable `quantization error`
@@ -80,60 +81,7 @@ class bSGD(Compression):
                 gradient.shape.as_list()) / bit_size
 
             self.compression_rates.append(self.cr[variable.ref()])
-            # print(np.mean(self.compression_rates))
-
-        # Error Feedback
-        error = gradient - sparse_gradient
-        self.error[variable.ref()].assign(error)
-
-        return sparse_gradient
-
-        gradient = gradient + self.error[variable.ref()]
-        flattened_gradient = tf.reshape(gradient, [-1])
-        input_shape = gradient.shape
-
-        ft_np = tf.abs(flattened_gradient).numpy()
-        sorted_indices = np.argsort(ft_np)[::-1]
-
-        # Split the sorted indices into 'buckets' number of parts
-        partitioned_indices = np.array_split(sorted_indices, self.buckets)
-        indices = list(itertools.chain.from_iterable(partitioned_indices))
-
-        sorted_arr = sorted(ft_np, reverse=True)
-
-        # Split the sorted array into 'buckets' number of parts
-        partitioned_list = np.array_split(sorted_arr, self.buckets)
-
-        for i, part in enumerate(partitioned_list):
-            if self.buckets - (i + 1) < self.sparse_buckets:
-                partitioned_list[i] = np.zeros_like(part)
-            else:
-                partitioned_list[i] = [np.mean(part)] * len(part)
-
-        # partitioned_list = [[np.mean(part)] * len(part) if i < (self.buckets - self.sparse_buckets)
-        #                     else np.zeros_like(part)
-        #                     for i, part in enumerate(partitioned_list)]
-
-        sparse_gradient = tf.gather(tf.constant(list(itertools.chain.from_iterable(partitioned_list))),
-                                    tf.argsort(indices))
-        sparse_gradient = sparse_gradient * tf.sign(flattened_gradient)
-
-        if variable.ref() not in self.cr:
-            bit_sizes = [
-                # (self.buckets - self.sparse_buckets) * len(partitioned_list[-1]) + (
-                #     self.buckets - self.sparse_buckets) * 32 * tf.int32.size * 8,
-                self.get_bucket_tensor_size_in_bits(sparse_gradient, self.buckets, self.sparse_buckets),
-                self.get_sparse_tensor_size_in_bits(sparse_gradient)
-            ]
-
-            bit_size = min(bit_sizes)
-            self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(
-                gradient.shape.as_list()) / bit_size
-
-            self.compression_rates.append(self.cr[variable.ref()])
             print(np.mean(self.compression_rates))
-
-        sparse_gradient = tf.reshape(sparse_gradient, input_shape)
 
         # Error Feedback
         error = gradient - sparse_gradient

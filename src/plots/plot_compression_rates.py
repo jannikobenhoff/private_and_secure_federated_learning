@@ -6,34 +6,7 @@ from pprint import pprint
 import numpy as np
 import matplotlib.pyplot as plt
 import itertools
-
-names = {
-    "sgd terngrad": "TernGrad",
-    "terngrad": "TernGrad",
-    "sgd naturalcompression": "Natural Compression",
-    "naturalcompression": "Natural Compression",
-    "sgd onebitsgd": "1-Bit SGD",
-    "onebitsgd": "1-Bit SGD",
-    "sgd sparsegradient": "Sparse Gradient",
-    "sparsegradient": "Sparse Gradient",
-    "sgd gradientsparsification": "Gradient Sparsification",
-    "gradientsparsification": "Gradient Sparsification",
-    "memsgd": "Sparsified SGD with Memory",
-    "atomo": "Atomic Sparsification",
-    "sgd atomo": "Atomic Sparsification",
-    "efsignsgd": "EF-SignSGD",
-    "fetchsgd": "FetchSGD",
-    "vqsgd": "vqSGD",
-    "sgd vqsgd": "vqSGD",
-    "topk": "Top-K",
-    "sgd topk": "Top-K",
-    "sgd ": "SGD",
-    "sgd": "SGD",
-    "sgd_vgg": "SGD",
-    "sgd none": "SGD",
-    "sgd bsgd": "BucketSGD",
-    "bsgd": "BucketSGD",
-}
+from plot_utils import names, markers, colors
 
 
 def get_all_files_in_directory(root_path):
@@ -157,10 +130,6 @@ def plot_compression_metrics(title: str, parent_folder: str):
                 metrics[lean_strat_key][strat_key]["max_val_acc"] = np.mean([
                     metrics[lean_strat_key][strat_key]["max_val_acc"], np.max(val_acc)])
 
-    marker = itertools.cycle(('+', 'v', 'o', '*'))
-    colors = itertools.cycle(
-        ('r', 'g', "#32CD32", 'y', 'm', 'c', 'grey', 'orange', 'pink', "#D2691E", 'b', "#FFD700", "#a6bddb"))
-
     fig, axes = plt.subplots(2, 3, figsize=(15, 8), gridspec_kw={'width_ratios': [1, 1, 1.3]})
     axes = axes.flatten()
 
@@ -187,8 +156,8 @@ def plot_compression_metrics(title: str, parent_folder: str):
 
             table_data.append(
                 [label_name, round(100 * met["max_val_acc"], 2), round(met["cr"], 1)])
-            m = next(marker)
-            c = next(colors)
+            m = markers[label_name]
+            c = colors[label_name]
 
             WINDOW_SIZE = 5
 
@@ -362,10 +331,6 @@ def plot_compare_all(parent_folder: str, bsgd: bool, epochs: int):
             metrics[lean_strat_key][strat_key]["max_val_acc"] = np.mean([
                 metrics[lean_strat_key][strat_key]["max_val_acc"], np.max(val_acc)])
 
-    marker = itertools.cycle(('+', 'v', 'o', '*'))
-    colors = itertools.cycle(
-        ('r', 'g', "#32CD32", 'y', 'm', 'c', 'grey', 'orange', 'pink', "#D2691E", 'b', "#FFD700", "#a6bddb"))
-
     fig, axes = plt.subplots(2, 3, figsize=(15, 8), gridspec_kw={'width_ratios': [1, 1, 1.3]})
     axes = axes.flatten()
 
@@ -381,12 +346,12 @@ def plot_compare_all(parent_folder: str, bsgd: bool, epochs: int):
 
         table_data.append(
             [label_name, round(100 * best_param_metrics["max_val_acc"], 2), round(best_param_metrics["cr"], 1)])
-        m = next(marker)
-        c = next(colors)
+        m = markers[label_name]
+        c = colors[label_name]
 
         sorted_data = sorted(cr_acc_pairs, key=lambda x: x[0], reverse=True)
 
-        WINDOW_SIZE = 5
+        WINDOW_SIZE = 2
 
         axes[0].plot(np.arange(1, min(len(best_param_metrics["train_acc"]) + 1, epochs + 1), 1),
                      best_param_metrics["train_acc"][:epochs],
@@ -472,9 +437,354 @@ def plot_compare_all(parent_folder: str, bsgd: bool, epochs: int):
     plt.show()
 
 
+def plot_bit_all(parent_folder: str, bsgd: bool, max_bits_ratio):
+    directory_path = '../results/compression/' + parent_folder
+    all_files = get_all_files_in_directory(directory_path)
+
+    bits_pro_epoch = 1000
+
+    metrics = {}
+    for file_path in all_files:
+        if "DS" in file_path:
+            continue
+        if "Bucket" in file_path and not bsgd:
+            continue
+        # if not "MEM" in file_path:
+        #     continue
+        file = open(file_path, "r")
+        file = json.load(file)
+        strat = ast.literal_eval(file["args"]["strategy"])
+        strat_key = f"{strat}"
+        lean_strat_key = f"{strat['optimizer']} {strat['compression']}"
+
+        cr = file["compression_rates"][0]
+        if cr == 1:
+            train_acc = np.array(ast.literal_eval(file["training_acc"]))
+            train_loss = np.array(ast.literal_eval(file["training_loss"]))
+            val_acc = np.array(ast.literal_eval(file["val_acc"]))
+            val_loss = np.array(ast.literal_eval(file["val_loss"]))
+        else:
+            cut_off = int((bits_pro_epoch * max_bits_ratio) / (bits_pro_epoch / cr)) + 1
+            train_acc = np.array(ast.literal_eval(file["training_acc"]))[:cut_off]
+            train_loss = np.array(ast.literal_eval(file["training_loss"]))[:cut_off]
+            val_acc = np.array(ast.literal_eval(file["val_acc"]))[:cut_off]
+            val_loss = np.array(ast.literal_eval(file["val_loss"]))[:cut_off]
+
+        # print(strat_key, np.max(val_acc))
+        if lean_strat_key not in metrics:
+            metrics[lean_strat_key] = {}
+
+        if strat_key not in metrics[lean_strat_key]:
+            metrics[lean_strat_key][strat_key] = {}
+            metrics[lean_strat_key][strat_key]["train_acc"] = train_acc
+            metrics[lean_strat_key][strat_key]["train_loss"] = train_loss
+            metrics[lean_strat_key][strat_key]["val_acc"] = val_acc
+            metrics[lean_strat_key][strat_key]["val_loss"] = val_loss
+            metrics[lean_strat_key][strat_key]["cr"] = cr
+            metrics[lean_strat_key][strat_key]["max_val_acc"] = np.max(val_acc)
+
+        else:
+            metrics[lean_strat_key][strat_key]["train_acc"] = mean_of_arrays_with_padding(train_acc,
+                                                                                          metrics[lean_strat_key][
+                                                                                              strat_key]["train_acc"])
+            metrics[lean_strat_key][strat_key]["train_loss"] = mean_of_arrays_with_padding(train_loss,
+                                                                                           metrics[lean_strat_key][
+                                                                                               strat_key]["train_loss"])
+            metrics[lean_strat_key][strat_key]["val_acc"] = mean_of_arrays_with_padding(val_acc,
+                                                                                        metrics[lean_strat_key][
+                                                                                            strat_key]["val_acc"])
+            metrics[lean_strat_key][strat_key]["val_loss"] = mean_of_arrays_with_padding(val_loss,
+                                                                                         metrics[lean_strat_key][
+                                                                                             strat_key]["val_loss"])
+            metrics[lean_strat_key][strat_key]["cr"] = np.mean([cr, metrics[lean_strat_key][strat_key]["cr"]])
+            metrics[lean_strat_key][strat_key]["max_val_acc"] = np.mean([
+                metrics[lean_strat_key][strat_key]["max_val_acc"], np.max(val_acc)])
+
+    fig, axes = plt.subplots(2, 3, figsize=(15, 8), gridspec_kw={'width_ratios': [1, 1, 1.3]})
+    axes = axes.flatten()
+
+    table_data = []
+    for method in metrics:
+        label_name = names[method.lower().replace(" none", "")]
+
+        cr_acc_pairs = []
+        for p in metrics[method]:
+            cr_acc_pairs.append((metrics[method][p]['cr'], metrics[method][p]['max_val_acc']))
+        best_param = max(metrics[method].items(), key=lambda x: x[1]['max_val_acc'])
+        best_param_metrics = best_param[1]
+
+        table_data.append(
+            [label_name, round(100 * best_param_metrics["max_val_acc"], 2), round(best_param_metrics["cr"], 1)])
+        m = markers[label_name]
+        c = colors[label_name]
+
+        sorted_data = sorted(cr_acc_pairs, key=lambda x: x[0], reverse=True)
+
+        current_timeline = np.linspace(0, 100, len(best_param_metrics["train_acc"]))
+
+        # Create the fixed "bits" timeline
+        fixed_timeline = np.linspace(0, 100, 100)
+
+        # Interpolate the data onto the fixed timeline
+        interpolated_acc = np.interp(fixed_timeline, current_timeline, best_param_metrics["train_acc"])
+
+        axes[0].plot(interpolated_acc,
+                     markersize=4, color=c,
+                     label=label_name)
+
+        interpolated_test_acc = np.interp(fixed_timeline, current_timeline, best_param_metrics["val_acc"])
+        axes[1].plot(interpolated_test_acc, markersize=4, label=label_name, color=c)
+
+        axes[2].plot([x[0] for x in sorted_data], [x[1] for x in sorted_data], marker=m, label=label_name, color=c,
+                     markersize=4)
+
+        interpolated_train_loss = np.interp(fixed_timeline, current_timeline, best_param_metrics["train_loss"])
+        axes[3].plot(interpolated_train_loss,
+                     markersize=4, label=label_name,
+                     color=c)
+        interpolated_test_loss = np.interp(fixed_timeline, current_timeline, best_param_metrics["val_loss"])
+        axes[4].plot(interpolated_test_loss,
+                     markersize=4, label=label_name,
+                     color=c)
+
+    axes[3].grid(alpha=0.2)
+    axes[3].set_title("Training Loss", fontsize=10, fontweight='bold')
+    # axes[3].legend(fontsize=8)
+    axes[3].set_yscale('log')
+    axes[3].tick_params(axis='both', which='major', labelsize=8)
+    axes[3].set_xlabel("% available bits used", fontsize=8)
+
+    axes[1].grid(alpha=0.2)
+    axes[1].set_title("Test Accuracy", fontsize=10, fontweight='bold')
+    axes[1].tick_params(axis='both', which='major', labelsize=8)
+    axes[1].set_xlabel("% available bits used", fontsize=8)
+
+    axes[2].grid(alpha=0.2)
+    axes[2].set_title("Test Accuracy vs Overall Compression", fontsize=10, fontweight='bold')
+    axes[2].legend(fontsize=7)  # , bbox_to_anchor=(0.75, 0.7))
+    axes[2].set_xscale('log')
+    axes[2].tick_params(axis='both', which='major', labelsize=8)
+
+    axes[0].grid(alpha=0.2)
+    axes[0].set_title("Training Accuracy", fontsize=10, fontweight='bold')
+    axes[0].legend(fontsize=8)
+    axes[0].tick_params(axis='both', which='major', labelsize=8)
+    axes[0].set_xlabel("% available bits used", fontsize=8)
+    axes[4].grid(alpha=0.2)
+    axes[4].tick_params(axis='both', which='major', labelsize=8)
+    axes[4].set_title("Test Loss", fontsize=10, fontweight='bold')
+    axes[4].set_yscale('log')
+    axes[4].set_xlabel("% available bits used", fontsize=8)
+
+    table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
+
+    table = axes[5].table(cellText=table_data,
+                          colLabels=["Method", "Test Acc", "Compression Ratio"],
+                          cellLoc='center',
+                          loc='center')
+
+    axes[5].axis('off')
+
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1.1, 1.6)
+
+    for (row, col), cell in table.get_celld().items():
+        if row == 0:
+            cell.set_fontsize(9)
+            cell._text.set_weight('bold')
+        if col == 0 and row > 0:
+            cell.set_fontsize(8)
+    table.auto_set_column_width(col=list(range(3)))
+
+    plt.suptitle("Bits timeline " + parent_folder.upper())
+    plt.tight_layout()
+    # plt.savefig(f"../../figures/{parent_folder}.pdf", bbox_inches='tight')
+    plt.show()
+
+
+def plot_time_all(parent_folder: str, bsgd: bool):
+    directory_path = '../results/compression/' + parent_folder
+    all_files = get_all_files_in_directory(directory_path)
+
+    metrics = {}
+    for file_path in all_files:
+        if "DS" in file_path:
+            continue
+        if "Bucket" in file_path and not bsgd:
+            continue
+        # if not "MEM" in file_path:
+        #     continue
+        file = open(file_path, "r")
+        file = json.load(file)
+        strat = ast.literal_eval(file["args"]["strategy"])
+        strat_key = f"{strat}"
+        lean_strat_key = f"{strat['optimizer']} {strat['compression']}"
+
+        cr = file["compression_rates"][0]
+
+        train_acc = np.array(ast.literal_eval(file["training_acc"]))
+        train_loss = np.array(ast.literal_eval(file["training_loss"]))
+        val_acc = np.array(ast.literal_eval(file["val_acc"]))
+        val_loss = np.array(ast.literal_eval(file["val_loss"]))
+        time_per_epoch = np.array(file["time_per_epoch"])
+
+        # print(strat_key, np.max(val_acc))
+        if lean_strat_key not in metrics:
+            metrics[lean_strat_key] = {}
+
+        if strat_key not in metrics[lean_strat_key]:
+            metrics[lean_strat_key][strat_key] = {}
+            metrics[lean_strat_key][strat_key]["train_acc"] = train_acc
+            metrics[lean_strat_key][strat_key]["train_loss"] = train_loss
+            metrics[lean_strat_key][strat_key]["val_acc"] = val_acc
+            metrics[lean_strat_key][strat_key]["val_loss"] = val_loss
+            metrics[lean_strat_key][strat_key]["cr"] = cr
+            metrics[lean_strat_key][strat_key]["max_val_acc"] = np.max(val_acc)
+            metrics[lean_strat_key][strat_key]["time_per_epoch"] = time_per_epoch
+
+        else:
+            metrics[lean_strat_key][strat_key]["train_acc"] = mean_of_arrays_with_padding(train_acc,
+                                                                                          metrics[lean_strat_key][
+                                                                                              strat_key]["train_acc"])
+            metrics[lean_strat_key][strat_key]["train_loss"] = mean_of_arrays_with_padding(train_loss,
+                                                                                           metrics[lean_strat_key][
+                                                                                               strat_key]["train_loss"])
+            metrics[lean_strat_key][strat_key]["val_acc"] = mean_of_arrays_with_padding(val_acc,
+                                                                                        metrics[lean_strat_key][
+                                                                                            strat_key]["val_acc"])
+            metrics[lean_strat_key][strat_key]["val_loss"] = mean_of_arrays_with_padding(val_loss,
+                                                                                         metrics[lean_strat_key][
+                                                                                             strat_key]["val_loss"])
+
+            metrics[lean_strat_key][strat_key]["time_per_epoch"] = mean_of_arrays_with_padding(time_per_epoch,
+                                                                                               metrics[lean_strat_key][
+                                                                                                   strat_key][
+                                                                                                   "time_per_epoch"])
+
+            metrics[lean_strat_key][strat_key]["cr"] = np.mean([cr, metrics[lean_strat_key][strat_key]["cr"]])
+            metrics[lean_strat_key][strat_key]["max_val_acc"] = np.mean([
+                metrics[lean_strat_key][strat_key]["max_val_acc"], np.max(val_acc)])
+
+    fig, axes = plt.subplots(2, 3, figsize=(15, 8), gridspec_kw={'width_ratios': [1, 1, 1.3]})
+    axes = axes.flatten()
+
+    table_data = []
+    for method in metrics:
+        label_name = names[method.lower().replace(" none", "")]
+
+        cr_acc_pairs = []
+        for p in metrics[method]:
+            cr_acc_pairs.append((metrics[method][p]['cr'], metrics[method][p]['max_val_acc']))
+        best_param = max(metrics[method].items(), key=lambda x: x[1]['max_val_acc'])
+        best_param_metrics = best_param[1]
+
+        table_data.append(
+            [label_name, round(100 * best_param_metrics["max_val_acc"], 2), round(best_param_metrics["cr"], 1)])
+        m = markers[label_name]
+        c = colors[label_name]
+
+        sorted_data = sorted(cr_acc_pairs, key=lambda x: x[0], reverse=True)
+
+        WINDOW_SIZE = 2
+
+        cumulative_time = np.cumsum(best_param_metrics["time_per_epoch"])
+
+        axes[0].plot(cumulative_time,
+                     best_param_metrics["train_acc"],
+                     markersize=4, color=c,
+                     label=label_name)
+
+        x_values = np.arange(1, len(best_param_metrics["val_acc"]) + 1, 1)
+        y_values = list(moving_average(best_param_metrics["val_acc"], WINDOW_SIZE))
+        deviations = np.array(best_param_metrics["val_acc"]) - np.array(y_values)
+
+        # Compute the upper and lower bounds
+        upper_bound = y_values + deviations
+        lower_bound = y_values - deviations
+
+        # Plot the fill between
+        # axes[1].fill_between(x_values, lower_bound[:epochs], upper_bound[:epochs], color=c, alpha=0.3)
+        axes[1].plot(cumulative_time, y_values, markersize=4, label=label_name, color=c)
+
+        axes[2].plot([x[0] for x in sorted_data], [x[1] for x in sorted_data], marker=m, label=label_name, color=c,
+                     markersize=4)
+
+        axes[3].plot(cumulative_time,
+                     best_param_metrics["train_loss"],
+                     markersize=4, label=label_name,  # marker=m,
+                     color=c)
+        axes[4].plot(cumulative_time,
+                     list(moving_average(best_param_metrics["val_loss"], WINDOW_SIZE)),
+                     markersize=4, label=label_name,  # marker=m,
+                     color=c)
+
+    axes[3].grid(alpha=0.2)
+    axes[3].set_title("Training Loss", fontsize=10, fontweight='bold')
+    axes[3].set_xlabel("seconds", fontsize=8)
+    axes[3].set_yscale('log')
+    axes[3].tick_params(axis='both', which='major', labelsize=8)
+
+    axes[1].grid(alpha=0.2)
+    axes[1].set_title("Test Accuracy", fontsize=10, fontweight='bold')
+    axes[1].tick_params(axis='both', which='major', labelsize=8)
+    axes[1].set_xlabel("seconds", fontsize=8)
+
+    axes[2].grid(alpha=0.2)
+    axes[2].set_title("Test Accuracy vs Overall Compression", fontsize=10, fontweight='bold')
+    # axes[2].set_xlabel("Overall Compression", fontsize=8, fontweight='bold')
+    # axes[2].set_ylabel("Test Accuracy", fontsize=8, fontweight='bold')
+    axes[2].legend(fontsize=7, bbox_to_anchor=(0.75, 0.7))
+    axes[2].set_xscale('log')
+    axes[2].tick_params(axis='both', which='major', labelsize=8)
+
+    axes[0].grid(alpha=0.2)
+    axes[0].set_title("Training Accuracy", fontsize=10, fontweight='bold')
+    axes[0].legend(fontsize=8)
+    axes[0].tick_params(axis='both', which='major', labelsize=8)
+    axes[0].set_xlabel("seconds", fontsize=8)
+
+    axes[4].grid(alpha=0.2)
+    axes[4].tick_params(axis='both', which='major', labelsize=8)
+    axes[4].set_title("Test Loss", fontsize=10, fontweight='bold')
+    axes[4].set_yscale('log')
+    axes[4].set_xlabel("seconds", fontsize=8)
+    axes[4].set_xscale('log')
+
+    table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
+
+    table = axes[5].table(cellText=table_data,
+                          colLabels=["Method", "Test Acc", "Compression Ratio"],
+                          cellLoc='center',
+                          loc='center')
+
+    axes[5].axis('off')
+
+    table.auto_set_font_size(False)
+    table.set_fontsize(10)
+    table.scale(1.1, 1.6)
+
+    for (row, col), cell in table.get_celld().items():
+        if row == 0:
+            cell.set_fontsize(9)
+            cell._text.set_weight('bold')
+        if col == 0 and row > 0:
+            cell.set_fontsize(8)
+    table.auto_set_column_width(col=list(range(3)))
+
+    plt.suptitle(parent_folder.upper())
+    plt.tight_layout()
+    # plt.savefig(f"../../figures/{parent_folder}.pdf", bbox_inches='tight')
+    plt.show()
+
+
 if __name__ == "__main__":
     # plot_compression_metrics("efsignsgd", "vggnew")
 
-    plot_compare_all("vggnew", True, 40)
+    # plot_compare_all("baseline_resnet", True, 40)
 
     # plot_compression_rates()
+
+    plot_bit_all("baseline_resnet", True, 0.1)
+
+    # plot_time_all("baseline_resnet", True)

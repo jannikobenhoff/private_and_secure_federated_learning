@@ -13,7 +13,7 @@ class GradientSparsification(Compression):
         self.max_iter = int(max_iter)
         self.compression_rates = []
 
-    def build(self, var_list):
+    def build(self, var_list, clients=1):
         """Initialize optimizer variables.
         GradientSparsification optimizer has no variables.
 
