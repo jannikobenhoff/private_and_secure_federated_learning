@@ -347,7 +347,8 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
     axes[2].grid(alpha=0.2)
     axes[2].tick_params(axis='both', which='major', labelsize=8)
     axes[2].set_title("Test Loss", fontsize=10, fontweight='bold')
-    axes[2].set_yscale('log')
+    axes[2].set_xlabel("Iteration", fontsize=8)
+    # axes[2].set_yscale('log')
 
     table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
 
@@ -379,6 +380,6 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 if __name__ == "__main__":
     # plot_compression_metrics("efsignsgd", "vggnew")
 
-    plot_compare_all("le", True)
+    plot_compare_all("figs", True)
 
     # plot_compression_rates()

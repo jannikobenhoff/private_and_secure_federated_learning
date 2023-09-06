@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="baseline_l2_vgg11"
+DEFAULT_MODE="baseline_l2_lenet"
 
 # LeNet:    search_lenet      baseline_l2_lenet       l2_lenet        no_l2_lenet
 # ResNet18: search_resnet18   baseline_l2_resnet18    no_l2_resnet18
@@ -11,13 +11,13 @@ DEFAULT_MODE="baseline_l2_vgg11"
 mode=${1:-$DEFAULT_MODE}
 
 base_strategy='{"optimizer": "sgd", "compression": "atomo", "learning_rate": 0.01, "svd_rank":RANK}'
-base_strategy_resnet='{"optimizer": "sgd", "compression": "atomo", "learning_rate": 0.01, "svd_rank":RANK}'
+base_strategy_resnet='{"optimizer": "sgd", "compression": "atomo", "learning_rate": 0.1, "svd_rank":RANK}'
 base_strategy_vgg11='{"optimizer": "sgd", "compression": "atomo", "learning_rate": 0.05, "svd_rank":RANK}'
 
 ranks=(1 3 6)
 #ranks=(6 6)
 
-runs=3
+runs=1
 for ((i=1; i<=runs; i++))
 do
     case $mode in

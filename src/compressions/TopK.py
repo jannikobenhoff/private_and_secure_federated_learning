@@ -23,14 +23,31 @@ class TopK(Compression):
             return
         self._built = True
 
-    def compress(self, gradient: Tensor, variable) -> Tensor:
+    def compress(self, grads: list[Tensor], variables):
+        flattened_grads = [tf.reshape(grad, [-1]) for grad in grads]
+        gradient = tf.concat(flattened_grads, axis=0)
+
         sparse_gradient = self.top_k_sparsification(gradient, self.k)
 
-        if variable.ref() not in self.cr:
-            self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(
+        if variables[0].ref() not in self.cr:
+            self.cr[variables[0].ref()] = gradient.dtype.size * 8 * np.prod(
                 gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
                 sparse_gradient)
-            self.compression_rates.append(self.cr[variable.ref()])
-            print(np.mean(self.compression_rates))
+            self.compression_rates.append(self.cr[variables[0].ref()])
+            self.compression_rates = [np.mean(self.compression_rates)]
 
-        return sparse_gradient
+            print("CR:", np.mean(self.compression_rates))
+
+        compressed_grads = []
+        start = 0
+        for var in variables:
+            size = tf.reduce_prod(var.shape).numpy()
+            segment = tf.Variable(sparse_gradient[start: start + size])
+            compressed_grads.append(tf.reshape(segment, var.shape))
+            start += size
+
+        return {
+            "compressed_grads": compressed_grads,
+            "decompress_info": None,
+            "needs_decompress": False
+        }

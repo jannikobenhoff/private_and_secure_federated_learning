@@ -81,22 +81,11 @@ class Compression:
         self._variables.append(variable)
         return variable
 
-    def compress(self, gradient: Tensor, variable):
+    def compress(self, grads: list[Tensor], variables):
         raise NotImplementedError("Subclasses must implement compress method")
 
-    def decompress(self, compressed_gradient: Tensor):
+    def decompress(self, compressed_data, variables):
         raise NotImplementedError("Subclasses must implement decompress method")
-
-    def federated_compress(self, gradients: list[Tensor], variables: list[Tensor], client_id: int):
-        for i, gradient in enumerate(gradients):
-            gradients[i] = self.compress(gradient, variables[i])
-        return {
-            'compressed_grad': gradients,
-            'decompress_info': None
-        }
-
-    def federated_decompress(self, info, variables):
-        return info["compressed_grad"]
 
     @staticmethod
     def top_k_sparsification(input_tensor: Tensor, k: int) -> Tensor:

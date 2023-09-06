@@ -27,33 +27,49 @@ class SparseGradient(Compression):
         if hasattr(self, "_built") and self._built:
             return
         self.residuals = {}
-        for var in var_list:
-            self.residuals[var.ref()] = self.add_variable_from_reference(
-                model_variable=var, variable_name="residual"
-            )
+        flattened_grads = [tf.reshape(var, [-1]) for var in var_list]
+        gradient_size = tf.concat(flattened_grads, axis=0)
 
-        # self.compression_rate = var_list[0].dtype.size * 8
+        for client in range(1, clients + 1):
+            self.residuals[str(client)] = tf.Variable(tf.zeros_like(gradient_size, dtype=var_list[0].dtype))
         self._built = True
 
-    def compress(self, gradient: Tensor, variable) -> Tensor:
+    def compress(self, grads: list[Tensor], variables, client_id=1):
         """
         Remember residuals (dropped values) locally to add to next gradient
         before dropping again.
         """
+        flattened_grads = [tf.reshape(grad, [-1]) for grad in grads]
+        gradient = tf.concat(flattened_grads, axis=0)
 
-        res = self.residuals[variable.ref()]
+        res = self.residuals[str(client_id)]
         gradient_with_residuals = gradient + res
 
         gradient_dropped = self.gradDrop(gradient_with_residuals, self.drop_rate)
-        self.residuals[variable.ref()].assign(gradient - gradient_dropped)
+        self.residuals[str(client_id)].assign(gradient - gradient_dropped)
 
-        if variable.ref() not in self.cr:
-            self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(
+        if variables[0].ref() not in self.cr:
+            self.cr[variables[0].ref()] = gradient.dtype.size * 8 * np.prod(
                 gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
                 gradient_dropped)
-            self.compression_rates.append(self.cr[variable.ref()])
+            self.compression_rates.append(self.cr[variables[0].ref()])
+            self.compression_rates = [np.mean(self.compression_rates)]
 
-        return gradient_dropped
+            print("CR:", np.mean(self.compression_rates))
+
+        compressed_grads = []
+        start = 0
+        for var in variables:
+            size = tf.reduce_prod(var.shape).numpy()
+            segment = tf.Variable(gradient_dropped[start: start + size])
+            compressed_grads.append(tf.reshape(segment, var.shape))
+            start += size
+
+        return {
+            "compressed_grads": compressed_grads,
+            "decompress_info": None,
+            "needs_decompress": False
+        }
 
     def gradDrop(self, gradient: Tensor, drop_rate) -> Tensor:
         """

@@ -23,9 +23,22 @@ class NaturalCompression(Compression):
         self.compression_rates.append(var_list[0].dtype.size)
         self._built = True
 
-    def compress(self, gradient: Tensor, variable) -> Tensor:
-        gradient_compressed = self.natural_compress(gradient)
-        return gradient_compressed
+    # def compress(self, gradient: Tensor, variable) -> Tensor:
+    #     gradient_compressed = self.natural_compress(gradient)
+    #     return gradient_compressed
+
+    def compress(self, gradients: list[Tensor], variables: list[Tensor], client_id: int = 1):
+        compressed_grads = []
+
+        for i, gradient in enumerate(gradients):
+            gradient_quantized = self.natural_compress(gradient)
+            compressed_grads.append(gradient_quantized)
+
+        return {
+            "compressed_grads": compressed_grads,
+            "decompress_info": None,
+            "needs_decompress": False
+        }
 
     def natural_compress(self, input_tensor: Tensor) -> Tensor:
         """

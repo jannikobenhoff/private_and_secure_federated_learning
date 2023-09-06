@@ -4,7 +4,7 @@ import tensorflow as tf
 
 
 def step_decay(epoch, initial_lrate, drop_factor, drop_epochs, min_lr):
-    drops = sum([1 for drop_epoch in drop_epochs if epoch >= drop_epoch])
+    drops = sum([1 for drop_epoch in drop_epochs if epoch + 1 == drop_epoch])
     return max(min_lr, initial_lrate * math.pow(drop_factor, drops))
 
 

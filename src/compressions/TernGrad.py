@@ -24,29 +24,25 @@ class TernGrad(Compression):
         self.compression_rates.append(var_list[0].dtype.size * 8 / np.log2(3))
         self._built = True
 
-    def compress(self, gradient: Tensor, variable):
-        gradient_clip = self.gradient_clipping(gradient, self.clip)
-        gradient_tern = self.ternarize(gradient_clip)
-
-        return gradient_tern
-
-    def federated_compress(self, gradients: list[Tensor], variables: list[Tensor], client_id: int):
-        quantized_gradients = []
-        decomp = []
-        for i, gradient in enumerate(gradients):
-            gradient_clip = self.gradient_clipping(gradient, self.clip)
+    def compress(self, grads: list[Tensor], variables):
+        compressed_grads = []
+        scales = []
+        for grad in grads:
+            gradient_clip = self.gradient_clipping(grad, self.clip)
             gradient_tern, scale = self.ternarize_federated(gradient_clip)
-            quantized_gradients.append(gradient_tern)
-            decomp.append(scale)
+            compressed_grads.append(gradient_tern)
+            scales.append(scale)
+
         return {
-            'compressed_grad': quantized_gradients,
-            'decompress_info': decomp
+            "compressed_grads": compressed_grads,
+            "decompress_info": scales,
+            "needs_decompress": True
         }
 
-    def federated_decompress(self, info, variables):
+    def decompress(self, compressed_data, variables):
         decompressed_gradients = []
-        for i, gradient in enumerate(info["compressed_grad"]):
-            scale = info["decompress_info"][i]
+        for i, gradient in enumerate(compressed_data["compressed_grads"]):
+            scale = compressed_data["decompress_info"][i]
             decompressed_gradients.append(gradient * scale)
 
         return decompressed_gradients

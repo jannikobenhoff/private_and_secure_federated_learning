@@ -30,6 +30,7 @@ class Strategy(optimizer_v2.OptimizerV2):
         self.optimizer_name = optimizer
         self.compression = compression
         self.learning_rate = learning_rate
+        self.num_clients = 1
         if (
                 isinstance(momentum, tf.Tensor)
                 or callable(momentum)
@@ -73,136 +74,90 @@ class Strategy(optimizer_v2.OptimizerV2):
             self._get_hyper("momentum", var_dtype)
         )
 
-    def federated_compress(self, grads, var_list, client_id, number_clients, lr):
+    def build(self, variables, num_clients=1):
+        self.num_clients = num_clients
         if self.compression is not None:
-            self.compression.build(var_list, number_clients)
-            data = self.compression.federated_compress(grads, var_list, client_id)
-            return data
+            self.compression.build(variables, num_clients)
         elif self.optimizer_name != "sgd":
-            self.optimizer.build(var_list, number_clients)
-            data = self.optimizer.federated_compress(grads, var_list, client_id=client_id, lr=lr)
-            return data
-        else:
-            return {"compressed_grad": grads}
+            self.optimizer.build(variables, num_clients)
 
-    def federated_decompress(self, client_data, var_list, lr):
-        client_grads = 0
-
+    def compress(self, grads, variables, client_id=1, number_clients=1):
+        """
+        Gradients from loss function and trainable model weights
+        """
         if self.compression is not None:
-            for client in client_data:
-                client_grads = tf.cond(tf.equal(client, "client_1"),
-                                       lambda: self.compression.federated_decompress(client_data[client], var_list),
-                                       lambda: tf.nest.map_structure(lambda x, y: x + y, client_grads,
-                                                                     self.compression.federated_decompress(
-                                                                         client_data[client], var_list)))
-            # Average Gradients
-            client_grads = tf.nest.map_structure(lambda x: x / len(client_data.keys()), client_grads)
-
-        elif self.optimizer_name == "fetchsgd":
-            client_grads = self.optimizer.federated_decompress(client_data, var_list, lr)
-
+            compressed_data = self.compression.compress(grads, variables)
+            return compressed_data
         elif self.optimizer_name != "sgd":
-            for client in client_data:
-                client_grads = tf.cond(tf.equal(client, "client_1"),
-                                       lambda: self.optimizer.federated_decompress(client_data[client], var_list, lr),
-                                       lambda: tf.nest.map_structure(lambda x, y: x + y, client_grads,
-                                                                     self.optimizer.federated_decompress(
-                                                                         client_data[client], var_list, lr)))
-            # Average Gradients
-            client_grads = tf.nest.map_structure(lambda x: x / len(client_data.keys()), client_grads)
+            compressed_data = self.optimizer.compress(grads, variables, client_id=client_id, lr=self.learning_rate)
+            return compressed_data
         else:
-            for client in client_data:
-                client_grads = tf.cond(tf.equal(client, "client_1"), lambda: client_data[client]["compressed_grad"],
-                                       lambda: tf.nest.map_structure(lambda x, y: x + y, client_grads,
-                                                                     client_data[client]["compressed_grad"]))
-            # Average Gradients
-            client_grads = tf.nest.map_structure(lambda x: x / len(client_data.keys()), client_grads)
-        return client_grads
+            return {
+                "compressed_grads": grads,
+                "decompress_info": None,
+                "needs_decompress": False
+            }
+
+    def decompress(self, compressed_data: dict, variables):
+        if "client_1" in compressed_data.keys():
+            print("FL")
+            # Federated Learning, every entry is compressed data by client.
+            if self.compression is not None:
+                for client in range(1, len(compressed_data) + 1):
+                    client = "client_" + str(client)
+                    client_grads = tf.cond(tf.equal(client, "client_1"),
+                                           lambda: self.compression.decompress(compressed_data[client], variables),
+                                           lambda: tf.nest.map_structure(lambda x, y: x + y, client_grads,
+                                                                         self.compression.decompress(
+                                                                             compressed_data[client], variables)))
+                # Average Gradients
+                client_grads = tf.nest.map_structure(lambda x: x / len(compressed_data.keys()), client_grads)
+                return client_grads
+            elif self.optimizer_name != "sgd":
+                decompressed_grads = self.optimizer.decompress(compressed_data, variables)
+                return decompressed_grads
+            else:
+                for client in range(1, len(compressed_data) + 1):
+                    client = "client_" + str(client)
+                    client_grads = tf.cond(tf.equal(client, "client_1"),
+                                           lambda: compressed_data[client]["compressed_grads"],
+                                           lambda: tf.nest.map_structure(lambda x, y: x + y, client_grads,
+                                                                         compressed_data[client]["compressed_grads"]))
+                # Average Gradients
+                client_grads = tf.nest.map_structure(lambda x: x / len(compressed_data.keys()), client_grads)
+                return client_grads
+        else:
+            if self.compression is not None:
+                decompressed_grads = self.compression.decompress(compressed_data, variables)
+                return decompressed_grads
+            elif self.optimizer_name != "sgd":
+                decompressed_grads = self.optimizer.decompress(compressed_data, variables)
+                return decompressed_grads
 
     def _resource_apply_dense(self, grad, var, apply_state=None):
-        if self.compression is not None:
-            grad = self.compression.compress(grad, var)
-
-        if self.optimizer_name == "sgd":
-            var_device, var_dtype = var.device, var.dtype.base_dtype
-            coefficients = (apply_state or {}).get(
-                (var_device, var_dtype)
-            ) or self._fallback_apply_state(var_device, var_dtype)
-
-            if self._momentum:
-                momentum_var = self.get_slot(var, "momentum")
-                return tf.raw_ops.ResourceApplyKerasMomentum(
-                    var=var.handle,
-                    accum=momentum_var.handle,
-                    lr=coefficients["lr_t"],
-                    grad=grad,
-                    momentum=coefficients["momentum"],
-                    use_locking=self._use_locking,
-                    use_nesterov=self.nesterov,
-                )
-            else:
-                return tf.raw_ops.ResourceApplyGradientDescent(
-                    var=var.handle,
-                    alpha=coefficients["lr_t"],
-                    delta=grad,
-                    use_locking=self._use_locking,
-                )
-        else:
-            self._apply_dense_other(grad, var, apply_state)
-
-    def _apply_dense_other(self, grad, var, apply_state=None):
         var_device, var_dtype = var.device, var.dtype.base_dtype
         coefficients = (apply_state or {}).get(
             (var_device, var_dtype)
         ) or self._fallback_apply_state(var_device, var_dtype)
-
-        delta = self.optimizer.update_step(grad, var, coefficients["lr_t"])
-
-        return tf.raw_ops.ResourceApplyGradientDescent(
-            var=var.handle,
-            alpha=tf.constant(1.0, dtype=tf.float32),
-            delta=delta,
-            use_locking=self._use_locking,
-        )
-
-    def _resource_apply_sparse_duplicate_indices(
-            self, grad, var, indices, **kwargs
-    ):
 
         if self._momentum:
-            return super()._resource_apply_sparse_duplicate_indices(
-                grad, var, indices, **kwargs
+            momentum_var = self.get_slot(var, "momentum")
+            return tf.raw_ops.ResourceApplyKerasMomentum(
+                var=var.handle,
+                accum=momentum_var.handle,
+                lr=coefficients["lr_t"],
+                grad=grad,
+                momentum=coefficients["momentum"],
+                use_locking=self._use_locking,
+                use_nesterov=self.nesterov,
             )
         else:
-            var_device, var_dtype = var.device, var.dtype.base_dtype
-            coefficients = kwargs.get("apply_state", {}).get(
-                (var_device, var_dtype)
-            ) or self._fallback_apply_state(var_device, var_dtype)
-
-            return tf.raw_ops.ResourceScatterAdd(
-                resource=var.handle,
-                indices=indices,
-                updates=-grad * coefficients["lr_t"],
+            return tf.raw_ops.ResourceApplyGradientDescent(
+                var=var.handle,
+                alpha=coefficients["lr_t"],
+                delta=grad,
+                use_locking=self._use_locking,
             )
-
-    def _resource_apply_sparse(self, grad, var, indices, apply_state=None):
-        # This method is only needed for momentum optimization.
-        var_device, var_dtype = var.device, var.dtype.base_dtype
-        coefficients = (apply_state or {}).get(
-            (var_device, var_dtype)
-        ) or self._fallback_apply_state(var_device, var_dtype)
-
-        momentum_var = self.get_slot(var, "momentum")
-        return tf.raw_ops.ResourceSparseApplyKerasMomentum(
-            var=var.handle,
-            accum=momentum_var.handle,
-            lr=coefficients["lr_t"],
-            grad=grad,
-            indices=indices,
-            momentum=coefficients["momentum"],
-            use_locking=self._use_locking,
-            use_nesterov=self.nesterov,
-        )
 
     def get_config(self):
         config = super().get_config()
@@ -254,35 +209,3 @@ class Strategy(optimizer_v2.OptimizerV2):
                 if key != 'optimizer' and key != 'compression' and key != 'learning_rate':
                     add_on += "_" + key + str(self.params[key])
             return "{}_{}{}".format(self.optimizer_name.upper(), self.compression.name, add_on)
-
-    # class Strategy:
-    #     def __init__(self, optimizer, compression=None):
-    #         self.optimizer = optimizer
-    #         self.compression = compression
-    #
-    #     def update_parameters(self, grads_and_vars: zip):
-    #         grads_and_vars = list(grads_and_vars)
-    #         gradient, variables = zip(*grads_and_vars)
-    #         gradient = list(gradient)
-    #
-    #         if self.compression is not None:
-    #             scope_name = "optimizer"
-    #             with tf.name_scope(scope_name):
-    #                 with tf.init_scope():
-    #                     # Lift variable creation to init scope to avoid environment
-    #                     # issues.
-    #                     self.compression.build(variables)
-    #         if self.compression is None:
-    #             self.optimizer.apply_gradients(zip(gradient, variables))
-    #         else:
-    #             gradient_compressed = []
-    #             for i, grad in enumerate(gradient):
-    #                 if False:  # huffman
-    #                     enc, huf, shape = self.compression.compress(grad, variables[i])
-    #                     dec_huf = decode_huffman(enc, huf)
-    #                     dec = decode_rle(dec_huf)
-    #                     gradient_compressed.append(tf.reshape(dec, shape))
-    #                 else:
-    #                     gradient_compressed.append(self.compression.compress(grad, variables[i]))
-    #
-    #             self.optimizer.apply_gradients(zip(gradient_compressed, variables))

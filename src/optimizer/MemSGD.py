@@ -30,28 +30,49 @@ class MemSGD(Optimizer):
         if hasattr(self, "_built") and self._built:
             return
 
-        if clients == 1:
-            # Local Setup
-            self.memory = []
-
-            for var in var_list:
-                self.memory.append(
-                    self.add_variable_from_reference(
-                        model_variable=var, variable_name="m", initial_value=tf.zeros(shape=var.shape)
-                    )
-                )
-        else:
-            self.memory = {}
-            # Federated Setup
-            for client_id in range(1, clients + 1):
-                self.memory[str(client_id)] = []
-                for var in var_list:
-                    self.memory[str(client_id)].append(
-                        self.add_variable_from_reference(
-                            model_variable=var, variable_name="m", initial_value=tf.zeros(shape=var.shape)
-                        )
-                    )
+        self.memory = {}
+        for client_id in range(1, clients + 1):
+            self.memory[str(client_id)] = tf.Variable(tf.zeros(shape=tf.reduce_sum([tf.size(var) for var in var_list])))
         self._built = True
+
+    def compress(self, grads: list[Tensor], variables, client_id, lr):
+        flattened_grads = [tf.reshape(grad, [-1]) for grad in grads]
+        gradient = tf.concat(flattened_grads, axis=0)
+
+        m = self.memory[str(client_id)]
+
+        if self.top_k is None:
+            sparse_gradient = self.rand_k_sparsification(input_tensor=m + lr * gradient,
+                                                         k=self.rand_k)
+        else:
+            sparse_gradient = self.top_k_sparsification(input_tensor=m + lr * gradient,
+                                                        k=self.top_k)
+
+        self.memory[str(client_id)].assign(m + lr * gradient - sparse_gradient)
+
+        if variables[0].ref() not in self.cr:
+            self.cr[variables[0].ref()] = gradient.dtype.size * 8 * np.prod(
+                gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
+                sparse_gradient)
+            self.compression_rates.append(self.cr[variables[0].ref()])
+            self.compression_rates = [np.mean(self.compression_rates)]
+
+            print("CR:", np.mean(self.compression_rates))
+
+        compressed_grads = []
+        start = 0
+        for var in variables:
+            size = tf.reduce_prod(var.shape).numpy()
+            segment = tf.Variable(sparse_gradient[start: start + size])
+            # Divided by lr because lr will be multiplied again later in keras process
+            compressed_grads.append(tf.reshape(segment, var.shape) / lr)
+            start += size
+
+        return {
+            "compressed_grads": compressed_grads,
+            "decompress_info": None,
+            "needs_decompress": False
+        }
 
     def update_step(self, gradient: Tensor, variable, lr) -> Tensor:
         self.lr = lr

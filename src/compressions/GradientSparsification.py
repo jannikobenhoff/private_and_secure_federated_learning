@@ -24,15 +24,15 @@ class GradientSparsification(Compression):
             return
         self._built = True
 
-    def compress(self, gradient: Tensor, variable) -> Tensor:
+    def compress(self, grads: list[Tensor], variables):
         """
         Q(g) = [Z1 * g1/p1, ...]
         Z1: selector
         g1: gradient
         p1: probability calculated with greedy alg.
         """
-        input_shape = gradient.shape
-        gradient = tf.reshape(gradient, [-1])
+        flattened_grads = [tf.reshape(grad, [-1]) for grad in grads]
+        gradient = tf.concat(flattened_grads, axis=0)
 
         probabilities = self.greedy_algorithm(input_tensor=gradient, max_iter=self.max_iter, kappa=self.k)
 
@@ -42,18 +42,28 @@ class GradientSparsification(Compression):
         gradient_spars = tf.multiply(selectors, gradient) / probabilities
         gradient_spars = tf.where(tf.math.is_nan(gradient_spars), 0., gradient_spars)
 
-        if variable.ref() not in self.cr:
-            self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(
+        if variables[0].ref() not in self.cr:
+            self.cr[variables[0].ref()] = gradient.dtype.size * 8 * np.prod(
                 gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
                 gradient_spars)
-            self.compression_rates.append(self.cr[variable.ref()])
+            self.compression_rates.append(self.cr[variables[0].ref()])
             self.compression_rates = [np.mean(self.compression_rates)]
 
-            # print(np.mean(self.compression_rates))
+            print("CR:", np.mean(self.compression_rates))
 
-        gradient_spars = tf.reshape(gradient_spars, input_shape)
+        compressed_grads = []
+        start = 0
+        for var in variables:
+            size = tf.reduce_prod(var.shape).numpy()
+            segment = tf.Variable(gradient_spars[start: start + size])
+            compressed_grads.append(tf.reshape(segment, var.shape))
+            start += size
 
-        return gradient_spars
+        return {
+            "compressed_grads": compressed_grads,
+            "decompress_info": None,
+            "needs_decompress": False
+        }
 
     @staticmethod
     def greedy_algorithm(input_tensor: Tensor, kappa: float, max_iter: int) -> Tensor:

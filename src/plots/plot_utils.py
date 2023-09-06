@@ -27,10 +27,10 @@ names = {
 }
 
 colors = {
-    "SGD": 'r',
+    "SGD": 'b',
     "BucketSGD": 'g', "vqSGD": "#32CD32", "Top-K": 'y',
     "EF-SignSGD": 'm', "FetchSGD": 'c', "Atomic Sparsification": 'grey', "Sparsified SGD with Memory": 'orange',
-    "Natural Compression": 'pink', "Gradient Sparsification": "#D2691E", "1-Bit SGD": 'b', "TernGrad": "#FFD700",
+    "Natural Compression": 'pink', "Gradient Sparsification": "#D2691E", "1-Bit SGD": 'r', "TernGrad": "#FFD700",
     "Sparse Gradient": "#a6bddb"
 }
 

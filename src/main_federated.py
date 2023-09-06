@@ -2,18 +2,17 @@ import json
 from datetime import datetime
 import os
 
-from optimizer.FetchSGD import FetchSGD
+import keras
+from keras.losses import SparseCategoricalCrossentropy
+from keras.metrics import SparseCategoricalAccuracy
+
 from main_local import strategy_factory, model_factory
 from utilities.federator import *
 from utilities.parameters import get_parameters_federated
-from models.LeNet import LeNet
-from compressions.bSGD import bSGD
-from models.ResNet import ResNet
+
 from utilities.datasets import load_dataset
 from utilities.client_data import client_datasets, stratified_sampling, label_splitter, plot_client_distribution, \
     client_datasets_cifar
-from utilities import Strategy
-from compressions.TernGrad import TernGrad
 
 # initialize GPU usage
 # Restrict TensorFlow to only allocate 2GB of memory on GPUs
@@ -39,14 +38,25 @@ def fed_worker(args):
 
     img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset(args.dataset,
                                                                                           fullset=args.fullset)
+
+    # Initialize Strategy (Optimizer / Compression)
     strategy_params = json.loads(args.strategy)
     strategy = strategy_factory(**strategy_params)
     strategy.summary()
+    print(strategy_params)
 
-    lambda_l2 = 0.0015
+    # Initialize Model and build if needed
+    lambda_l2 = 0.0015  # TODO lambda
     model_client = model_factory(args.model.lower(), lambda_l2, input_shape, num_classes)
 
-    print(strategy_params)
+    if args.dataset == "cifar10":
+        model_client.build(input_shape=(None, 32, 32, 3))
+
+    model_client.compile(optimizer=strategy,
+                         loss='sparse_categorical_crossentropy',
+                         metrics=['accuracy'])
+
+    model_client.summary()
 
     start_time = time.time()
     # VARIABLES
@@ -54,8 +64,6 @@ def fed_worker(args):
     number_clients = args.number_clients
     inactive_prob = 0
     batch_size = args.batch_size
-    early_stopping = args.es
-    early_stopping_rate = args.es_rate
     varying_local_iteration = args.varying_local_iter
     # set random seed
     np.random.seed(args.rs)
@@ -92,12 +100,10 @@ def fed_worker(args):
         print('Not defined local iteration type!')
 
     learning_rate = args.learning_rate
-    num_sample = 100
-    split_type = args.split_type
 
     loss_func = SparseCategoricalCrossentropy()
     acc_func = SparseCategoricalAccuracy()
-    loss_metric = keras.metrics.SparseCategoricalCrossentropy()
+    loss_metric = tf.keras.metrics.Mean()
 
     (split_data, split_labels) = label_splitter(img_train, label_train)
 
@@ -105,12 +111,6 @@ def fed_worker(args):
     val_sample_per_class = 100
     (validation_images, validation_labels) = stratified_sampling(num_sample_per_class=val_sample_per_class,
                                                                  list_data=split_data, list_labels=split_labels)
-
-    (client_data, client_labels) = client_datasets_cifar(number_clients, img_train, label_train, num_classes,
-                                                         shuffle=True)
-
-    # (client_data, client_labels) = client_datasets(number_clients=number_clients, split_type="random",
-    #                                                list_data=split_data, list_labels=split_labels, beta=0.05)
 
     # Plot Client Class Distribution
     # plot_client_distribution(number_clients, client_labels)
@@ -126,6 +126,7 @@ def fed_worker(args):
     # Given the client_datasets_cifar function and the above count_labels_per_client function
     (client_data, client_labels) = client_datasets_cifar(number_clients, img_train, label_train, num_classes,
                                                          shuffle=True)
+
     label_counts = count_labels_per_client(client_labels, num_classes)
 
     # Print the counts for each client
@@ -137,17 +138,9 @@ def fed_worker(args):
     # Federated Learning
     active_client_matrix = active_client(prob=inactive_prob, max_iter=max_iter, number_clients=number_clients)
 
-    if args.dataset == "cifar10":
-        model_client.build(input_shape=(None, 32, 32, 3))
-
-    model_client.compile(optimizer=strategy,
-                         loss='sparse_categorical_crossentropy',
-                         metrics=['accuracy'])
-
-    model_client.summary()
-
     time_create_model = time.time() - start_time - time_pre
 
+    # Start FL
     model_federated, test_loss, test_acc, compression_rates, time_per_iteration = federator(
         active_clients=active_client_matrix,
         learning_rate=learning_rate,
@@ -162,16 +155,14 @@ def fed_worker(args):
         val_label=validation_labels,
         loss_func=loss_func, acc_func=acc_func,
         optimizer=strategy,
-        loss_metric=loss_metric,
-        num_sample=num_sample, num_class=num_classes,
-        early_stopping=early_stopping,
-        es_rate=early_stopping_rate,
+        loss_metric=loss_metric, num_class=num_classes,
         varying_local_iter=varying_local_iteration,
         folder_name="folder_name",
         local_iter_type=local_iter_type)
 
     time_federator = time.time() - time_pre - time_create_model - start_time
 
+    # Save FL metrics
     fed_metrics = {
         "test_loss": str(test_loss),
         "test_acc": str(test_acc),

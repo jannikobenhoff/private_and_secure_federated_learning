@@ -24,49 +24,8 @@ class Atomo(Compression):
             return
         self._built = True
 
-    def compress(self, gradient: Tensor, variable) -> Tensor:
-        input_shape = gradient.shape
-
-        if gradient.ndim != 2:
-            gradient_ndim2 = self._resize_to_2d(gradient)
-        else:
-            gradient_ndim2 = gradient
-
-        s, u, vT = tf.linalg.svd(gradient_ndim2, full_matrices=False)
-        vT = tf.transpose(vT).numpy()
-        s = s.numpy()
-        u = u.numpy()
-
-        if self.random_sample:
-            i, probs = self._sample_svd(s, rank=self.svd_rank)
-            u = u[:, i]
-            s = s[i] / probs
-            vT = vT[i, :]
-        elif self.svd_rank > 0:
-            u = u[:, :self.svd_rank]
-            s = s[:self.svd_rank]
-            vT = vT[:self.svd_rank, :]
-
-        if variable.ref() not in self.cr:
-            grad_type = gradient.dtype.size
-            bit_size = (np.prod(
-                u.shape) + np.prod(
-                s.shape) + np.prod(
-                vT.shape)) * grad_type * 8
-
-            self.cr[variable.ref()] = grad_type * 8 * np.prod(
-                gradient.shape.as_list()) / bit_size
-
-            self.compression_rates.append(self.cr[variable.ref()])
-            self.compression_rates = [np.mean(self.compression_rates)]
-            print(np.mean(self.compression_rates))
-
-        decoded = tf.convert_to_tensor(np.dot(np.dot(u, np.diag(s)), vT))
-        decoded = tf.reshape(decoded, input_shape)
-        return tf.cast(decoded, dtype=gradient.dtype)
-
-    def federated_compress(self, gradients: list[Tensor], variables: list[Tensor], client_id: int):
-        compressed_gradients = []
+    def compress(self, gradients: list[Tensor], variables: list[Tensor], client_id: int = 1):
+        compressed_grads = []
         for idx, gradient in enumerate(gradients):
             if gradient.ndim != 2:
                 gradient_ndim2 = self._resize_to_2d(gradient)
@@ -102,28 +61,29 @@ class Atomo(Compression):
                 self.compression_rates = [np.mean(self.compression_rates)]
                 print(np.mean(self.compression_rates))
 
-            compressed_gradients.append({
+            compressed_grads.append({
                 "u": u,
                 "s": s,
                 "vT": vT
             })
         return {
-            "compressed_grad": compressed_gradients,
-            "decompression_info": None
+            "compressed_grad": compressed_grads,
+            "decompression_info": None,
+            "needs_decompress": True
         }
 
-    def federated_decompress(self, info, variables):
-        decompressed_gradients = []
-        for i, _ in enumerate(info["compressed_grad"]):
-            s = info["compressed_grad"][i]["s"]
-            u = info["compressed_grad"][i]["u"]
-            vT = info["compressed_grad"][i]["vT"]
+    def decompress(self, compressed_data, variables):
+        decompressed_grads = []
+        for i, _ in enumerate(compressed_data["compressed_grad"]):
+            s = compressed_data["compressed_grad"][i]["s"]
+            u = compressed_data["compressed_grad"][i]["u"]
+            vT = compressed_data["compressed_grad"][i]["vT"]
             decoded = tf.convert_to_tensor(np.dot(np.dot(u, np.diag(s)), vT))
             decoded = tf.reshape(decoded, variables[i].shape)
             decoded = tf.cast(decoded, dtype=variables[i].dtype)
-            decompressed_gradients.append(decoded)
+            decompressed_grads.append(decoded)
 
-        return decompressed_gradients
+        return decompressed_grads
 
     def _sample_svd(self, s, rank=0):
         if s[0] < 1e-6:
@@ -156,8 +116,6 @@ class Atomo(Compression):
         if x.ndim == 1:
             n = shape[0]
             return tf.reshape(x, (n // 2, 2))
-        # print([s == 1 for s in shape[2:]])
-        # print(shape[2:], shape.numpy())
         if tf.reduce_all([s == 1 for s in shape[2:]]):
             return tf.reshape(x, (shape[0], shape[1]))
         x = tf.reshape(x, (shape[0], shape[1], -1))
