@@ -316,16 +316,32 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 
         sorted_data = sorted(cr_acc_pairs, key=lambda x: x[0], reverse=True)
 
-        axes[0].plot(np.arange(1, len(best_param_metrics["test_acc"]) + 1, 1),
-                     best_param_metrics["test_acc"], markersize=4, label=label_name, color=c)
+        x_values = np.arange(1, len(best_param_metrics["test_acc"]) + 1, 1)
+        y_values = list(moving_average(best_param_metrics["test_acc"], WINDOW_SIZE))
+        deviations = np.array(best_param_metrics["test_acc"]) - np.array(y_values)
+
+        # Compute the upper and lower bounds
+        upper_bound = y_values + deviations
+        lower_bound = y_values - deviations
+
+        # Plot the fill between
+        axes[0].fill_between(x_values, lower_bound, upper_bound, color=c, alpha=0.3)
+        axes[0].plot(x_values, y_values, markersize=4, label=label_name, color=c)
 
         axes[1].plot([x[0] for x in sorted_data], [x[1] for x in sorted_data], marker=m, label=label_name, color=c,
                      markersize=4)
 
-        axes[2].plot(np.arange(1, len(best_param_metrics["test_loss"]) + 1, 1),
-                     best_param_metrics["test_loss"],
-                     markersize=4, label=label_name,  # marker=m,
-                     color=c)
+        x_values = np.arange(1, len(best_param_metrics["test_loss"]) + 1, 1)
+        y_values = list(moving_average(best_param_metrics["test_loss"], WINDOW_SIZE))
+        deviations = np.array(best_param_metrics["test_loss"]) - np.array(y_values)
+
+        # Compute the upper and lower bounds
+        upper_bound = y_values + deviations
+        lower_bound = y_values - deviations
+
+        # Plot the fill between
+        axes[2].fill_between(x_values, lower_bound, upper_bound, color=c, alpha=0.3)
+        axes[2].plot(x_values, y_values, markersize=4, label=label_name, color=c)
 
     axes[0].grid(alpha=0.2)
     axes[0].set_title("Test Accuracy", fontsize=10, fontweight='bold')
@@ -378,8 +394,9 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 
 
 if __name__ == "__main__":
+    WINDOW_SIZE = 3
     # plot_compression_metrics("efsignsgd", "vggnew")
 
-    plot_compare_all("figs", True)
+    plot_compare_all("vgg", True)
 
     # plot_compression_rates()

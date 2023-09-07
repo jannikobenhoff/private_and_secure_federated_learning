@@ -70,7 +70,6 @@ class vqSGD(Compression):
         if variables[0].ref() not in self.cr:
             self.cr[variables[0].ref()] = d / (self.s * np.log2(2 * d))
             self.compression_rates.append(self.cr[variables[0].ref()])
-            print("CR:", np.mean(self.compression_rates))
 
         return {
             "compressed_grads": indices,

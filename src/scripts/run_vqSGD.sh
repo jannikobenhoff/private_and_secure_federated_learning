@@ -14,8 +14,7 @@ base_strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.0
 base_strategy_resnet='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.1, "repetition": K_VALUE}'
 base_strategy_vgg11='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.05, "repetition": K_VALUE}'
 
-#repetitions=(1500 200 500 200)
-repetitions=(500)
+repetitions=(250) # 500 1000 1500)
 repetitions_vgg11=(30000)
 repetitions_resnet=(20000 50000)
 

@@ -117,12 +117,12 @@ def plot_avg_times(parent_folders, bsgd: bool):
 
 
 def plot_total_run_time():
-    directory_path = '../results/compression/'
+    directory_path = '../results/'
     all_files = get_all_files_in_directory(directory_path)
     total_time = 0
 
     for file_path in all_files:
-        if "DS" in file_path:
+        if "DS" in file_path or ".pkl" in file_path:
             continue
         file = open(file_path, "r")
         file = json.load(file)
@@ -133,6 +133,6 @@ def plot_total_run_time():
 
 
 if __name__ == "__main__":
-    plot_avg_times(["baseline_resnet"], True)
+    # plot_avg_times(["baseline_resnet"], True)
 
-    # plot_total_run_time()
+    plot_total_run_time()

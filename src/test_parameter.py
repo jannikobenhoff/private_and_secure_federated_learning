@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from pprint import pprint
 
+import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -77,9 +78,24 @@ if __name__ == "__main__":
 
     # 1000 975
 
-    f = open("res_param.json", "r")
-    f = json.load(f)
-    f["res"] = ast.literal_eval(f["res"])
+    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("mnist", fullset=1)
 
-    for b in f["res"]:
-        print(b[0], b[1], np.mean(b[2]["val_accuracy"]))
+    fig, axes = plt.subplots(nrows=3, ncols=3)
+
+    axes = axes.flatten()
+
+    for ax in axes:
+        index = np.random.randint(len(img_train))
+        ax.imshow(img_train[index], cmap='gray')
+        # ax.set_title(f"Label: {label_train[index]}")
+        ax.axis('off')
+
+    plt.tight_layout()
+    plt.savefig("mnist.pdf")
+
+    # f = open("res_param.json", "r")
+    # f = json.load(f)
+    # f["res"] = ast.literal_eval(f["res"])
+    #
+    # for b in f["res"]:
+    #     print(b[0], b[1], np.mean(b[2]["val_accuracy"]))

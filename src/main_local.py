@@ -135,9 +135,9 @@ def train_step(data, label, model, loss_func):
         logits = model(data, training=True)
         loss_value = loss_func(label, logits)
         # Add L2 regularization losses
-        loss_value += tf.reduce_sum(model.losses)
+        total_loss = loss_value + tf.reduce_sum(model.losses)
 
-    grads = tape.gradient(loss_value, model.trainable_variables)
+    grads = tape.gradient(total_loss, model.trainable_variables)
     return grads, loss_value
 
 
@@ -164,10 +164,10 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
     strategy = strategy_factory(**strategy_params)
     strategy.summary()
 
-    BATCH_SIZE = 32
+    BATCH_SIZE = 64
     initial_lr = strategy_params["learning_rate"]
-    drop_factor = 0.5
-    drop_epochs = [1, 25, 37]
+    drop_factor = 0.1
+    drop_epochs = [25]
     min_lr = initial_lr * 0.1 * 0.1
 
     if args.dataset == "cifar10" and args.model.lower() == "resnet18":
@@ -223,7 +223,8 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
             epoch_accuracy.update_state(label, model(data, training=False))
             # Update progress bar
             progress_bar.set_postfix({"Training loss": f"{epoch_loss_avg.result().numpy():.4f}",
-                                      "Training accuracy": f"{epoch_accuracy.result().numpy():.4f}"})
+                                      "Training accuracy": f"{epoch_accuracy.result().numpy():.4f}",
+                                      "Compression ratio": f"{np.mean(optimizer.compression_rates()):.2f}"})
 
         # End of epoch
         time_history.append(time.time() - epoch_start_time)
@@ -339,7 +340,7 @@ def worker(args):
                 validation_losses_per_epoch[k_step].append(history['val_loss'])
                 train_metrics_list[0] = train_metrics
                 all_scores.append(np.max(history['val_accuracy']))
-                # all_scores.append(np.mean(history.history['val_loss']))
+                # all_scores.append(np.min(history['val_loss']))
 
             print("Mean val accuracy:", np.mean(all_scores),
                   "Time taken: {:.2f}".format(time.time() - search_step_start_time))
@@ -350,6 +351,7 @@ def worker(args):
             val_loss.append(validation_losses_per_epoch)
 
             return -np.mean(all_scores)
+            # return np.mean(all_scores)
 
         result = gp_minimize(objective, search_space, n_calls=args.n_calls,  # acq_func='EI',
                              # x0=[[1e-6], [1e-4], [1e-2]],

@@ -19,11 +19,11 @@ base_strategy_resnet='{"optimizer": "fetchsgd", "compression": "none", "learning
 base_strategy_vgg11='{"optimizer": "fetchsgd", "compression": "none", "learning_rate": 0.05, "c": C_VALUE, "r": 1,
                       "topk": K_VALUE, "momentum": 0.9}'
 
-counters=(10000) # 2000 5000)
+counters=(30000 10000 20000 ) # 2000 5000)
 counters_resnet=(5000 10000 100000)
 counters_vgg11=(500000)
 
-runs=1
+runs=5
 for ((i=1; i<=runs; i++))
 do
 case $mode in

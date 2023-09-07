@@ -49,7 +49,7 @@ class GradientSparsification(Compression):
             self.compression_rates.append(self.cr[variables[0].ref()])
             self.compression_rates = [np.mean(self.compression_rates)]
 
-            print("CR:", np.mean(self.compression_rates))
+            # print("CR:", np.mean(self.compression_rates))
 
         compressed_grads = []
         start = 0

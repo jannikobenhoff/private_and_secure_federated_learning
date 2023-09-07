@@ -27,9 +27,7 @@ class OneBitSGD(Compression):
         self.error = {}
         for client_id in range(1, clients + 1):
             for var in var_list:
-                self.error[var.name + str(client_id)] = self.add_variable_from_reference(
-                    model_variable=var, variable_name="error", initial_value=tf.zeros_like(var)
-                )
+                self.error[var.name + str(client_id)] = tf.Variable(tf.zeros_like(var), trainable=False)
 
         self.compression_rates.append(var_list[0].dtype.size * 8)
         """

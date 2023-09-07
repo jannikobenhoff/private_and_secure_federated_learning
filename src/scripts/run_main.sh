@@ -18,17 +18,6 @@ case $mode in
           --strategy="$compression_strategy"
         ;;
 
-#      python ../main_local.py --model LeNet --dataset mnist \
-#          --epochs=200 \
-#          --n_calls=10 \
-#          --k_fold=5 \
-#          --fullset=1 \
-#          --stop_patience=15 \
-#          --bayesian_search \
-#          --log=1 \
-#          --strategy="$compression_strategy"
-#        ;;
-
     "search_resnet18")
         python ../main_local.py --model ResNet18 --dataset cifar10 \
           --epochs=50 \

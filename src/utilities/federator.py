@@ -5,6 +5,7 @@ import numpy as np
 import time
 
 from keras.models import Model
+from tqdm import tqdm
 
 
 def active_client(prob: Fraction, max_iter: int, number_clients: int):
@@ -17,8 +18,10 @@ def train_step(data, label, model, loss_func):
     with tf.GradientTape() as tape:
         logits = model(data, training=True)
         loss_value = loss_func(label, logits)
+        # Add L2 regularization losses
+        total_loss = loss_value + tf.reduce_sum(model.losses)
 
-    grads = tape.gradient(loss_value, model.trainable_variables)
+    grads = tape.gradient(total_loss, model.trainable_variables)
     return grads, loss_value
 
 
@@ -68,12 +71,15 @@ def test_step(data, label, model, acc_func, loss_metric, loss_func):
 
 # @tf.function
 def local_train_loop(trainset, model, number_of_batches, local_iter, loss_func, optimizer, acc_func, loss_metric,
-                     batch_size, reminder_size, client_id, number_clients, learning_rate):
-    # local training
-    trainable_variables = model.trainable_variables
-    local_average_grads = [tf.zeros_like(var) for var in trainable_variables]
-    for _ in tf.range(local_iter):
+                     batch_size, reminder_size, client_id, number_clients, learning_rate, progress_bar,
+                     initial_weights):
+    epoch_loss_avg = tf.keras.metrics.Mean()
+    epoch_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
 
+    for _ in tf.range(local_iter):
+        # local training
+        trainable_variables = model.trainable_variables
+        local_average_grads = [tf.zeros_like(var) for var in trainable_variables]
         for batch, (data, label) in trainset.enumerate():
             grads, loss_value = train_step(data, label, model, loss_func)
             grads = tf.cond(tf.equal(batch, number_of_batches - 1),
@@ -82,8 +88,18 @@ def local_train_loop(trainset, model, number_of_batches, local_iter, loss_func, 
 
             local_average_grads = tf.nest.map_structure(lambda x, y: x + y, local_average_grads, grads)
 
-        local_average_grads = tf.nest.map_structure(lambda x: x / number_of_batches, local_average_grads)
+            # Mini-batch SGD
+            optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
+            epoch_loss_avg.update_state(loss_value)
+            epoch_accuracy.update_state(label, model(data, training=False))
+            # Update progress bar
+            progress_bar.set_postfix({"Client": client_id, "Training loss": f"{epoch_loss_avg.result().numpy():.4f}",
+                                      "Training accuracy": f"{epoch_accuracy.result().numpy():.4f}"})
+
+        local_average_grads = [a - b for a, b in zip(model.trainable_weights,
+                                                     initial_weights)]
+        # print(tf.reduce_sum([tf.reduce_sum(l) for l in local_average_grads]))
     # Gradient Compression
     compressed_data = optimizer.compress(local_average_grads, model.trainable_variables, client_id,
                                          number_clients)
@@ -102,11 +118,7 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
     # Initialize Federate Model and Optimizer
     model_federator = model
     federator_weights = model_federator.get_weights()
-
     optimizer.build(model_federator.trainable_variables, number_clients)
-
-    # client_weights = model_federator.get_weights()
-    # prev_grads = np.concatenate([(x - y).reshape(-1) for x, y in zip(client_weights, federator_weights)])
 
     test_loss = []
     test_acc = []
@@ -123,10 +135,14 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
         iter_start_time = time.time()
 
         # lr decay
-        # if num_iter == max_iter / 2:
-        #     learning_rate = learning_rate / 5
-
-        for k in range(number_clients):
+        # if num_iter in [15, 30]:
+        #     learning_rate = learning_rate * 0.2
+        #     optimizer.learning_rate = learning_rate
+        progress_bar_clients = tqdm(range(number_clients), desc=f"Iteration {num_iter + 1}/{max_iter}", unit="client",
+                                    ncols=150)
+        for k in progress_bar_clients:
+            progress_bar_clients.set_description(
+                f"Iteration {num_iter + 1}/{max_iter}, Client {k + 1}/{number_clients}")
 
             if varying_local_iter and k:
                 if local_iter_type == "exponential":
@@ -140,55 +156,35 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
             if active_clients[num_iter][k]:
                 active_client_number += 1
 
-                print('Client', k + 1)
-
                 # prepare the data, shuffle, divide into batches
                 data = train_data[k]
                 label = train_label[k]
                 train_dataset = tf.data.Dataset.from_tensor_slices((data, label))
-                train_dataset = train_dataset.shuffle(len(label), reshuffle_each_iteration=True)  # shuffle the order
+                train_dataset = train_dataset.shuffle(len(label), reshuffle_each_iteration=True)
                 train_dataset = train_dataset.batch(size_of_batch, drop_remainder=False)
                 train_dataset = train_dataset.prefetch(tf.data.AUTOTUNE)
                 number_of_batches = len(train_dataset)
                 reminder_size = len(label) % batch_size
 
-                # Reset Local Model
+                # Reset Local Model with weights from last global update
                 model_federator.set_weights(federator_weights)
+                initial_trainable_weights = [var.numpy() for var in model_federator.trainable_variables]
 
                 # Local Training Loop
                 compressed_data = local_train_loop(
                     train_dataset, model_federator, number_of_batches, local_iter[k], loss_func, optimizer, acc_func,
-                    loss_metric, batch_size, reminder_size, active_client_number, number_clients, learning_rate)
-
-                # Add client weight to all client weights
-                # client_weights = tf.cond(tf.equal(active_client_number, 1), lambda: model_federator.get_weights(),
-                #                          lambda: tf.nest.map_structure(lambda x, y: x + y, client_weights,
-                #                                                        model_federator.get_weights()))
+                    loss_metric, batch_size, reminder_size, active_client_number, number_clients, learning_rate,
+                    progress_bar_clients, initial_trainable_weights)
 
                 client_data["client_" + str(active_client_number)] = compressed_data
 
-        # Average client weights and metrics
-        # client_weights = tf.nest.map_structure(lambda x: x / active_client_number, client_weights)
-
         # Taking gradients, setting new weights, measuring validation accuracy after each epoch
         if active_client_number >= (number_clients * (0.75)):
-            client_grads = optimizer.decompress(client_data, federator_weights)
+            client_grads = optimizer.decompress(client_data, model_federator.trainable_variables)
 
             # Update federator weights with averaged client weights
-            weight_index = 0
-            grad_index = 0
-
-            while weight_index < len(federator_weights) and grad_index < len(client_grads):
-                if federator_weights[weight_index].shape == client_grads[grad_index].shape:
-                    federator_weights[weight_index] -= client_grads[grad_index] * optimizer.learning_rate
-                    weight_index += 1
-                    grad_index += 1
-                else:
-                    # If shapes don't match, try the next weight with the current gradient, happens with e.g.
-                    # VGG / ResNet, because of un-trainable layers/weights
-                    weight_index += 1
-
-            model_federator.set_weights(weights=federator_weights)
+            optimizer.apply_gradients(zip(client_grads, model_federator.trainable_variables))
+            federator_weights = model_federator.get_weights()
 
             val_loss_avg = tf.keras.metrics.Mean()
             val_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
@@ -213,18 +209,12 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
                 test_loss_avg.update_state(test_loss_value)
                 test_accuracy.update_state(label, logits)
 
-            # test_loss_value, test_acc_value = test_step(test_data, test_label, model_federator, acc_func, loss_metric,
-            #                                             loss_func)
             test_acc.append(test_accuracy.result().numpy())
             test_loss.append(test_loss_avg.result().numpy())
             time_per_iteration.append(time.time() - iter_start_time)
 
-            print("Validation accuracy:", val_accuracy.result().numpy())
-            print("Validation loss:", val_loss_avg.result().numpy())
-            print("Test accuracy:", test_acc[-1])
-            print("Test loss:", test_loss[-1])
-            print("LR:", learning_rate)
-            print("Time taken: ", time.time() - iter_start_time)
+            print("  Test Accuracy:", f"{test_acc[-1]: .4f} | Test loss:", f"{test_loss[-1] : .4f}")
+            print("  Learning rate: ", learning_rate, " | Time taken: ", f"{time.time() - iter_start_time: .1f}s\n")
         else:
             print('Epoch ', num_iter + 1, ' is ignored')
 

@@ -6,7 +6,7 @@ import keras
 from keras.losses import SparseCategoricalCrossentropy
 from keras.metrics import SparseCategoricalAccuracy
 
-from main_local import strategy_factory, model_factory
+from main_local import strategy_factory, model_factory, get_l2_lambda
 from utilities.federator import *
 from utilities.parameters import get_parameters_federated
 
@@ -46,7 +46,13 @@ def fed_worker(args):
     print(strategy_params)
 
     # Initialize Model and build if needed
-    lambda_l2 = 0.0015  # TODO lambda
+    if True:  # args.train_on_baseline == 1:
+        lambda_l2 = get_l2_lambda(args, **{"optimizer": "sgd", "compression": "none"})
+    else:
+        lambda_l2 = None
+
+    args.lambda_l2 = lambda_l2
+    print("Using L2 lambda:", lambda_l2)
     model_client = model_factory(args.model.lower(), lambda_l2, input_shape, num_classes)
 
     if args.dataset == "cifar10":

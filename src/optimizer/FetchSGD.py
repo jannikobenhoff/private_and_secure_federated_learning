@@ -61,7 +61,6 @@ class FetchSGD(Optimizer):
         if variables[0].ref() not in self.cr:
             self.cr[variables[0].ref()] = d / (self.c * self.r)
             self.compression_rates.append(self.cr[variables[0].ref()])
-            print("CR:", np.mean(self.compression_rates))
 
         flattened_grads = [tf.reshape(grad, [-1]) for grad in grads]
         concatenated_grads = tf.concat(flattened_grads, axis=0)

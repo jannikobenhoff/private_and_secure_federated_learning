@@ -59,7 +59,6 @@ class Atomo(Compression):
 
                 self.compression_rates.append(self.cr[variables[idx].ref()])
                 self.compression_rates = [np.mean(self.compression_rates)]
-                print(np.mean(self.compression_rates))
 
             compressed_grads.append({
                 "u": u,

@@ -57,27 +57,10 @@ def plot_compression_rates():
 
 
 def plot_compression_metrics(title: str, parent_folder: str):
-    plot_configs = {
-        "gradientsparsification": ["max_iter", "k"],
-        "fetchsgd": ["c"],
-        "sparsegradient": ["drop_rate"],
-        "vqsgd": ["repetition"],
-        "topk": ["k"],
-        "memsgd": ["top_k"],
-        "naturalcompression": [],
-        "efsignsgd": [],
-        "onebitsgd": [],
-        "bsgd": ["buckets", "sparse_buckets"],
-        "bsgd2": ["buckets", "sparse_buckets"],
-        "terngrad": [],
-        "atomo": ["svd_rank"],
-        "bucketsgd": ["buckets", "sparse_buckets"],
-        "bsgd": ["buckets", "sparse_buckets"],
-        "sgd": []
-    }
     directory_path = '../results/compression/' + parent_folder
     all_files = get_all_files_in_directory(directory_path)
     metrics = {}
+
     for file_path in all_files:
         if "DS" in file_path:
             continue
@@ -134,6 +117,8 @@ def plot_compression_metrics(title: str, parent_folder: str):
     axes = axes.flatten()
 
     table_data = []
+    cs = iter(["g", "r", "y", "purple", "orange", "pink"])
+
     for method in metrics:
         cr_acc_pairs = []
         for p in metrics[method]:
@@ -152,22 +137,33 @@ def plot_compression_metrics(title: str, parent_folder: str):
             else:
                 label_name = ', '.join(
                     f"{key}: {value}" for key, value in param.items() if
-                    value != "None")  # param[plot_configs[title][0]]
+                    value != "None")
 
             table_data.append(
                 [label_name, round(100 * met["max_val_acc"], 2), round(met["cr"], 1)])
-            m = markers[label_name]
-            c = colors[label_name]
 
-            WINDOW_SIZE = 5
+            if label_name.lower() == "sgd":
+                m = markers[label_name]
+                c = colors[label_name]
+            else:
+                m = markers[names[title.lower()]]
+                c = next(cs)  # colors[names[title.lower()]]
 
             axes[0].plot(np.arange(1, len(met["train_acc"]) + 1, 1), met["train_acc"],
                          markersize=4, color=c,  # marker=m,
                          label=label_name)
 
-            axes[1].plot(np.arange(1, len(met["val_acc"]) + 1, 1), list(moving_average(met["val_acc"], WINDOW_SIZE)),
-                         markersize=4, label=label_name,  # marker=m,
-                         color=c)
+            x_values = np.arange(1, len(met["val_acc"]) + 1, 1)
+            y_values = list(moving_average(met["val_acc"], WINDOW_SIZE))
+            deviations = np.array(met["val_acc"]) - np.array(y_values)
+
+            # Compute the upper and lower bounds
+            upper_bound = y_values + deviations
+            lower_bound = y_values - deviations
+
+            # Plot the fill between
+            axes[1].fill_between(x_values, lower_bound, upper_bound, color=c, alpha=0.15)
+            axes[1].plot(x_values, y_values, markersize=4, label=label_name, color=c)
 
             axes[2].plot(met["cr"], met["max_val_acc"], marker=m, label=label_name, color=c,
                          markersize=4)
@@ -175,9 +171,18 @@ def plot_compression_metrics(title: str, parent_folder: str):
             axes[3].plot(np.arange(1, len(met["train_loss"]) + 1, 1), met["train_loss"],
                          markersize=4, label=label_name,  # marker=m,
                          color=c)
-            axes[4].plot(np.arange(1, len(met["val_loss"]) + 1, 1), list(moving_average(met["val_loss"], WINDOW_SIZE)),
-                         markersize=4, label=label_name,  # marker=m,
-                         color=c)
+
+            x_values = np.arange(1, len(met["val_loss"]) + 1, 1)
+            y_values = list(moving_average(met["val_loss"], WINDOW_SIZE))
+            deviations = np.array(met["val_loss"]) - np.array(y_values)
+
+            # Compute the upper and lower bounds
+            upper_bound = y_values + deviations
+            lower_bound = y_values - deviations
+
+            # Plot the fill between
+            axes[4].fill_between(x_values, lower_bound, upper_bound, color=c, alpha=0.15)
+            axes[4].plot(x_values, y_values, markersize=4, label=label_name, color=c)
 
     axes[3].grid(alpha=0.2)
     axes[3].set_title("Training Loss", fontsize=10, fontweight='bold')
@@ -226,6 +231,7 @@ def plot_compression_metrics(title: str, parent_folder: str):
             cell._text.set_weight('bold')
         if col == 0 and row > 0:
             cell.set_fontsize(8)
+    table.auto_set_column_width(col=list(range(3)))
 
     plt.suptitle(names[title.lower()], fontsize=14, fontweight="bold")
     plt.tight_layout()
@@ -351,11 +357,9 @@ def plot_compare_all(parent_folder: str, bsgd: bool, epochs: int):
 
         sorted_data = sorted(cr_acc_pairs, key=lambda x: x[0], reverse=True)
 
-        WINDOW_SIZE = 2
-
         axes[0].plot(np.arange(1, min(len(best_param_metrics["train_acc"]) + 1, epochs + 1), 1),
                      best_param_metrics["train_acc"][:epochs],
-                     markersize=4, color=c,  # marker=m,
+                     markersize=4, color=c,
                      label=label_name)
 
         x_values = np.arange(1, min(len(best_param_metrics["val_acc"]) + 1, epochs + 1), 1)
@@ -367,7 +371,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool, epochs: int):
         lower_bound = y_values - deviations
 
         # Plot the fill between
-        # axes[1].fill_between(x_values, lower_bound[:epochs], upper_bound[:epochs], color=c, alpha=0.3)
+        axes[1].fill_between(x_values, lower_bound[:epochs], upper_bound[:epochs], color=c, alpha=0.3)
         axes[1].plot(x_values, y_values, markersize=4, label=label_name, color=c)
 
         axes[2].plot([x[0] for x in sorted_data], [x[1] for x in sorted_data], marker=m, label=label_name, color=c,
@@ -377,10 +381,18 @@ def plot_compare_all(parent_folder: str, bsgd: bool, epochs: int):
                      best_param_metrics["train_loss"][:epochs],
                      markersize=4, label=label_name,  # marker=m,
                      color=c)
-        axes[4].plot(np.arange(1, min(len(best_param_metrics["val_loss"]) + 1, epochs + 1), 1),
-                     list(moving_average(best_param_metrics["val_loss"], WINDOW_SIZE))[:epochs],
-                     markersize=4, label=label_name,  # marker=m,
-                     color=c)
+
+        x_values = np.arange(1, min(len(best_param_metrics["val_loss"]) + 1, epochs + 1), 1)
+        y_values = list(moving_average(best_param_metrics["val_loss"], WINDOW_SIZE))[:epochs]
+        deviations = np.array(best_param_metrics["val_loss"])[:epochs] - np.array(y_values)
+
+        # Compute the upper and lower bounds
+        upper_bound = y_values + deviations
+        lower_bound = y_values - deviations
+
+        # Plot the fill between
+        axes[4].fill_between(x_values, lower_bound[:epochs], upper_bound[:epochs], color=c, alpha=0.3)
+        axes[4].plot(x_values, y_values, markersize=4, label=label_name, color=c)
 
     axes[3].grid(alpha=0.2)
     axes[3].set_title("Training Loss", fontsize=10, fontweight='bold')
@@ -396,7 +408,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool, epochs: int):
     axes[2].set_title("Test Accuracy vs Overall Compression", fontsize=10, fontweight='bold')
     # axes[2].set_xlabel("Overall Compression", fontsize=8, fontweight='bold')
     # axes[2].set_ylabel("Test Accuracy", fontsize=8, fontweight='bold')
-    axes[2].legend(fontsize=7, bbox_to_anchor=(0.75, 0.7))
+    axes[2].legend(fontsize=7)  # , bbox_to_anchor=(0.75, 0.7))
     axes[2].set_xscale('log')
     axes[2].tick_params(axis='both', which='major', labelsize=8)
 
@@ -734,7 +746,7 @@ def plot_time_all(parent_folder: str, bsgd: bool):
     axes[2].set_title("Test Accuracy vs Overall Compression", fontsize=10, fontweight='bold')
     # axes[2].set_xlabel("Overall Compression", fontsize=8, fontweight='bold')
     # axes[2].set_ylabel("Test Accuracy", fontsize=8, fontweight='bold')
-    axes[2].legend(fontsize=7, bbox_to_anchor=(0.75, 0.7))
+    axes[2].legend(fontsize=7)  # , bbox_to_anchor=(0.75, 0.7))
     axes[2].set_xscale('log')
     axes[2].tick_params(axis='both', which='major', labelsize=8)
 
@@ -779,12 +791,14 @@ def plot_time_all(parent_folder: str, bsgd: bool):
 
 
 if __name__ == "__main__":
-    # plot_compression_metrics("efsignsgd", "vggnew")
+    WINDOW_SIZE = 3
 
-    plot_compare_all("baseline_lenet", True, 40)
+    # plot_compression_metrics("fetchsgd", "new_lenet")
+
+    plot_compare_all("new_lenet", True, 40)
 
     # plot_compression_rates()
 
     # plot_bit_all("baseline_resnet", True, 0.1)
 
-    # plot_time_all("baseline_resnet", True)
+    # plot_time_all("new", True)
