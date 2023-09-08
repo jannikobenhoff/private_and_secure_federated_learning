@@ -795,7 +795,7 @@ if __name__ == "__main__":
 
     # plot_compression_metrics("fetchsgd", "new_lenet")
 
-    plot_compare_all("new_lenet", True, 40)
+    plot_compare_all("baseline_lenet", True, 50)
 
     # plot_compression_rates()
 

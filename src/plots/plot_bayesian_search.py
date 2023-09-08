@@ -31,8 +31,8 @@ def plot_bayesian_search(folder: str, title: str):
 
         if "DS" in file:
             continue
-        if title not in (param["optimizer"] + " " +
-                         param["compression"]).replace(
+        if title not in file and title not in (param["optimizer"] + " " +
+                                               param["compression"]).replace(
             " none", ""):
             continue
 
@@ -78,4 +78,4 @@ def plot_bayesian_search(folder: str, title: str):
 
 
 if __name__ == "__main__":
-    plot_bayesian_search("new", "sgd")
+    plot_bayesian_search("new", "bayesian_result_SGD_lenet_09_08_07_39_52.pkl")

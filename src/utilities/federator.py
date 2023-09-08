@@ -5,6 +5,7 @@ import numpy as np
 import time
 
 from keras.models import Model
+from numpy.linalg import norm
 from tqdm import tqdm
 
 
@@ -23,22 +24,6 @@ def train_step(data, label, model, loss_func):
 
     grads = tape.gradient(total_loss, model.trainable_variables)
     return grads, loss_value
-
-
-@tf.function
-def test_step2(data, label, model, acc_func, loss_metric, loss_func):
-    logits = model(data, training=False)
-    loss_value = loss_func(label, logits)
-    # val_loss_avg.update_state(val_loss_value)
-    # val_accuracy.update_state(label, logits)
-
-    acc_func.update_state(label, logits)
-    acc = acc_func.result()
-    # loss = loss_metric.result()
-    # loss_metric.update_state(loss)
-    acc_func.reset_state()
-    # loss_metric.reset_state()
-    return loss_value, acc
 
 
 def evaluate_on_sampled_data(val_data, val_label, model_federator, acc_func, loss_metric, loss_func, num_class):
@@ -75,21 +60,18 @@ def local_train_loop(trainset, model, number_of_batches, local_iter, loss_func, 
                      initial_weights):
     epoch_loss_avg = tf.keras.metrics.Mean()
     epoch_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
-
-    for _ in tf.range(local_iter):
-        # local training
+    client_average_grads = [tf.zeros_like(var) for var in model.trainable_variables]
+    # local training
+    for _ in tf.range(local_iter):  # wie oft updates
         trainable_variables = model.trainable_variables
-        local_average_grads = [tf.zeros_like(var) for var in trainable_variables]
+        iter_avg_grads = [tf.zeros_like(var) for var in trainable_variables]
         for batch, (data, label) in trainset.enumerate():
             grads, loss_value = train_step(data, label, model, loss_func)
             grads = tf.cond(tf.equal(batch, number_of_batches - 1),
                             lambda: tf.nest.map_structure(lambda x: x / batch_size * reminder_size, grads),
                             lambda: grads)
 
-            local_average_grads = tf.nest.map_structure(lambda x, y: x + y, local_average_grads, grads)
-
-            # Mini-batch SGD
-            optimizer.apply_gradients(zip(grads, model.trainable_variables))
+            iter_avg_grads = tf.nest.map_structure(lambda x, y: x + y, iter_avg_grads, grads)
 
             epoch_loss_avg.update_state(loss_value)
             epoch_accuracy.update_state(label, model(data, training=False))
@@ -97,11 +79,17 @@ def local_train_loop(trainset, model, number_of_batches, local_iter, loss_func, 
             progress_bar.set_postfix({"Client": client_id, "Training loss": f"{epoch_loss_avg.result().numpy():.4f}",
                                       "Training accuracy": f"{epoch_accuracy.result().numpy():.4f}"})
 
-        local_average_grads = [a - b for a, b in zip(model.trainable_weights,
-                                                     initial_weights)]
-        # print(tf.reduce_sum([tf.reduce_sum(l) for l in local_average_grads]))
+        iter_avg_grads = tf.nest.map_structure(lambda x: x / number_of_batches, iter_avg_grads)
+        client_average_grads = tf.nest.map_structure(lambda x, y: x + y, client_average_grads, iter_avg_grads)
+        optimizer.apply_gradients(zip(iter_avg_grads, model.trainable_variables))
+
+    # Normalize iterations
+    if local_iter > 1:
+        client_average_grads = tf.nest.map_structure(lambda x: x / local_iter, client_average_grads)
+    # print(tf.reduce_sum([tf.reduce_sum(a) for a in client_average_grads]))
+
     # Gradient Compression
-    compressed_data = optimizer.compress(local_average_grads, model.trainable_variables, client_id,
+    compressed_data = optimizer.compress(client_average_grads, model.trainable_variables, client_id,
                                          number_clients)
     return compressed_data
 
@@ -123,11 +111,8 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
     test_loss = []
     test_acc = []
     time_per_iteration = []
+    print("Local iterations:", local_iter)
     for num_iter in range(max_iter):
-        if num_iter > 0:
-            print('Federated learning iteration: ', num_iter + 1, "/", max_iter)
-        else:
-            print('Federated learning iteration: ', num_iter + 1, "Max iteration:", max_iter)
         active_client_number = 0
 
         client_data = {}
@@ -177,6 +162,7 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
                     progress_bar_clients, initial_trainable_weights)
 
                 client_data["client_" + str(active_client_number)] = compressed_data
+                model_federator.set_weights(federator_weights)
 
         # Taking gradients, setting new weights, measuring validation accuracy after each epoch
         if active_client_number >= (number_clients * (0.75)):

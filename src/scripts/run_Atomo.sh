@@ -17,7 +17,7 @@ base_strategy_vgg11='{"optimizer": "sgd", "compression": "atomo", "learning_rate
 ranks=(1 3 6)
 #ranks=(6 6)
 
-runs=3
+runs=2
 for ((i=1; i<=runs; i++))
 do
     case $mode in

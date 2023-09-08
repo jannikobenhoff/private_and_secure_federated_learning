@@ -18,7 +18,7 @@ from skopt.space import Real
 from skopt.utils import use_named_args
 from tensorflow.python.keras.callbacks import EarlyStopping, ReduceLROnPlateau, LearningRateScheduler
 
-from models.LeNet import LeNet
+from models.LeNet import LeNet, LeNet5
 from models.ResNet import ResNet
 from models.MobileNet import MobileNet
 from models.DenseNet import DenseNet
@@ -46,6 +46,7 @@ def model_factory(model_name, lambda_l2, input_shape, num_classes):
     print(f"Initializing {model_name.upper()}")
     if model_name == "lenet":
         model = LeNet(input_shape=input_shape, num_classes=num_classes, l2_lambda=lambda_l2)
+        model = LeNet5(input_shape=input_shape, l2_lambda=lambda_l2)
         model.build(input_shape=input_shape)
         return model
     elif model_name == "resnet18":

@@ -397,6 +397,6 @@ if __name__ == "__main__":
     WINDOW_SIZE = 3
     # plot_compression_metrics("efsignsgd", "vggnew")
 
-    plot_compare_all("vgg", True)
+    plot_compare_all("a", True)
 
     # plot_compression_rates()

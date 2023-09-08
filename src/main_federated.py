@@ -11,8 +11,7 @@ from utilities.federator import *
 from utilities.parameters import get_parameters_federated
 
 from utilities.datasets import load_dataset
-from utilities.client_data import client_datasets, stratified_sampling, label_splitter, plot_client_distribution, \
-    client_datasets_cifar
+from utilities.client_data import client_datasets, stratified_sampling, label_splitter  # plot_client_distribution, \
 
 # initialize GPU usage
 # Restrict TensorFlow to only allocate 2GB of memory on GPUs
@@ -40,7 +39,9 @@ def fed_worker(args):
                                                                                           fullset=args.fullset)
 
     # Initialize Strategy (Optimizer / Compression)
+    learning_rate = args.learning_rate
     strategy_params = json.loads(args.strategy)
+    strategy_params["learning_rate"] = learning_rate
     strategy = strategy_factory(**strategy_params)
     strategy.summary()
     print(strategy_params)
@@ -50,6 +51,7 @@ def fed_worker(args):
         lambda_l2 = get_l2_lambda(args, **{"optimizer": "sgd", "compression": "none"})
     else:
         lambda_l2 = None
+    # lambda_l2 = None
 
     args.lambda_l2 = lambda_l2
     print("Using L2 lambda:", lambda_l2)
@@ -71,6 +73,8 @@ def fed_worker(args):
     inactive_prob = 0
     batch_size = args.batch_size
     varying_local_iteration = args.varying_local_iter
+    beta = args.beta
+    split_type = args.split_type
     # set random seed
     np.random.seed(args.rs)
 
@@ -105,8 +109,6 @@ def fed_worker(args):
     else:
         print('Not defined local iteration type!')
 
-    learning_rate = args.learning_rate
-
     loss_func = SparseCategoricalCrossentropy()
     acc_func = SparseCategoricalAccuracy()
     loss_metric = tf.keras.metrics.Mean()
@@ -130,8 +132,10 @@ def fed_worker(args):
         return label_counts_per_client
 
     # Given the client_datasets_cifar function and the above count_labels_per_client function
-    (client_data, client_labels) = client_datasets_cifar(number_clients, img_train, label_train, num_classes,
-                                                         shuffle=True)
+    # (client_data, client_labels) = client_datasets(number_clients, img_train, label_train, num_classes,
+    #                                                 shuffle=True)
+    (client_data, client_labels) = client_datasets(number_clients=number_clients, split_type=split_type,
+                                                   list_data=split_data, list_labels=split_labels, beta=beta)
 
     label_counts = count_labels_per_client(client_labels, num_classes)
 
@@ -145,7 +149,16 @@ def fed_worker(args):
     active_client_matrix = active_client(prob=inactive_prob, max_iter=max_iter, number_clients=number_clients)
 
     time_create_model = time.time() - start_time - time_pre
+    (split_data, split_labels) = label_splitter(img_train, label_train)
+    num_classes = len(split_labels)
 
+    # stratified sampling from training data
+    val_sample_per_class = 100
+    (validation_images, validation_labels) = stratified_sampling(num_sample_per_class=val_sample_per_class,
+                                                                 list_data=split_data, list_labels=split_labels)
+
+    (client_data, client_labels) = client_datasets(number_clients=number_clients, split_type=split_type,
+                                                   list_data=split_data, list_labels=split_labels, beta=beta)
     # Start FL
     model_federated, test_loss, test_acc, compression_rates, time_per_iteration = federator(
         active_clients=active_client_matrix,
@@ -179,6 +192,7 @@ def fed_worker(args):
             "create_model": time_create_model,
             "federator": time_federator
         },
+        "client_labels": str(label_counts),
         "time_per_iteration": time_per_iteration
     }
     print(

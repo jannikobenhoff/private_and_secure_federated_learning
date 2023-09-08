@@ -105,6 +105,7 @@ class Strategy(optimizer_v2.OptimizerV2):
             if not compressed_data["client_1"]["needs_decompress"]:
                 for client in range(1, len(compressed_data) + 1):
                     client = "client_" + str(client)
+
                     client_grads = tf.cond(tf.equal(client, "client_1"),
                                            lambda: compressed_data[client]["compressed_grads"],
                                            lambda: tf.nest.map_structure(lambda x, y: x + y, client_grads,

@@ -45,8 +45,10 @@ def get_parameters_federated():
                         help='Choose from same, uniform, gaussian, exponential and dirichlet(baseline to compare with when number of local iterations changes.).')
     parser.add_argument('--const_local_iter', type=int,
                         default=1)  # the number of local iterations when the number of local iterations is constant
-    parser.add_argument('--learning_rate', type=float, default=0.05)
+    parser.add_argument('--learning_rate', type=float, default=0.01)
     parser.add_argument('--varying_local_iter', action='store_true', default=False)
+    parser.add_argument('--beta', type=float, default=0.5)
+    parser.add_argument('--split_type', type=str, default='dirichlet', help='Choose from dirichlet, uniform')
 
     return parser.parse_args()
 
@@ -66,7 +68,7 @@ def get_parameters():
                         help='Choose from same, uniform, gaussian, exponential and dirichlet(baseline to compare with when number of local iterations changes.).')
     parser.add_argument('--const_local_iter', type=int,
                         default=1)  # the number of local iterations when the number of local iterations is constant
-    parser.add_argument('--learning_rate', type=float, default=0.05)
+    parser.add_argument('--learning_rate', type=float, default=0.01)
     parser.add_argument('--split_type', type=str, default='dirichlet', help='Choose from dirichlet, uniform')
     parser.add_argument('--beta_index', type=int, default=0)
     parser.add_argument('--beta', type=float, default=0.5)
