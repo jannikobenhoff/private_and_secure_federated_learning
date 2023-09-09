@@ -39,7 +39,17 @@ class SparseGradient(Compression):
         Remember residuals (dropped values) locally to add to next gradient
         before dropping again.
         """
-        flattened_grads = [tf.reshape(grad, [-1]) for grad in grads]
+        normalized_gradients = []
+        for grad, var in zip(grads, variables):
+            if grad is not None:
+                mean, variance = tf.nn.moments(grad, axes=[0])
+                normalized_grad = tf.nn.batch_normalization(
+                    grad, mean, variance, offset=None, scale=None, variance_epsilon=1e-5)
+                normalized_gradients.append(normalized_grad)
+            else:
+                normalized_gradients.append(grad)
+
+        flattened_grads = [tf.reshape(grad, [-1]) for grad in normalized_gradients]
         gradient = tf.concat(flattened_grads, axis=0)
 
         res = self.residuals[str(client_id)]

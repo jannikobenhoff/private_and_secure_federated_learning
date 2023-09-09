@@ -14,7 +14,7 @@ base_strategy='{"optimizer": "sgd", "compression": "terngrad", "learning_rate": 
 base_strategy_resnet='{"optimizer": "sgd", "compression": "terngrad", "learning_rate": 0.1, "clip": 2.5}'
 base_strategy_vgg11='{"optimizer": "sgd", "compression": "terngrad", "learning_rate": 0.05, "clip": 2.5}'
 
-runs=5
+runs=3
 for ((i=1; i<=runs; i++))
 do
     case $mode in

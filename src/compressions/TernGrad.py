@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow import Tensor
+import tensorflow_probability as tfp
 
 from .Compression import Compression
 
@@ -52,11 +53,13 @@ class TernGrad(Compression):
         if len(input_tensor.shape) == 1:
             abs_input = tf.abs(input_tensor)
             s_t = tf.reduce_max(abs_input, axis=0, keepdims=True)
-            b_t = tf.cast(abs_input / s_t >= 0.5, input_tensor.dtype)
+            b_t = tfp.distributions.Bernoulli(probs=tf.abs(input_tensor) / s_t, dtype=input_tensor.dtype).sample()
+            # b_t = tf.cast(abs_input / s_t >= 0.5, input_tensor.dtype)
             return tf.sign(input_tensor) * b_t, s_t
         abs_input = tf.abs(input_tensor)
         s_t = tf.reduce_max(abs_input, axis=1, keepdims=True)
-        b_t = tf.cast(abs_input / s_t >= 0.5, dtype=input_tensor.dtype)
+        b_t = tfp.distributions.Bernoulli(probs=tf.abs(input_tensor) / s_t, dtype=input_tensor.dtype).sample()
+        # b_t = tf.cast(abs_input / s_t >= 0.5, dtype=input_tensor.dtype)
 
         return tf.sign(input_tensor) * b_t, s_t
 
@@ -72,13 +75,14 @@ class TernGrad(Compression):
         if len(input_tensor.shape) == 1:
             abs_input = tf.abs(input_tensor)
             s_t = tf.reduce_max(abs_input, axis=0, keepdims=True)
-            b_t = tf.cast(abs_input / s_t >= 0.5, input_tensor.dtype)
-
+            b_t = tfp.distributions.Bernoulli(probs=tf.abs(input_tensor) / s_t, dtype=input_tensor.dtype).sample()
+            # b_t = tf.cast(abs_input / s_t >= 0.5, input_tensor.dtype)
             return s_t * tf.sign(input_tensor) * b_t
 
         abs_input = tf.abs(input_tensor)
         s_t = tf.reduce_max(abs_input, axis=1, keepdims=True)
-        b_t = tf.cast(abs_input / s_t >= 0.5, dtype=input_tensor.dtype)
+        b_t = tfp.distributions.Bernoulli(probs=tf.abs(input_tensor) / s_t, dtype=input_tensor.dtype).sample()
+        # b_t = tf.cast(abs_input / s_t >= 0.5, dtype=input_tensor.dtype)
         return s_t * tf.sign(input_tensor) * b_t
 
     @staticmethod

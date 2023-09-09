@@ -87,7 +87,7 @@ class FetchSGD(Optimizer):
 
         cs = CSVec(d=d, c=self.c, r=self.r, numBlocks=self.blocks)
         # self.error.assign_add(self.momentum)
-        self.error.assign(self.momentum)
+        self.error.assign_add(self.momentum)
 
         cs.accumulateTable(self.error.numpy())
 

@@ -47,7 +47,11 @@ class vqSGD(Compression):
         if l2 != 0:
             gradient = tf.divide(gradient, l2)
         else:
-            print("L2 ZERO")
+            return {
+                "compressed_grads": gradient,
+                "decompress_info": 0,
+                "needs_decompress": True
+            }
 
         d = gradient.shape[0]
         d_sqrt = np.sqrt(d)

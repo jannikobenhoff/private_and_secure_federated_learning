@@ -75,7 +75,10 @@ class GradientSparsification(Compression):
         """
         g = input_tensor.numpy()
         d = len(g)
-        p = np.minimum(kappa * d * np.abs(g) / np.sum(np.abs(g)), 1)
+        if np.sum(np.abs(g)) == 0:
+            return input_tensor
+        else:
+            p = np.minimum(kappa * d * np.abs(g) / np.sum(np.abs(g)), 1)
         j = 0
 
         while j < max_iter:

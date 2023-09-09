@@ -6,9 +6,9 @@ from src.compressions.GradientSparsification import *
 class TestGradientSparsification(unittest.TestCase):
     def test_greedy(self):
         gs = GradientSparsification(k=0.001, max_iter=2)
-        greedy = gs.greedy_algorithm(input_tensor=tf.constant([[1, 20, 3, 4, 5]],
+        greedy = gs.greedy_algorithm(input_tensor=tf.constant([[0, 0, 0, 0, 0]],
                                                               dtype=tf.float32),
-                                     max_iter=2, k=0.001)
+                                     max_iter=2, kappa=0.001)
         print(greedy)
         self.assertTrue(True, "Not equal.")
 

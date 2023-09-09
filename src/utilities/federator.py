@@ -200,7 +200,8 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
             time_per_iteration.append(time.time() - iter_start_time)
 
             print("  Test Accuracy:", f"{test_acc[-1]: .4f} | Test loss:", f"{test_loss[-1] : .4f}")
-            print("  Learning rate: ", learning_rate, " | Time taken: ", f"{time.time() - iter_start_time: .1f}s\n")
+            print("  Learning rate: ", learning_rate, " | Time taken: ",
+                  f"{time.time() - iter_start_time: .1f}s | {optimizer.optimizer_name} {optimizer.compression_name}")
         else:
             print('Epoch ', num_iter + 1, ' is ignored')
 

@@ -50,7 +50,7 @@ def model_factory(model_name, lambda_l2, input_shape, num_classes):
         model.build(input_shape=input_shape)
         return model
     elif model_name == "resnet18":
-        model = ResNet("resnet18", num_classes, lambda_l2=lambda_l2)
+        model = ResNet("resnet101", num_classes, lambda_l2=lambda_l2)
         model.build(input_shape=(None, 32, 32, 3))
         return model
     elif model_name == "mobilenet":
