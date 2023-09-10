@@ -6,7 +6,7 @@ vqsgd='{"optimizer": "sgd", "compression": "vqsgd", "repetition": 250}'
 
 gradientsparsification='{"optimizer": "sgd", "compression": "gradientsparsification", "max_iter": 2, "k": 0.01}'
 
-atomo='{"optimizer": "sgd", "compression": "atomo", "svd_rank": 3}'
+atomo='{"optimizer": "sgd", "compression": "atomo", "svd_rank": 1}'
 
 efsignsgd='{"optimizer": "efsignsgd", "compression": "none"}'
 
@@ -17,17 +17,17 @@ sgd='{"optimizer": "sgd", "compression": "none"}'
 
 onebitsgd='{"optimizer": "sgd", "compression": "onebitsgd"}'
 
-terngrad='{"optimizer": "None", "compression": "terngrad", "clip": 2.5}'
+terngrad='{"optimizer": "sgd", "compression": "terngrad", "clip": 2.5}'
 
-topk='{"optimizer": "None", "compression": "topk", "k": 500}'
+topk='{"optimizer": "sgd", "compression": "topk", "k": 1000}'
 
 naturalcompression='{"optimizer": "sgd", "compression": "naturalcompression"}'
 
-memsgd='{"optimizer": "memsgd", "compression": "none", "top_k": 100, "rand_k": "None"}'
+memsgd='{"optimizer": "memsgd", "compression": "none", "top_k": 1000, "rand_k": "None"}'
 
-base_strategy=$naturalcompression
+base_strategy=$atomo
 
-beta_values=(0.125 2)
+beta_values=(2 0.125)
 local_iter_types=(dirichlet same)
 
 # dirichlet 2    -> 700

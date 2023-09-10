@@ -48,7 +48,9 @@ class GradientSparsification(Compression):
                 gradient_spars)
             self.compression_rates.append(self.cr[variables[0].ref()])
             self.compression_rates = [np.mean(self.compression_rates)]
-
+            # self.compression_rates = [gradient.dtype.size * 8 * np.prod(
+            #     gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
+            #     gradient_spars)]
             # print("CR:", np.mean(self.compression_rates))
 
         compressed_grads = []

@@ -125,3 +125,9 @@ def ResNet(model_type, num_classes, lambda_l2):
         return BuildResNet(BottleNeck, [3, 8, 36, 3], num_classes, lambda_l2)
     else:
         ValueError("{:s} is currently not supported.".format(model_type))
+
+
+if __name__ == "__main__":
+    a = ResNet("resnet18", 10, None)
+    a.build(input_shape=(None, 32, 32, 3))
+    a.summary()

@@ -18,7 +18,7 @@ drop_rates=(85 95 99) #90
 #drop_rates=(85 85 85)
 
 #iterations=(2)
-runs=5
+runs=2
 for ((i=1; i<=runs; i++))
 do
     case $mode in

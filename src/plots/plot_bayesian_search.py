@@ -27,12 +27,12 @@ def plot_bayesian_search(folder: str, title: str):
         param = ast.literal_eval(metrics["args"].strategy)
         label_name = names[(param["optimizer"] + " " +
                             param["compression"]).replace(
-            " none", "")]
+            " none", "").replace(" None", "")]
 
         if "DS" in file:
             continue
-        if title not in file and title not in (param["optimizer"] + " " +
-                                               param["compression"]).replace(
+        if title.lower() not in file.lower() and title not in (param["optimizer"] + " " +
+                                                               param["compression"]).replace(
             " none", ""):
             continue
 
@@ -78,4 +78,4 @@ def plot_bayesian_search(folder: str, title: str):
 
 
 if __name__ == "__main__":
-    plot_bayesian_search("new", "bayesian_result_SGD_lenet_09_08_07_39_52.pkl")
+    plot_bayesian_search("mnist", "bayesian_result_SGD_mnist 2.pkl")

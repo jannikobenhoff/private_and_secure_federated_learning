@@ -34,6 +34,13 @@ class TestAtomo(unittest.TestCase):
         calc = at.compress(grad, grad)
         print("Diff:", tf.reduce_sum(tf.abs(calc - grad)))
 
+    def test_reshape(self):
+        at = Atomo(svd_rank=1)
+
+        grad = tf.constant([1, 0, 2, 3, 4])
+        print(grad.shape)
+        print(at._resize_to_2d(grad))
+
 
 if __name__ == '__main__':
     unittest.main()

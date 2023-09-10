@@ -18,7 +18,7 @@ k_values=(0.1 0.01 0.001)
 k_values_vgg=(0.3 0.1 0.05) #0.05 0.1 0.3)
 k_values_resnet=(0.3 0.1 0.05 )
 
-runs=1
+runs=2
 for ((i=1; i<=runs; i++))
 do
     case $mode in
