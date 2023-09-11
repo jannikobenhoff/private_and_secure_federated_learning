@@ -34,6 +34,7 @@ class Strategy(optimizer_v2.OptimizerV2):
             self.compression_name = compression.name
         self.learning_rate = learning_rate
         self.num_clients = 1
+
         if (
                 isinstance(momentum, tf.Tensor)
                 or callable(momentum)

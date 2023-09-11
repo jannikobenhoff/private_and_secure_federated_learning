@@ -24,7 +24,7 @@ class GradientSparsification(Compression):
             return
         self._built = True
 
-    def compress(self, grads: list[Tensor], variables):
+    def compress(self, grads: list[Tensor], variables, log=True):
         """
         Q(g) = [Z1 * g1/p1, ...]
         Z1: selector
@@ -42,16 +42,15 @@ class GradientSparsification(Compression):
         gradient_spars = tf.multiply(selectors, gradient) / probabilities
         gradient_spars = tf.where(tf.math.is_nan(gradient_spars), 0., gradient_spars)
 
-        if variables[0].ref() not in self.cr:
-            self.cr[variables[0].ref()] = gradient.dtype.size * 8 * np.prod(
+        if log:  # variables[0].ref() not in self.cr:
+            # self.cr[variables[0].ref()] =
+            self.compression_rates.append(gradient.dtype.size * 8 * np.prod(
                 gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
-                gradient_spars)
-            self.compression_rates.append(self.cr[variables[0].ref()])
+                gradient_spars))
             self.compression_rates = [np.mean(self.compression_rates)]
             # self.compression_rates = [gradient.dtype.size * 8 * np.prod(
             #     gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
             #     gradient_spars)]
-            # print("CR:", np.mean(self.compression_rates))
 
         compressed_grads = []
         start = 0

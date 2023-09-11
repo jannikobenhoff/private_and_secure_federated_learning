@@ -17,7 +17,7 @@ base_strategy_vgg11='{"optimizer": "sgd", "compression": "sparsegradient", "lear
 drop_rates=(85 95 99) #90
 #drop_rates=(85 85 85)
 
-#iterations=(2)
+parallel=0
 runs=2
 for ((i=1; i<=runs; i++))
 do
@@ -25,21 +25,33 @@ do
         "search_lenet"|"l2_lenet"|"baseline_l2_lenet"|"no_l2_lenet")
             for k in "${drop_rates[@]}"; do
                 modified_strategy="${base_strategy//K_VALUE/$k}"
-                ./run_main.sh "$modified_strategy" "$mode"
+                if [ "$parallel" -eq 1 ]; then
+                    ./run_main.sh "$modified_strategy" "$mode" &
+                else
+                    ./run_main.sh "$modified_strategy" "$mode"
+                fi
             done
             ;;
 
         "search_resnet18"|"no_l2_resnet18"|"baseline_l2_resnet18")
             for k in "${drop_rates[@]}"; do
                 modified_strategy="${base_strategy_resnet//K_VALUE/$k}"
-                ./run_main.sh "$modified_strategy" "$mode"
+                if [ "$parallel" -eq 1 ]; then
+                    ./run_main.sh "$modified_strategy" "$mode" &
+                else
+                    ./run_main.sh "$modified_strategy" "$mode"
+                fi
             done
             ;;
 
         "baseline_l2_vgg11")
             for k in "${drop_rates[@]}"; do
                 modified_strategy="${base_strategy_vgg11//K_VALUE/$k}"
-                ./run_main.sh "$modified_strategy" "$mode"
+                if [ "$parallel" -eq 1 ]; then
+                    ./run_main.sh "$modified_strategy" "$mode" &
+                else
+                    ./run_main.sh "$modified_strategy" "$mode"
+                fi
             done
         ;;
 

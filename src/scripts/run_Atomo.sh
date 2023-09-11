@@ -14,10 +14,11 @@ base_strategy='{"optimizer": "sgd", "compression": "atomo", "learning_rate": 0.0
 base_strategy_resnet='{"optimizer": "sgd", "compression": "atomo", "learning_rate": 0.1, "svd_rank":RANK}'
 base_strategy_vgg11='{"optimizer": "sgd", "compression": "atomo", "learning_rate": 0.05, "svd_rank":RANK}'
 
-ranks=(1 3 6)
+ranks=(1)
 #ranks=(6 6)
 
-runs=2
+parallel=0
+runs=1
 for ((i=1; i<=runs; i++))
 do
     case $mode in
@@ -25,7 +26,11 @@ do
             for rank in "${ranks[@]}"; do
             modified_strategy="${base_strategy//RANK/$rank}"
 
-            ./run_main.sh "$modified_strategy" "$mode"
+            if [ "$parallel" -eq 1 ]; then
+                    ./run_main.sh "$modified_strategy" "$mode" &
+                else
+                    ./run_main.sh "$modified_strategy" "$mode"
+            fi
             done
             ;;
 
@@ -33,14 +38,22 @@ do
             for rank in "${ranks[@]}"; do
             modified_strategy="${base_strategy_resnet//RANK/$rank}"
 
-            ./run_main.sh "$modified_strategy" "$mode"
+            if [ "$parallel" -eq 1 ]; then
+                    ./run_main.sh "$modified_strategy" "$mode" &
+                else
+                    ./run_main.sh "$modified_strategy" "$mode"
+            fi
             done
             ;;
         "baseline_l2_vgg11")
             for rank in "${ranks[@]}"; do
             modified_strategy="${base_strategy_vgg11//RANK/$rank}"
 
-            ./run_main.sh "$modified_strategy" "$mode"
+            if [ "$parallel" -eq 1 ]; then
+                    ./run_main.sh "$modified_strategy" "$mode" &
+                else
+                    ./run_main.sh "$modified_strategy" "$mode"
+            fi
             done
             ;;
         *)

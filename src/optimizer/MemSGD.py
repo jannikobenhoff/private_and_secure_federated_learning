@@ -72,69 +72,6 @@ class MemSGD(Optimizer):
             "needs_decompress": False
         }
 
-    def update_step(self, gradient: Tensor, variable, lr) -> Tensor:
-        self.lr = lr
-        lr = tf.cast(self.lr, variable.dtype.base_dtype)
-
-        var_key = self._var_key(variable)
-
-        m = self.memory[self._index_dict[var_key]]
-        if gradient.dtype != variable.dtype:
-            gradient = tf.cast(gradient, dtype=variable.dtype)
-
-        if self.top_k is None:
-            g = self.rand_k_sparsification(input_tensor=m + lr * gradient,
-                                           k=self.rand_k)
-        else:
-            g = self.top_k_sparsification(input_tensor=m + lr * gradient,
-                                          k=self.top_k)
-        if variable.ref() not in self.cr:
-            self.cr[variable.ref()] = gradient.dtype.size * 8 * np.prod(
-                gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
-                g)
-            self.compression_rates.append(self.cr[variable.ref()])
-
-        self.memory[self._index_dict[var_key]].assign(m + lr * gradient - g)
-
-        return g
-
-    def federated_compress(self, gradients: list[Tensor], variables: list[Tensor], client_id: int, lr):
-        self.lr = lr
-        lr = tf.cast(self.lr, variables[0].dtype.base_dtype)
-        quantized_gradients = []
-        for i, gradient in enumerate(gradients):
-
-            var_key = self._var_key(variables[i])
-
-            m = self.memory[str(client_id)][self._index_dict[var_key]]
-
-            if gradient.dtype != variables[i].dtype:
-                gradient = tf.cast(gradient, dtype=variables[i].dtype)
-
-            if self.top_k is None:
-                g = self.rand_k_sparsification(input_tensor=m + lr * gradient,
-                                               k=self.rand_k)
-            else:
-                g = self.top_k_sparsification(input_tensor=m + lr * gradient,
-                                              k=self.top_k)
-            if variables[i].ref() not in self.cr:
-                self.cr[variables[i].ref()] = gradient.dtype.size * 8 * np.prod(
-                    gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
-                    g)
-                self.compression_rates.append(self.cr[variables[i].ref()])
-
-            self.memory[str(client_id)][self._index_dict[var_key]].assign(m + lr * gradient - g)
-            quantized_gradients.append(g)
-        return {
-            'compressed_grad': quantized_gradients,
-            'decompress_info': None
-        }
-
-    def federated_decompress(self, client_data, variables, lr):
-        for i, gradient in client_data["compressed_grad"]:
-            client_data["compressed_grad"] = gradient / lr
-        return client_data["compressed_grad"]
-
     @staticmethod
     def top_k_sparsification(input_tensor: Tensor, k: int) -> Tensor:
         """

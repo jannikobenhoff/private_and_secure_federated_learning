@@ -22,43 +22,40 @@ class EFsignSGD(Optimizer):
         if hasattr(self, "_built") and self._built:
             return
         for client in range(1, clients + 1):
-            self.errors[str(client)] = tf.Variable(tf.zeros(shape=tf.reduce_sum([tf.size(var) for var in var_list])))
+            for var in var_list:
+                self.errors[var.name + str(client)] = tf.Variable(tf.zeros_like(var))
         self.compression_rates.append(var_list[0].dtype.size * 8)
         self._built = True
 
     def compress(self, grads: list[Tensor], variables: list[Tensor], lr, client_id: int = 1):
-        flattened_grads = [tf.reshape(grad, [-1]) for grad in grads]
-        gradient = tf.concat(flattened_grads, axis=0)
+        compressed_grads = []
+        decompress_info = []
+        for i, gradient in enumerate(grads):
+            error = self.errors[variables[i].name + str(client_id)]
+            d = tf.size(gradient)
+            d = tf.cast(d, dtype=gradient.dtype)
 
-        error = self.errors[str(client_id)]
+            p_t = lr * gradient + error
+            norm = tf.divide(tf.norm(p_t, ord=1), d)
+            delta_t = tf.multiply(norm, tf.sign(p_t))
 
-        d = tf.size(gradient)
-        d = tf.cast(d, dtype=gradient.dtype)
-
-        p_t = lr * gradient + error
-        norm = tf.divide(tf.norm(p_t, ord=1), d)
-        delta_t = tf.multiply(norm, tf.sign(p_t))
-
-        # update residual error
-        self.errors[str(client_id)].assign(p_t - delta_t)
+            # update residual error
+            self.errors[variables[i].name + str(client_id)].assign(p_t - delta_t)
+            compressed_grads.append(tf.sign(p_t))
+            decompress_info.append(norm / lr)
 
         # Norm is divided by lr because lr will be multiplied later in keras process
         return {
-            "compressed_grads": tf.sign(p_t),
-            "decompress_info": norm / lr,
+            "compressed_grads": compressed_grads,
+            "decompress_info": decompress_info,
             "needs_decompress": True
         }
 
     def decompress(self, compressed_data, variables):
-        scaled_gradient = tf.multiply(compressed_data["compressed_grads"], compressed_data["decompress_info"])
-
         decompressed_grads = []
-        start = 0
-        for var in variables:
-            size = tf.reduce_prod(var.shape).numpy()
-            segment = tf.Variable(scaled_gradient[start: start + size])
-            decompressed_grads.append(tf.reshape(segment, var.shape))
-            start += size
+        for i, gradient in enumerate(compressed_data["compressed_grads"]):
+            norm = compressed_data["decompress_info"][i]
+            decompressed_grads.append(tf.multiply(gradient, norm))
         return decompressed_grads
 
     def update_step(self, gradient: Tensor, variable, lr) -> Tensor:

@@ -24,7 +24,7 @@ class Atomo(Compression):
             return
         self._built = True
 
-    def compress(self, gradients: list[Tensor], variables: list[Tensor], client_id: int = 1):
+    def compress(self, gradients: list[Tensor], variables: list[Tensor], client_id: int = 1, log=True):
         compressed_grads = []
         for idx, gradient in enumerate(gradients):
             if gradient.ndim != 2:
@@ -33,6 +33,7 @@ class Atomo(Compression):
                 gradient_ndim2 = gradient
 
             s, u, vT = tf.linalg.svd(gradient_ndim2, full_matrices=False)
+
             vT = tf.transpose(vT).numpy()
             s = s.numpy()
             u = u.numpy()
@@ -47,17 +48,18 @@ class Atomo(Compression):
                 s = s[:self.svd_rank]
                 vT = vT[:self.svd_rank, :]
 
-            if variables[idx].ref() not in self.cr:
+            if log:  # variables[idx].ref() not in self.cr:
                 grad_type = gradient.dtype.size
                 bit_size = (np.prod(
                     u.shape) + np.prod(
                     s.shape) + np.prod(
                     vT.shape)) * grad_type * 8
 
-                self.cr[variables[idx].ref()] = grad_type * 8 * np.prod(
-                    gradient.shape.as_list()) / bit_size
+                # self.cr[variables[idx].ref()] = grad_type * 8 * np.prod(
+                #     gradient.shape.as_list()) / bit_size
 
-                self.compression_rates.append(self.cr[variables[idx].ref()])
+                self.compression_rates.append(grad_type * 8 * np.prod(
+                    gradient.shape.as_list()) / bit_size)
                 self.compression_rates = [np.mean(self.compression_rates)]
 
             compressed_grads.append({
@@ -65,18 +67,19 @@ class Atomo(Compression):
                 "s": s,
                 "vT": vT
             })
+        # eventuell orig size hinzufügen bei decompression_info
         return {
-            "compressed_grad": compressed_grads,
+            "compressed_grads": compressed_grads,
             "decompression_info": None,
             "needs_decompress": True
         }
 
     def decompress(self, compressed_data, variables):
         decompressed_grads = []
-        for i, _ in enumerate(compressed_data["compressed_grad"]):
-            s = compressed_data["compressed_grad"][i]["s"]
-            u = compressed_data["compressed_grad"][i]["u"]
-            vT = compressed_data["compressed_grad"][i]["vT"]
+        for i, _ in enumerate(compressed_data["compressed_grads"]):
+            s = compressed_data["compressed_grads"][i]["s"]
+            u = compressed_data["compressed_grads"][i]["u"]
+            vT = compressed_data["compressed_grads"][i]["vT"]
             decoded = tf.convert_to_tensor(np.dot(np.dot(u, np.diag(s)), vT))
             decoded = tf.reshape(decoded, variables[i].shape)
             decoded = tf.cast(decoded, dtype=variables[i].dtype)
@@ -94,6 +97,7 @@ class Atomo(Compression):
         # print("Probs:", np.sum(probs))  # =!= rank
         sampled_idx = []
         sample_probs = []
+
         for i, p in enumerate(probs):
             # if np.random.rand() < p:
             # random sampling from bernulli distribution

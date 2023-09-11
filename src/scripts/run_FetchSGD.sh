@@ -23,7 +23,8 @@ counters=(30000 10000 20000 ) # 2000 5000)
 counters_resnet=(5000 10000 100000)
 counters_vgg11=(500000)
 
-runs=5
+parallel=0
+runs=2
 for ((i=1; i<=runs; i++))
 do
 case $mode in
@@ -32,7 +33,11 @@ case $mode in
             modified_strategy="${base_strategy//C_VALUE/$c}"
             modified_strategy="${modified_strategy//K_VALUE/$((c/30))}"
 
-            ./run_main.sh "$modified_strategy" "$mode"
+           if [ "$parallel" -eq 1 ]; then
+                    ./run_main.sh "$modified_strategy" "$mode" &
+                else
+                    ./run_main.sh "$modified_strategy" "$mode"
+           fi
         done
         ;;
 
@@ -41,7 +46,11 @@ case $mode in
             modified_strategy="${base_strategy_resnet//C_VALUE/$c}"
             modified_strategy="${modified_strategy//K_VALUE/$((c/30))}"
 
-            ./run_main.sh "$modified_strategy" "$mode"
+            if [ "$parallel" -eq 1 ]; then
+                    ./run_main.sh "$modified_strategy" "$mode" &
+                else
+                    ./run_main.sh "$modified_strategy" "$mode"
+            fi
         done
         ;;
 
@@ -50,9 +59,13 @@ case $mode in
             modified_strategy="${base_strategy_vgg11//C_VALUE/$c}"
             modified_strategy="${modified_strategy//K_VALUE/$((c/30))}"
 
-            ./run_main.sh "$modified_strategy" "$mode"
-            done
-            ;;
+            if [ "$parallel" -eq 1 ]; then
+                    ./run_main.sh "$modified_strategy" "$mode" &
+                else
+                    ./run_main.sh "$modified_strategy" "$mode"
+            fi
+        done
+        ;;
 
     *)
         echo "Invalid mode provided."

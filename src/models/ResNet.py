@@ -2,6 +2,86 @@ import tensorflow as tf
 from keras.regularizers import l2
 from keras import layers
 
+import tensorflow as tf
+import numpy as np
+import matplotlib.pyplot as plt
+import math
+
+from tensorflow import Tensor
+from keras.layers import Input, Conv2D, ReLU, BatchNormalization, Add, AveragePooling2D, Flatten, Dense
+from keras.models import Model
+
+
+def resnet(num_filters: int, size: int, input_shape=(int, int, int), lambda_l2=None):
+    inputs = Input(shape=input_shape)
+
+    # First Layer
+    model_layers = BatchNormalization()(inputs)
+    model_layers = Conv2D(kernel_size=3,
+                          strides=1,
+                          filters=num_filters,
+                          padding="same",
+                          kernel_regularizer=l2(lambda_l2))(model_layers)
+
+    model_layers = ReLU()(model_layers)
+    model_layers = BatchNormalization()(model_layers)
+
+    # First size/8, second size/4, third size/8, last size/8
+    block_length_array = [math.floor(size / 8), math.ceil(size / 4), math.ceil(size / 4), math.floor(size / 8)]
+
+    for layer_block_num in range(len(block_length_array)):
+
+        if layer_block_num == 0:
+            for k in range(block_length_array[layer_block_num]):
+                model_layers = residual_block(model_layers, downsample=False, filters=num_filters, lambda_l2=lambda_l2)
+
+        else:
+            for k in range(block_length_array[layer_block_num]):
+                model_layers = residual_block(model_layers, downsample=(k == 0), filters=num_filters,
+                                              lambda_l2=lambda_l2)
+        num_filters *= 2
+
+    model_layers = AveragePooling2D(4)(model_layers)
+    model_layers = Flatten()(model_layers)
+    outputs = Dense(10, activation='softmax')(model_layers)
+    model = Model(inputs, outputs)
+    # model.compile(
+    #     optimizer=optimizer,
+    #     loss=loss,
+    #     metrics=metric)
+    return model
+
+
+def residual_block(input: Tensor, downsample: bool, filters: int, lambda_l2):
+    block_layer = Conv2D(kernel_size=3,
+                         strides=(2 if downsample else 1),
+                         filters=filters,
+                         padding="same",
+                         kernel_regularizer=l2(lambda_l2))(input)
+
+    block_layer = ReLU()(block_layer)
+    block_layer = BatchNormalization()(block_layer)
+
+    block_layer = Conv2D(kernel_size=3,
+                         strides=1,
+                         filters=filters,
+                         padding="same",
+                         kernel_regularizer=l2(lambda_l2))(block_layer)
+
+    if downsample:
+        input = Conv2D(kernel_size=1,
+                       strides=2,
+                       filters=filters,
+                       padding="same",
+                       kernel_regularizer=l2(lambda_l2))(input)
+
+    block_layer = Add()([input, block_layer])
+
+    relu = ReLU()(block_layer)
+    block_layer = BatchNormalization()(relu)
+
+    return block_layer
+
 
 class BasicBlock(tf.keras.Model):
     expansion = 1

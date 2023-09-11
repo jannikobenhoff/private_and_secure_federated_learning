@@ -351,7 +351,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
     axes[1].set_title("Test Accuracy vs Overall Compression", fontsize=10, fontweight='bold')
     # axes[2].set_xlabel("Overall Compression", fontsize=8, fontweight='bold')
     # axes[2].set_ylabel("Test Accuracy", fontsize=8, fontweight='bold')
-    axes[1].legend(fontsize=7, bbox_to_anchor=(0.75, 0.7))
+    axes[1].legend(fontsize=7)  # , bbox_to_anchor=(0.75, 0.7))
     axes[1].set_xscale('log')
     axes[1].tick_params(axis='both', which='major', labelsize=8)
 
@@ -397,6 +397,6 @@ if __name__ == "__main__":
     WINDOW_SIZE = 3
     # plot_compression_metrics("efsignsgd", "vggnew")
 
-    plot_compare_all("same_2", True)
+    plot_compare_all("dirichlet_0125", True)
 
     # plot_compression_rates()

@@ -78,4 +78,4 @@ def plot_bayesian_search(folder: str, title: str):
 
 
 if __name__ == "__main__":
-    plot_bayesian_search("mnist", "bayesian_result_SGD_mnist 2.pkl")
+    plot_bayesian_search("new", "bayesian_result_SGD_lenet_09_10_14_01_01.pkl")

@@ -13,6 +13,56 @@ import tensorflow as tf
 from keras import layers
 from keras.regularizers import l2
 
+from keras import layers, models
+
+cfg = {
+    'VGG11': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
+    'VGG13': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
+    'VGG16': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
+    'VGG19': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M'],
+}
+
+
+def VGG(vgg_name, input_shape=(32, 32, 3), num_classes=10, batch_norm=True, l2_lambda=None):
+    layers_list = []
+    in_channels = input_shape[2]
+
+    for x in cfg[vgg_name]:
+        if x == 'M':
+            layers_list.append(layers.MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+        else:
+            if batch_norm:
+                layers_list.extend([
+                    layers.Conv2D(x, (3, 3), padding='same', kernel_regularizer=l2(l2_lambda)),
+                    layers.BatchNormalization(),
+                    layers.ReLU(),
+                ])
+            else:
+                layers_list.extend([
+                    layers.Conv2D(x, (3, 3), padding='same', kernel_regularizer=l2(l2_lambda)),
+                    layers.ReLU(),
+                ])
+
+    layers_list.append(layers.GlobalAveragePooling2D())
+
+    model = models.Sequential(layers_list)
+    model.add(layers.Dense(num_classes, activation='softmax'))
+
+    return model
+
+
+def test():
+    model = VGG('VGG11')
+    model.build(input_shape=(None, 32, 32, 3))
+    model.summary()
+
+    x = tf.random.normal((2, 32, 32, 3))
+    y = model(x)
+    print(y.shape)
+
+
+# test()
+
 config_codebook = {
     'vgg11': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
     'vgg13': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
@@ -21,7 +71,7 @@ config_codebook = {
 }
 
 
-class VGG(tf.keras.Model):
+class VGG_old(tf.keras.Model):
     def __init__(self, vgg_name, num_classes, lambda_l2):
         super(VGG, self).__init__()
         self.conv = self._make_layers(config_codebook[vgg_name], lambda_l2=lambda_l2)

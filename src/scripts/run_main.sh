@@ -20,12 +20,12 @@ case $mode in
 
     "search_resnet18")
         python ../main_local.py --model ResNet18 --dataset cifar10 \
-          --epochs=50 \
+          --epochs=40 \
           --n_calls=10 \
-          --k_fold=3 \
+          --k_fold=5 \
           --gpu=1 \
           --fullset=100 \
-          --stop_patience=7 \
+          --stop_patience=5 \
           --bayesian_search \
           --log=1 \
           --strategy="$compression_strategy"
@@ -58,7 +58,7 @@ case $mode in
 
     "baseline_l2_lenet")
         python ../main_local.py --model LeNet --dataset mnist \
-            --epochs=45 \
+            --epochs=80 \
             --k_fold=1 \
             --fullset=100 \
             --stop_patience=10 \
@@ -71,7 +71,7 @@ case $mode in
 
     "baseline_l2_vgg11")
         python ../main_local.py --model VGG11 --dataset cifar10 \
-            --epochs=40 \
+            --epochs=30 \
             --gpu=1 \
             --k_fold=1 \
             --fullset=100 \

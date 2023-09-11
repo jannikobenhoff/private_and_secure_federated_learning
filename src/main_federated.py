@@ -9,7 +9,7 @@ from keras.metrics import SparseCategoricalAccuracy
 from main_local import strategy_factory, model_factory, get_l2_lambda
 from utilities.federator import *
 from utilities.parameters import get_parameters_federated
-
+from models.ResNet import resnet
 from utilities.datasets import load_dataset
 from utilities.client_data import client_datasets, stratified_sampling, label_splitter  # plot_client_distribution, \
 
@@ -57,8 +57,8 @@ def fed_worker(args):
     print("Using L2 lambda:", lambda_l2)
     model_client = model_factory(args.model.lower(), lambda_l2, input_shape, num_classes)
 
-    if args.dataset == "cifar10":
-        model_client.build(input_shape=(None, 32, 32, 3))
+    # if args.dataset == "cifar10":
+    #     model_client.build(input_shape=(None, 32, 32, 3))
 
     model_client.compile(optimizer=strategy,
                          loss='sparse_categorical_crossentropy',
@@ -113,35 +113,8 @@ def fed_worker(args):
     acc_func = SparseCategoricalAccuracy()
     loss_metric = tf.keras.metrics.Mean()
 
-    (split_data, split_labels) = label_splitter(img_train, label_train)
-
-    # stratified sampling from training data
-    val_sample_per_class = 100
-    (validation_images, validation_labels) = stratified_sampling(num_sample_per_class=val_sample_per_class,
-                                                                 list_data=split_data, list_labels=split_labels)
-
     # Plot Client Class Distribution
     # plot_client_distribution(number_clients, client_labels)
-    def count_labels_per_client(client_labels, num_classes):
-        label_counts_per_client = []
-
-        for labels in client_labels:
-            counts = np.bincount(labels.flatten(), minlength=num_classes)
-            label_counts_per_client.append(counts)
-
-        return label_counts_per_client
-
-    # Given the client_datasets_cifar function and the above count_labels_per_client function
-    # (client_data, client_labels) = client_datasets(number_clients, img_train, label_train, num_classes,
-    #                                                 shuffle=True)
-    (client_data, client_labels) = client_datasets(number_clients=number_clients, split_type=split_type,
-                                                   list_data=split_data, list_labels=split_labels, beta=beta)
-
-    label_counts = count_labels_per_client(client_labels, num_classes)
-
-    # Print the counts for each client
-    for i, counts in enumerate(label_counts):
-        print(f"Client {i}: {counts}")
 
     time_pre = time.time() - start_time
 
@@ -158,7 +131,23 @@ def fed_worker(args):
                                                                  list_data=split_data, list_labels=split_labels)
 
     (client_data, client_labels) = client_datasets(number_clients=number_clients, split_type=split_type,
-                                                   list_data=split_data, list_labels=split_labels, beta=beta)
+                                                   list_data=split_data, list_labels=split_labels, beta=beta,
+                                                   dataset=args.dataset)
+
+    def count_labels_per_client(client_labels, num_classes):
+        label_counts_per_client = []
+
+        for labels in client_labels:
+            counts = np.bincount(labels.flatten(), minlength=num_classes)
+            label_counts_per_client.append(counts)
+
+        return label_counts_per_client
+
+    label_counts = count_labels_per_client(client_labels, num_classes)
+
+    for i, counts in enumerate(label_counts):
+        print(f"Client {i}: {counts}")
+
     # Start FL
     model_federated, test_loss, test_acc, compression_rates, time_per_iteration = federator(
         active_clients=active_client_matrix,

@@ -2,7 +2,7 @@
 
 sparsegradient='{"optimizer": "sgd", "compression": "sparsegradient", "drop_rate": 99}'
 
-vqsgd='{"optimizer": "sgd", "compression": "vqsgd", "repetition": 250}'
+vqsgd='{"optimizer": "sgd", "compression": "vqsgd", "repetition": 500}'
 
 gradientsparsification='{"optimizer": "sgd", "compression": "gradientsparsification", "max_iter": 2, "k": 0.01}'
 
@@ -25,10 +25,10 @@ naturalcompression='{"optimizer": "sgd", "compression": "naturalcompression"}'
 
 memsgd='{"optimizer": "memsgd", "compression": "none", "top_k": 1000, "rand_k": "None"}'
 
-base_strategy=$atomo
+base_strategy=$efsignsgd
 
-beta_values=(2 0.125)
-local_iter_types=(dirichlet same)
+beta_values=( 2 )
+local_iter_types=( same)
 
 # dirichlet 2    -> 700
 # dirichlet 0125 -> 850
