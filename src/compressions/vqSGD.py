@@ -50,7 +50,7 @@ class vqSGD(Compression):
             return {
                 "compressed_grads": gradient,
                 "decompress_info": 0,
-                "needs_decompress": True
+                "needs_decompress": False
             }
 
         d = gradient.shape[0]
@@ -83,6 +83,17 @@ class vqSGD(Compression):
 
     def decompress(self, compressed_data, variables):
         indices = compressed_data["compressed_grads"]
+
+        if not compressed_data["needs_decompress"]:
+            decompressed_grads = []
+            start = 0
+            for var in variables:
+                size = tf.reduce_prod(var.shape).numpy()
+                segment = tf.Variable(compressed_data["compressed_grads"][start: start + size])
+                decompressed_grads.append(tf.reshape(segment, var.shape))
+                start += size
+            return decompressed_grads
+
         l2 = compressed_data["decompress_info"]
         d = sum([tf.size(var).numpy() for var in variables])
         d_sqrt = np.sqrt(d)
