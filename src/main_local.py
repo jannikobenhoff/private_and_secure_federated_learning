@@ -94,9 +94,11 @@ def strategy_factory(**params) -> Strategy:
         return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=vqSGD(repetition=params["repetition"]))
     elif params["compression"].lower() == "atomo":
-        # not working yet
         return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=Atomo(svd_rank=params["svd_rank"]))
+    elif params["optimizer"].lower() == "sgdm":
+        return Strategy(learning_rate=params["learning_rate"], params=params,
+                        compression=None, optimizer="sgd", momentum=params["momentum"])
     elif params["compression"].lower() == "none":
         return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=None, optimizer=params["optimizer"].lower())

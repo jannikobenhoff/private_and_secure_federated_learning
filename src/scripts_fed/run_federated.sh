@@ -25,6 +25,8 @@ naturalcompression='{"optimizer": "sgd", "compression": "naturalcompression"}'
 
 memsgd='{"optimizer": "memsgd", "compression": "none", "top_k": 1000, "rand_k": "None"}'
 
+sgdm='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
+
 base_strategy=$efsignsgd
 
 beta_values=( 2 )

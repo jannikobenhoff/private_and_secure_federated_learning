@@ -23,6 +23,7 @@ names = {
     "sgd topk": "Top-K",
     "sgd ": "SGD",
     "sgd": "SGD",
+    "sgdm": "SGD with Momentum",
     "sgd_vgg": "SGD",
     "sgd none": "SGD",
     "sgd bsgd": "BucketSGD",
@@ -30,7 +31,7 @@ names = {
 }
 
 colors = {
-    "SGD": 'b',
+    "SGD": 'b', 'SGD with Momentum': "purple",
     "BucketSGD": 'g', "vqSGD": "#32CD32", "Top-K": 'y',
     "EF-SignSGD": 'm', "FetchSGD": 'c', "Atomic Sparsification": 'grey', "Sparsified SGD with Memory": 'orange',
     "Natural Compression": 'pink', "Gradient Sparsification": "#D2691E", "1-Bit SGD": 'r', "TernGrad": "#FFD700",
@@ -39,6 +40,7 @@ colors = {
 
 markers = {
     "SGD": 'o',  # circle
+    'SGD with Momentum': ".",
     "BucketSGD": 's',  # square
     "vqSGD": '^',  # triangle up
     "Top-K": 'D',  # diamond
