@@ -121,7 +121,10 @@ class Compression:
 
         # int32 -> Index 0 -> Index 2 * 2,147,483,647
         # int64 > 2 * 2,147,483,647
-        num_index_bits = tf.int32.size * 8
+        from tensorflow.python.ops.numpy_ops import np_config
+        np_config.enable_numpy_behavior()
+        num_index_bits = tf.experimental.numpy.log2(flattened_tensor.shape[
+                                                        0])  # tf.int32.size * 8
         num_value_bits = tf.constant(tensor.dtype.size * 8, dtype=tf.int64)
 
         total_bits = num_nonzero_entries * (num_index_bits + num_value_bits)

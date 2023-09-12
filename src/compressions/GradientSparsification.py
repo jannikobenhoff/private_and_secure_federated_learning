@@ -34,6 +34,12 @@ class GradientSparsification(Compression):
         flattened_grads = [tf.reshape(grad, [-1]) for grad in grads]
         gradient = tf.concat(flattened_grads, axis=0)
 
+        if tf.reduce_sum(tf.abs(gradient)) == 0.0:
+            return {
+                "compressed_grads": grads,
+                "decompress_info": None,
+                "needs_decompress": False
+            }
         probabilities = self.greedy_algorithm(input_tensor=gradient, max_iter=self.max_iter, kappa=self.k)
 
         random_tensor = tf.random.uniform(probabilities.shape, 0, 1)
@@ -42,15 +48,12 @@ class GradientSparsification(Compression):
         gradient_spars = tf.multiply(selectors, gradient) / probabilities
         gradient_spars = tf.where(tf.math.is_nan(gradient_spars), 0., gradient_spars)
 
-        if log:  # variables[0].ref() not in self.cr:
-            # self.cr[variables[0].ref()] =
-            self.compression_rates.append(gradient.dtype.size * 8 * np.prod(
+        if variables[0].ref() not in self.cr and log:
+            self.cr[variables[0].ref()] = gradient.dtype.size * 8 * np.prod(
                 gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
-                gradient_spars))
+                gradient_spars)
+            self.compression_rates.append(self.cr[variables[0].ref()])
             self.compression_rates = [np.mean(self.compression_rates)]
-            # self.compression_rates = [gradient.dtype.size * 8 * np.prod(
-            #     gradient.shape.as_list()) / self.get_sparse_tensor_size_in_bits(
-            #     gradient_spars)]
 
         compressed_grads = []
         start = 0

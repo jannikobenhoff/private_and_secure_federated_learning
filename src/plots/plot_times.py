@@ -128,7 +128,8 @@ def plot_total_run_time():
         file = json.load(file)
         if "time_per_epoch" in file:
             total_time += np.sum(file["time_per_epoch"])
-
+        elif "times" in file:
+            total_time += np.sum(file["times"]["federator"])
     print("Total Run Time:\n", round(total_time / 3600, 1), "h\n", round(total_time / 3600 / 24, 1), "days")
 
 

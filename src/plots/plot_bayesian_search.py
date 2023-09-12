@@ -77,5 +77,57 @@ def plot_bayesian_search(folder: str, title: str):
     plt.show()
 
 
+def plot_bayesian_search_fed(folder: str, title: str):
+    directory_path = '../results/bayesian/' + folder
+    all_files = get_all_files_in_directory(directory_path)
+
+    fig, axs = plt.subplots(1, 1, figsize=(9, 6))
+    cs = iter(["g", "b", "r", "y"])
+
+    print(len(all_files), "Files")
+    plot_title = ""
+    for file in all_files:
+
+        result = load(file)
+
+        metrics = result["metrics"]
+        param = ast.literal_eval(metrics["args"].strategy)
+        label_name = names[(param["optimizer"] + " " +
+                            param["compression"]).replace(
+            " none", "").replace(" None", "")]
+
+        if "DS" in file:
+            continue
+        if title.lower() not in file.lower() and title not in (param["optimizer"] + " " +
+                                                               param["compression"]).replace(
+            " none", ""):
+            continue
+
+        result.func_vals = -1 * result.func_vals
+        result.fun = -1 * result.fun
+
+        plot_gaussian_process(result, ax=axs, show_acq_funcboolean=True, show_title=False,
+                              **{"color": next(cs), "marker": markers[label_name], "label": "legend_name"})
+
+        # axs.set_title("best lambda: {:.7f}, validation accuracy: {:.3f}".format(result.x[0], -result.fun), fontsize=10)
+        plot_title = label_name
+
+    axs.set_title(
+        "Bayesian Search L2 regularization - {} - {}".format(metrics["args"].model, plot_title),
+        fontsize=10, fontweight="bold")
+    axs.set_xlabel("Lambda", fontsize=10)
+    axs.set_ylabel("Test Accuracy", fontsize=10)
+    axs.set_xscale('log')
+    # axs.invert_yaxis()
+
+    # plt.suptitle(label_name, fontsize=8)
+    plt.tight_layout()
+    # print(str(metrics["args"]).replace("Namespace", "").replace("}', e", "}',\ne")[1:-1])
+    # plt.savefig("../../figures/bayesian_" + plot_title + ".pdf", bbox_inches='tight')
+    plt.show()
+
+
 if __name__ == "__main__":
-    plot_bayesian_search("new", "bayesian_result_SGD_lenet_09_10_14_01_01.pkl")
+    # plot_bayesian_search("fed", "bayesian_result_lenet_09_12_18_34_05.pkl")
+
+    plot_bayesian_search_fed("fed", "bayesian_result_lenet_09_12_18_34_05.pkl")

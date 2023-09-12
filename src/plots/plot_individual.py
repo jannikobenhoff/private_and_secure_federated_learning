@@ -100,36 +100,40 @@ def plot_atomo():
     # ax2 = ax1.twinx()
 
     # Generate a test gradient with values from a uniform distribution
-    test_gradient = [tf.random.uniform(shape=[24, 24]), tf.random.uniform(shape=[24, 24])]
+    test_gradient = [tf.random.uniform(shape=[100, 50]), tf.random.uniform(shape=[100, 50])]
 
     # Create a series of histograms for different repetition parameters
     ranks = [1, 2, 3, 4, 6]
     var_values = []
     cr = []
     for i, rank in enumerate(ranks):
-        atomo = Atomo(svd_rank=rank)
+        atomo = Atomo(svd_rank=rank, random_sample=False)
 
         compressed_data = atomo.compress(test_gradient, tf.Variable(test_gradient, name="test"), log=True)
-
+        for i, _ in enumerate(compressed_data["compressed_grads"]):
+            s = compressed_data["compressed_grads"][i]["s"]
+            u = compressed_data["compressed_grads"][i]["u"]
+            vT = compressed_data["compressed_grads"][i]["vT"]
+            print(s.shape, u.shape, vT.shape)
         decompressed = atomo.decompress(compressed_data, tf.Variable(test_gradient, name="test"))
         mean = np.mean(decompressed)
         var = np.sum([np.power((x - mean), 2) for x in decompressed]) / 999
         var_values.append(var)
         cr.append(atomo.compression_rates[0])
-        ax1[0].scatter([rank], [var], marker=markers["Gradient Sparsification"], label=f"rank = {rank}")
-        ax1[1].scatter([rank], [cr[-1]], marker=markers["Gradient Sparsification"], label=f"rank = {rank}")
+        # ax1[0].scatter([rank], [var], marker=markers["Gradient Sparsification"], label=f"rank = {rank}")
+        # ax1[1].scatter([rank], [cr[-1]], marker=markers["Gradient Sparsification"], label=f"rank = {rank}")
         print(rank, cr[-1])
 
-    ax1[0].plot(ranks, var_values, color="b", alpha=0.4)
-    ax1[1].plot(ranks, cr, color="g", alpha=0.4)
-    ax1[0].set_xlabel('kappa', fontsize=8)
-    plt.tick_params(axis='both', which='major', labelsize=8)
-    ax1[0].set_ylabel('Variance', fontsize=8)
-    ax1[1].set_ylabel('Compression Ratio', fontsize=8)
-    ax1[0].grid(True, alpha=0.2)
-    ax1[0].legend(fontsize=8)
-    plt.show()
-    plt.tight_layout()
+    # ax1[0].plot(ranks, var_values, color="b", alpha=0.4)
+    # ax1[1].plot(ranks, cr, color="g", alpha=0.4)
+    # ax1[0].set_xlabel('kappa', fontsize=8)
+    # plt.tick_params(axis='both', which='major', labelsize=8)
+    # ax1[0].set_ylabel('Variance', fontsize=8)
+    # ax1[1].set_ylabel('Compression Ratio', fontsize=8)
+    # ax1[0].grid(True, alpha=0.2)
+    # ax1[0].legend(fontsize=8)
+    # plt.show()
+    # plt.tight_layout()
     # plt.savefig("repetition.pdf")
 
 

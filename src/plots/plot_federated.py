@@ -7,6 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import itertools
 
+import pandas as pd
+
 from plot_utils import names, colors, markers
 
 
@@ -20,25 +22,7 @@ def get_all_files_in_directory(root_path):
 
 
 def plot_compression_metrics(title: str, parent_folder: str):
-    plot_configs = {
-        "gradientsparsification": ["max_iter", "k"],
-        "fetchsgd": ["c"],
-        "sparsegradient": ["drop_rate"],
-        "vqsgd": ["repetition"],
-        "topk": ["k"],
-        "memsgd": ["top_k"],
-        "naturalcompression": [],
-        "efsignsgd": [],
-        "onebitsgd": [],
-        "bsgd": ["buckets", "sparse_buckets"],
-        "bsgd2": ["buckets", "sparse_buckets"],
-        "terngrad": [],
-        "atomo": ["svd_rank"],
-        "bucketsgd": ["buckets", "sparse_buckets"],
-        "bsgd": ["buckets", "sparse_buckets"],
-        "sgd": []
-    }
-    directory_path = '../results/compression/' + parent_folder
+    directory_path = '../results/federated/' + parent_folder
     all_files = get_all_files_in_directory(directory_path)
     metrics = {}
     for file_path in all_files:
@@ -59,7 +43,7 @@ def plot_compression_metrics(title: str, parent_folder: str):
             train_loss = np.array(ast.literal_eval(file["training_loss"]))
             val_acc = np.array(ast.literal_eval(file["val_acc"]))
             val_loss = np.array(ast.literal_eval(file["val_loss"]))
-            print(len(val_loss))
+
             cr = file["compression_rates"][0]
 
             if lean_strat_key not in metrics:
@@ -242,7 +226,7 @@ def mean_of_arrays_with_padding(arr1, arr2):
     return mean_arr
 
 
-def plot_compare_all(parent_folder: str, bsgd: bool):
+def plot_compare_all(parent_folder: str, bsgd: bool = True):
     directory_path = '../results/federated/' + parent_folder
     all_files = get_all_files_in_directory(directory_path)
 
@@ -256,8 +240,9 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
         #     continue
         file = open(file_path, "r")
         file = json.load(file)
+        print(file["args"]["local_iter_type"], file["args"]["beta"])
         strat = ast.literal_eval(file["args"]["strategy"])
-        strat_key = f"{strat}"
+        strat_key = f"{strat}"  # {file['args']['lambda_l2']}"
         lean_strat_key = f"{strat['optimizer']} {strat['compression']}"
 
         # train_acc = np.array(ast.literal_eval(file["training_acc"]))
@@ -296,7 +281,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
             metrics[lean_strat_key][strat_key]["max_val_acc"] = np.mean([
                 metrics[lean_strat_key][strat_key]["max_val_acc"], np.max(val_acc)])
 
-    fig, axes = plt.subplots(2, 2, figsize=(15, 8), gridspec_kw={'width_ratios': [1, 1.3]})
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8), gridspec_kw={'width_ratios': [1, 1.15]})
     axes = axes.flatten()
 
     table_data = []
@@ -346,6 +331,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
     axes[0].grid(alpha=0.2)
     axes[0].set_title("Test Accuracy", fontsize=10, fontweight='bold')
     axes[0].tick_params(axis='both', which='major', labelsize=8)
+    axes[0].legend(fontsize=7)
 
     axes[1].grid(alpha=0.2)
     axes[1].set_title("Test Accuracy vs Overall Compression", fontsize=10, fontweight='bold')
@@ -354,7 +340,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
     axes[1].legend(fontsize=7)  # , bbox_to_anchor=(0.75, 0.7))
     axes[1].set_xscale('log')
     axes[1].tick_params(axis='both', which='major', labelsize=8)
-
+    axes[1].set_ylim([0.75, 0.995])
     # axes[0].grid(alpha=0.2)
     # axes[0].set_title("Training Accuracy", fontsize=10, fontweight='bold')
     # axes[0].legend(fontsize=8)
@@ -364,7 +350,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
     axes[2].tick_params(axis='both', which='major', labelsize=8)
     axes[2].set_title("Test Loss", fontsize=10, fontweight='bold')
     axes[2].set_xlabel("Iteration", fontsize=8)
-    # axes[2].set_yscale('log')
+    axes[2].set_yscale('log')
 
     table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
 
@@ -389,14 +375,203 @@ def plot_compare_all(parent_folder: str, bsgd: bool):
 
     plt.suptitle(parent_folder.upper())
     plt.tight_layout()
-    # plt.savefig(f"../../figures/{parent_folder}.pdf", bbox_inches='tight')
+    plt.savefig(f"../../figures/{parent_folder}.pdf", bbox_inches='tight')
     plt.show()
+
+
+def lambda_search(parent_folder):
+    directory_path = '../results/federated/' + parent_folder
+    all_files = get_all_files_in_directory(directory_path)
+
+    metrics = {}
+    for file_path in all_files:
+        if "DS" in file_path:
+            continue
+        file = open(file_path, "r")
+        file = json.load(file)
+        strat = ast.literal_eval(file["args"]["strategy"])
+        strat_key = f"{strat} {file['args']['lambda_l2']}"
+        lean_strat_key = f"{strat['optimizer']} {strat['compression']} {file['args']['lambda_l2']}"
+
+        val_acc = np.array(ast.literal_eval(file["test_acc"]))
+        val_loss = np.array(ast.literal_eval(file["test_loss"]))
+        l2_lambda = file['args']['lambda_l2']
+        cr = file["compression_rates"][0]
+
+        if lean_strat_key not in metrics:
+            metrics[lean_strat_key] = {}
+
+        if strat_key not in metrics[lean_strat_key]:
+            metrics[lean_strat_key][strat_key] = {}
+            metrics[lean_strat_key][strat_key]["test_acc"] = val_acc
+            metrics[lean_strat_key][strat_key]["test_loss"] = val_loss
+            metrics[lean_strat_key][strat_key]["cr"] = cr
+            metrics[lean_strat_key][strat_key]["max_val_acc"] = np.max(val_acc)
+            metrics[lean_strat_key][strat_key]["l2_lambda"] = l2_lambda
+
+        else:
+            metrics[lean_strat_key][strat_key]["test_acc"] = mean_of_arrays_with_padding(val_acc,
+                                                                                         metrics[lean_strat_key][
+                                                                                             strat_key]["test_acc"])
+            metrics[lean_strat_key][strat_key]["test_loss"] = mean_of_arrays_with_padding(val_loss,
+                                                                                          metrics[lean_strat_key][
+                                                                                              strat_key]["test_loss"])
+            metrics[lean_strat_key][strat_key]["cr"] = np.mean([cr, metrics[lean_strat_key][strat_key]["cr"]])
+            metrics[lean_strat_key][strat_key]["max_val_acc"] = np.mean([
+                metrics[lean_strat_key][strat_key]["max_val_acc"], np.max(val_acc)])
+
+    fig, axes = plt.subplots(1, 3, figsize=(12, 5))  # , gridspec_kw={'width_ratios': [1, 1.3]})
+    axes = axes.flatten()
+    for method in metrics:
+        # label_name = names[method.lower().replace(" none", "").replace("none ", "")]
+        cr_acc_pairs = []
+        for p in metrics[method]:
+            cr_acc_pairs.append((metrics[method][p]['cr'], metrics[method][p]['max_val_acc']))
+        best_param = max(metrics[method].items(), key=lambda x: x[1]['max_val_acc'])
+        best_param_metrics = best_param[1]
+        print(best_param_metrics["l2_lambda"], best_param_metrics["max_val_acc"])
+
+        axes[0].scatter(best_param_metrics["l2_lambda"], best_param_metrics["max_val_acc"])
+        axes[1].plot(best_param_metrics["test_acc"], label=best_param_metrics["l2_lambda"])
+        axes[2].plot(best_param_metrics["test_loss"])
+
+    axes[0].set_xscale("log")
+    axes[1].legend()
+    plt.show()
+
+
+def plot_compare_to_diff_sets(parent_folders: list):
+    all_files = []
+    for parent_folder in parent_folders:
+        directory_path = '../results/federated/' + parent_folder
+        all_files += get_all_files_in_directory(directory_path)
+
+    metrics = {}
+    for file_path in all_files:
+        if "DS" in file_path:
+            continue
+        file = open(file_path, "r")
+        file = json.load(file)
+        print(file["args"]["local_iter_type"], file["args"]["beta"])
+        strat = ast.literal_eval(file["args"]["strategy"])
+        strat_key = f"{strat}" + "&{}_{}".format(file["args"]["local_iter_type"], file["args"]["beta"])
+        lean_strat_key = f"{strat['optimizer']} {strat['compression']}"
+
+        val_acc = np.array(ast.literal_eval(file["test_acc"]))
+        val_loss = np.array(ast.literal_eval(file["test_loss"]))
+        cr = file["compression_rates"][0]
+
+        if lean_strat_key not in metrics:
+            metrics[lean_strat_key] = {}
+
+        if strat_key not in metrics[lean_strat_key]:
+            metrics[lean_strat_key][strat_key] = {}
+            metrics[lean_strat_key][strat_key]["test_acc"] = val_acc
+            metrics[lean_strat_key][strat_key]["test_loss"] = val_loss
+            metrics[lean_strat_key][strat_key]["cr"] = cr
+            metrics[lean_strat_key][strat_key]["max_val_acc"] = np.max(val_acc)
+        else:
+            metrics[lean_strat_key][strat_key]["test_acc"] = mean_of_arrays_with_padding(val_acc,
+                                                                                         metrics[lean_strat_key][
+                                                                                             strat_key]["test_acc"])
+            metrics[lean_strat_key][strat_key]["test_loss"] = mean_of_arrays_with_padding(val_loss,
+                                                                                          metrics[lean_strat_key][
+                                                                                              strat_key]["test_loss"])
+            metrics[lean_strat_key][strat_key]["cr"] = np.mean([cr, metrics[lean_strat_key][strat_key]["cr"]])
+            metrics[lean_strat_key][strat_key]["max_val_acc"] = np.mean([
+                metrics[lean_strat_key][strat_key]["max_val_acc"], np.max(val_acc)])
+
+    fig, axes = plt.subplots(3, 4, figsize=(17, 8))
+    axes = axes.flatten()
+
+    ax_index = 0
+    for method in metrics:
+        print(method)
+        label_name = names[method.lower().replace(" none", "").replace("none ", "")]
+
+        setup_data = {"same": {}, "dirichlet": {}}
+        for setup in metrics[method]:
+            s = setup.split("&")[-1].split("_")
+            setup_data[s[0]][s[1]] = metrics[method][setup]["max_val_acc"]
+
+        print(setup_data)
+        diff_matrix = np.zeros((4, 4))
+
+        # Getting the keys and values from your data dictionary
+        keys = list(setup_data.keys())
+        subkeys = list(setup_data[keys[0]].keys())
+        if len(keys) + len(subkeys) != 4:
+            print("BREAK")
+            continue
+        # Calculating the differences between each pair of setups
+        for i, key1 in enumerate(keys):
+            for j, key2 in enumerate(subkeys):
+                for k, key3 in enumerate(keys):
+                    for l, key4 in enumerate(subkeys):
+                        diff_matrix[i * len(subkeys) + j][k * len(subkeys) + l] = round(100 * (setup_data[key1][key2] - \
+                                                                                               setup_data[key3][key4]),
+                                                                                        2)
+
+        # Creating a list of labels for the table
+        labels = [f'{key1}{key2}' for key1 in keys for key2 in subkeys]
+
+        # Creating a pandas DataFrame from the differences matrix
+        df = pd.DataFrame(diff_matrix, columns=labels, index=labels)
+
+        # Hide axes
+        axes[ax_index].xaxis.set_visible(False)
+        axes[ax_index].yaxis.set_visible(False)
+
+        # Table from DataFrame
+        table_data = []
+        for row in df.index:
+            table_data.append(df.loc[row])
+        table = axes[ax_index].table(cellText=table_data, colLabels=df.columns, loc='center', cellLoc='center',
+                                     colColours=['#f2f2f2'] * df.shape[1])
+
+        # Apply color map to the cells
+        norm = plt.cm.colors.Normalize(vmax=abs(diff_matrix).max(), vmin=-abs(diff_matrix).max())
+        colors = plt.cm.RdBu_r(norm(diff_matrix))
+        for i, label1 in enumerate(labels):
+            for j, label2 in enumerate(labels):
+                table[(i + 1, j)].set_facecolor(colors[i, j])
+                table[(i + 1, j)].set_text_props(
+                    color="w" if abs(diff_matrix[i, j]) > 0.5 * abs(diff_matrix).max() else "k")
+
+        # table.auto_set_font_size(False)
+        # table.set_fontsize(12)
+        # table.scale(1.5, 1.5)
+        # table.auto_set_font_size(False)
+        # table.set_fontsize(10)
+        # table.scale(1.1, 1.6)
+
+        for (row, col), cell in table.get_celld().items():
+            if row == 0:
+                cell.set_fontsize(5)
+                cell._text.set_weight('bold')
+            if col == 0 and row > 0:
+                cell.set_fontsize(8)
+        table.auto_set_column_width(col=list(range(4)))
+
+        ax_index += 1
+        print("i:", ax_index)
+
+    plt.show()
+
+    # plt.suptitle(parent_folder.upper())
+    # plt.tight_layout()
+    # plt.savefig(f"../../figures/{parent_folder}.pdf", bbox_inches='tight')
+    # plt.show()
 
 
 if __name__ == "__main__":
     WINDOW_SIZE = 3
-    # plot_compression_metrics("efsignsgd", "vggnew")
+    # plot_compression_metrics("atomo", "same_2")
 
-    plot_compare_all("dirichlet_0125", True)
+    # plot_compare_all("dirichlet_2")
+
+    # plot_compare_to_diff_sets(["same_2", "dirichlet_2", "same_0125", "dirichlet_0125"])
+
+    lambda_search("reg")
 
     # plot_compression_rates()

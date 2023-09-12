@@ -139,6 +139,9 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
                                   range(number_clients)]
 
             if active_clients[num_iter][k]:
+                if local_iter[k] < 1:
+                    continue
+
                 active_client_number += 1
 
                 # prepare the data, shuffle, divide into batches
@@ -165,7 +168,7 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
                 model_federator.set_weights(federator_weights)
 
         # Taking gradients, setting new weights, measuring validation accuracy after each epoch
-        if active_client_number >= (number_clients * (0.75)):
+        if True:  # active_client_number >= (number_clients * (0.75)):
             client_grads = optimizer.decompress(client_data, model_federator.trainable_variables)
 
             # Update federator weights with averaged client weights

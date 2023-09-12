@@ -132,8 +132,9 @@ class MemSGD(Optimizer):
     def get_sparse_tensor_size_in_bits(tensor):
         flattened_tensor = tf.reshape(tensor, [-1])
         num_nonzero_entries = tf.math.count_nonzero(flattened_tensor)
-
-        num_index_bits = tf.int32.size * 8
+        from tensorflow.python.ops.numpy_ops import np_config
+        np_config.enable_numpy_behavior()
+        num_index_bits = tf.experimental.numpy.log2(flattened_tensor.shape[0])  # tf.int32.size * 8
         num_value_bits = tf.constant(tensor.dtype.size * 8, dtype=tf.int64)
 
         total_bits = num_nonzero_entries * (num_index_bits + num_value_bits)

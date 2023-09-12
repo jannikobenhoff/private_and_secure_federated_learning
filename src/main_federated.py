@@ -5,6 +5,9 @@ import os
 import keras
 from keras.losses import SparseCategoricalCrossentropy
 from keras.metrics import SparseCategoricalAccuracy
+from skopt import gp_minimize
+from skopt.space import Real
+from skopt.utils import use_named_args, dump
 
 from main_local import strategy_factory, model_factory, get_l2_lambda
 from utilities.federator import *
@@ -47,8 +50,10 @@ def fed_worker(args):
     print(strategy_params)
 
     # Initialize Model and build if needed
-    if True:  # args.train_on_baseline == 1:
-        lambda_l2 = get_l2_lambda(args, **{"optimizer": "sgd", "compression": "none"})
+    if args.bayesian_search:
+        lambda_l2 = args.search_lambda
+    elif True:  # args.train_on_baseline == 1:
+        lambda_l2 = get_l2_lambda(args, **{"optimizer": "sgd", "compression": "federated"})
     else:
         lambda_l2 = None
     # lambda_l2 = None
@@ -64,7 +69,7 @@ def fed_worker(args):
                          loss='sparse_categorical_crossentropy',
                          metrics=['accuracy'])
 
-    model_client.summary()
+    # model_client.summary()
 
     start_time = time.time()
     # VARIABLES
@@ -187,13 +192,52 @@ def fed_worker(args):
     print(
         f'time split data: {time_create_model:.4f} \ntime create model: {time_create_model:.4f} \ntime federator: {time_federator:.4f}')
 
-    file = open('../results/federated/{}_{}_'
-                '{}.json'.format(strategy.get_file_name(), args.model.lower(),
-                                 datetime.now().strftime('%m_%d_%H_%M_%S')),
-                "w")
+    if args.bayesian_search:
+        file = open('../results/federated_bayesian/{}_{}_'
+                    '{}.json'.format(strategy.get_file_name(), args.model.lower(),
+                                     datetime.now().strftime('%m_%d_%H_%M_%S')),
+                    "w")
+    else:
+        file = open('../results/federated/{}_{}_'
+                    '{}.json'.format(strategy.get_file_name(), args.model.lower(),
+                                     datetime.now().strftime('%m_%d_%H_%M_%S')),
+                    "w")
     json.dump(fed_metrics, file, indent=4)
     file.close()
     print(f"Finished federated training for {strategy.get_plot_title()}")
+    return np.max(test_acc)
+
+
+def bayesian_search(args):
+    space = [Real(1e-6, 1e-1, "log-uniform", name='l2_reg')]
+
+    @use_named_args(space)
+    def objective(**params):
+        # params["l2_reg"] = params["l2_reg"]
+        print("Lambda: ", params["l2_reg"])
+        all_scores = []
+
+        for i in range(3):
+            print(f"Step {i + 1}/3")
+            args.search_lambda = params["l2_reg"]
+            max_test_acc = fed_worker(args)
+            all_scores.append(max_test_acc)
+
+        return - np.mean(all_scores)
+
+    result = gp_minimize(objective, space, n_calls=10, verbose=0, random_state=45)
+
+    metrics = {
+        "args": args,
+
+    }
+    result["metrics"] = metrics
+    dump(result,
+         '../results/bayesian/bayesian_result_{}_{}.pkl'.format(args.model.lower(),
+                                                                datetime.now().strftime(
+                                                                    '%m_%d_%H_%M_%S')),
+         store_objective=False)
+    print(f"Finished Bayesian Search.")
 
 
 def main():
@@ -202,7 +246,10 @@ def main():
 
     args = get_parameters_federated()
 
-    fed_worker(args)
+    if args.bayesian_search:
+        bayesian_search(args)
+    else:
+        fed_worker(args)
 
 
 if __name__ == "__main__":

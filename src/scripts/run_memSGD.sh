@@ -13,14 +13,14 @@ mode=${1:-$DEFAULT_MODE}
 # TODO RAND or TOP
 
 base_strategy='{"optimizer": "memsgd", "compression": "none", "learning_rate": 0.01, "top_k": K_VALUE, "rand_k": "None"}'
-base_strategy_resnet='{"optimizer": "memsgd", "compression": "none", "learning_rate": 0.1, "top_k": K_VALUE, "rand_k": "None"}'
-base_strategy_vgg11='{"optimizer":  "memsgd","compression":  "none", "learning_rate": 0.05, "top_k": K_VALUE, "rand_k": "None"}'
+base_strategy_resnet='{"optimizer": "memsgd", "compression": "none", "learning_rate": 0.01, "top_k": K_VALUE, "rand_k": "None"}'
+base_strategy_vgg11='{"optimizer":  "memsgd","compression":  "none", "learning_rate": 0.01, "top_k": K_VALUE, "rand_k": "None"}'
 
 top_ks=(100 500 1000)
 top_ks_vgg11=(500 1500 5000)
 top_ks_resnet=(1000 5000)
 
-parallel=1
+parallel=0
 runs=1
 for ((i=1; i<=runs; i++))
 do

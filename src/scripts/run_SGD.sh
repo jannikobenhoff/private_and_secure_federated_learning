@@ -12,7 +12,7 @@ mode=${1:-$DEFAULT_MODE}
 
 base_strategy='{"optimizer": "sgd", "compression": "none", "learning_rate": 0.01}'
 base_strategy_resnet='{"optimizer": "sgd", "compression": "none", "learning_rate": 0.01}'
-base_strategy_vgg11='{"optimizer": "sgd", "compression": "none", "learning_rate": 0.01}'
+base_strategy_vgg11='{"optimizer": "sgd", "compression": "none", "learning_rate": 0.05}'
 
 # TODO check lambda vgg11
 

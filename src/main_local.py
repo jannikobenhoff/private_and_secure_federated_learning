@@ -50,14 +50,14 @@ def model_factory(model_name, lambda_l2, input_shape, num_classes):
         model.build(input_shape=input_shape)
         return model
     elif model_name == "resnet18":
-        model = ResNet("resnet101", num_classes, lambda_l2=lambda_l2)
+        model = ResNet("resnet18", num_classes, lambda_l2=lambda_l2)
         model = resnet(num_filters=64, size=18, input_shape=(32, 32, 3), lambda_l2=lambda_l2)
         return model
     elif model_name == "mobilenet":
         model = MobileNetV2(num_classes, lambda_l2=lambda_l2)
         return model
     elif model_name == "vgg11":
-        model = VGG(vgg_name="VGG11", l2_lambda=lambda_l2)  # , num_classes=num_classes, lambda_l2=lambda_l2)
+        model = VGG(vgg_name="VGG11", l2_lambda=lambda_l2, num_classes=num_classes)
         model.build(input_shape=(None, 32, 32, 3))
         return model
     elif model_name == "densenet":
@@ -116,7 +116,7 @@ def get_l2_lambda(args, **params) -> float:
     opt = params["optimizer"]
     comp = params["compression"]
 
-    if (opt in ["efsignsgd", "sgd"] and comp == "none") or comp in ["onebitsgd", "naturalcompression"]:
+    if (opt in ["efsignsgd", "sgd"] and comp in ["none", "federated"]) or comp in ["onebitsgd", "naturalcompression"]:
         return lambdas[opt][comp]
 
     keys = [k for k in params.keys() if k != "compression" and k != "optimizer" and k != "learning_rate"]
@@ -167,7 +167,7 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
     strategy = strategy_factory(**strategy_params)
     strategy.summary()
 
-    BATCH_SIZE = 64
+    BATCH_SIZE = 32
     initial_lr = strategy_params["learning_rate"]
     drop_factor = 0.1
     drop_epochs = []
@@ -183,8 +183,8 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
     elif args.dataset == "cifar10" and args.model.lower() == "vgg11":
         BATCH_SIZE = 128
         initial_lr = strategy_params["learning_rate"]
-        drop_factor = 0.1
-        drop_epochs = [15]
+        drop_factor = 0.2
+        drop_epochs = [15, 30]
         min_lr = initial_lr * 0.1 * 0.1
 
     print("BATCH SIZE:", BATCH_SIZE)
@@ -202,7 +202,7 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
     val_accuracy_results = []
     time_history = []
 
-    best_val_loss = float('inf')
+    best_val_acc = float(0)
     patience_counter = 0
 
     for epoch in range(args.epochs):
@@ -257,8 +257,8 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
               optimizer.learning_rate.numpy())
 
         # Early Stopping Check
-        if val_loss_avg.result() < best_val_loss:
-            best_val_loss = val_loss_avg.result()
+        if val_accuracy.result() > best_val_acc:
+            best_val_acc = val_accuracy.result()
             patience_counter = 0
         else:
             patience_counter += 1

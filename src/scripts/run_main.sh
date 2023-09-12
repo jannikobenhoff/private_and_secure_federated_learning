@@ -58,10 +58,10 @@ case $mode in
 
     "baseline_l2_lenet")
         python ../main_local.py --model LeNet --dataset mnist \
-            --epochs=100 \
+            --epochs=60 \
             --k_fold=1 \
             --fullset=100 \
-            --stop_patience=10 \
+            --stop_patience=20 \
             --train_on_baseline=1 \
             --lr_decay=3 \
             --gpu=0 \
@@ -71,7 +71,7 @@ case $mode in
 
     "baseline_l2_vgg11")
         python ../main_local.py --model VGG11 --dataset cifar10 \
-            --epochs=30 \
+            --epochs=40 \
             --gpu=1 \
             --k_fold=1 \
             --fullset=100 \
@@ -121,11 +121,11 @@ case $mode in
 
     "baseline_l2_resnet18")
         python ../main_local.py --model ResNet18 --dataset cifar10 \
-            --epochs=40 \
+            --epochs=30 \
             --gpu=1 \
             --k_fold=1 \
             --fullset=100 \
-            --stop_patience=20 \
+            --stop_patience=7 \
             --train_on_baseline=1 \
             --lr_decay=3 \
             --log=1 \

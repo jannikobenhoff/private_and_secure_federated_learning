@@ -19,7 +19,7 @@ top_ks_resnet=(2000 5000 10000)
 top_ks_vgg11=(1000 5000 10000) # 2000
 
 parallel=0
-runs=2
+runs=1
 for ((i=1; i<=runs; i++))
 do
 case $mode in

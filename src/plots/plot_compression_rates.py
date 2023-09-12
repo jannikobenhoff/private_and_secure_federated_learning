@@ -793,9 +793,9 @@ def plot_time_all(parent_folder: str, bsgd: bool):
 if __name__ == "__main__":
     WINDOW_SIZE = 3
 
-    # plot_compression_metrics("memsgd", "lenet")
+    # plot_compression_metrics("atomo", "baseline_vgg")
 
-    plot_compare_all("test", True, 100)
+    plot_compare_all("lenet_64", True, 100)
 
     # plot_compression_rates()
 

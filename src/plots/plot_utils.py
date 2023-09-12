@@ -31,7 +31,7 @@ names = {
 }
 
 colors = {
-    "SGD": 'b', 'SGD with Momentum': "purple",
+    "SGD": 'b', 'SGD with Momentum': "darkgreen",
     "BucketSGD": 'g', "vqSGD": "#32CD32", "Top-K": 'y',
     "EF-SignSGD": 'm', "FetchSGD": 'c', "Atomic Sparsification": 'grey', "Sparsified SGD with Memory": 'orange',
     "Natural Compression": 'pink', "Gradient Sparsification": "#D2691E", "1-Bit SGD": 'r', "TernGrad": "#FFD700",

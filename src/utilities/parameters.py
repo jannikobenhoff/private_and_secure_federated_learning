@@ -35,7 +35,7 @@ def get_parameters_federated():
     parser.add_argument('--log', type=int, help='Log')
     parser.add_argument('--gpu', type=int, help='GPU')
     parser.add_argument('--train_on_baseline', type=int, help='Take baseline L2')
-
+    parser.add_argument('--bayesian_search', action='store_true', default=False)
     """Federated"""
     parser.add_argument('--max_iter', type=int, default=10)
     parser.add_argument('--number_clients', type=int, default=10)

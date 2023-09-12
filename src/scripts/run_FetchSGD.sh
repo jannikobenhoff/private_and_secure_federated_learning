@@ -24,7 +24,7 @@ counters_resnet=(5000 10000 100000)
 counters_vgg11=(500000)
 
 parallel=0
-runs=2
+runs=1
 for ((i=1; i<=runs; i++))
 do
 case $mode in
