@@ -16,7 +16,7 @@ base_strategy_vgg11='{"optimizer": "sgd", "compression": "none", "learning_rate"
 
 # TODO check lambda vgg11
 
-runs=3
+runs=1
 for ((i=1; i<=runs; i++))
 do
     case $mode in

@@ -18,7 +18,7 @@ ranks=(1 3 6)
 #ranks=(6 6)
 
 parallel=0
-runs=2
+runs=1
 for ((i=1; i<=runs; i++))
 do
     case $mode in

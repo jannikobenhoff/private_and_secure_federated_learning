@@ -43,7 +43,7 @@ from compressions.vqSGD import vqSGD
 
 
 def model_factory(model_name, lambda_l2, input_shape, num_classes):
-    print(f"Initializing {model_name.upper()}")
+    print(f'==> Building {model_name.upper()} model..')
     if model_name == "lenet":
         model = LeNet(input_shape=input_shape, num_classes=num_classes, l2_lambda=lambda_l2)
         model = LeNet5(input_shape=input_shape, l2_lambda=lambda_l2)
@@ -68,7 +68,6 @@ def model_factory(model_name, lambda_l2, input_shape, num_classes):
 
 
 def strategy_factory(**params) -> Strategy:
-    print(params)
     if params["compression"].lower() == "terngrad":
         return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=TernGrad(params["clip"]))
@@ -137,7 +136,6 @@ def get_l2_lambda(args, fed=False, **params) -> float:
 
         if type(first_key_value) != float:
             second_key = list(first_key_value.keys())[0]
-            print(second_key, first_key_value)
             if second_key in keys:
                 second_key_value = first_key_value[second_key][str(params[second_key])]
                 return second_key_value
@@ -217,79 +215,85 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
     best_val_acc = float(0)
     patience_counter = 0
 
-    for epoch in range(args.epochs):
-        epoch_loss_avg = tf.keras.metrics.Mean()
-        epoch_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
+    try:
+        for epoch in range(args.epochs):
+            epoch_loss_avg = tf.keras.metrics.Mean()
+            epoch_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
 
-        # Training loop over batches
-        progress_bar = tqdm(train_dataset, desc=f"Epoch {epoch + 1}/{args.epochs}", unit="batch", ncols=150)
-        epoch_start_time = time.time()
-        for data, label in progress_bar:
-            grads, loss_value = train_step(data, label, model, loss_func)
+            # Training loop over batches
+            progress_bar = tqdm(train_dataset, desc=f"Epoch {epoch + 1}/{args.epochs}", unit="batch", ncols=150)
+            epoch_start_time = time.time()
+            for data, label in progress_bar:
+                grads, loss_value = train_step(data, label, model, loss_func)
 
-            compressed_data = optimizer.compress(grads, model.trainable_variables)
+                compressed_data = optimizer.compress(grads, model.trainable_variables)
 
-            if compressed_data["needs_decompress"]:
-                decompressed_grads = optimizer.decompress(compressed_data, model.trainable_variables)
+                if compressed_data["needs_decompress"]:
+                    decompressed_grads = optimizer.decompress(compressed_data, model.trainable_variables)
+                else:
+                    decompressed_grads = compressed_data["compressed_grads"]
+                optimizer.apply_gradients(zip(decompressed_grads, model.trainable_variables))
+                epoch_loss_avg.update_state(loss_value)
+                epoch_accuracy.update_state(label, model(data, training=False))
+                # Update progress bar
+                progress_bar.set_postfix({"Training loss": f"{epoch_loss_avg.result().numpy():.4f}",
+                                          "Training accuracy": f"{epoch_accuracy.result().numpy():.4f}",
+                                          "Compression ratio": f"{np.mean(optimizer.compression_rates()):.2f}"})
+
+            # End of epoch
+            time_history.append(time.time() - epoch_start_time)
+
+            train_loss_results.append(epoch_loss_avg.result().numpy())
+            train_accuracy_results.append(epoch_accuracy.result().numpy())
+
+            print("   Train Loss:", f"{epoch_loss_avg.result().numpy(): .4f}",
+                  " | Train Accuracy:", f"{epoch_accuracy.result().numpy(): .4f}",
+                  "| Time per Epoch:", f"{time_history[-1]:.1f}s")
+
+            # Validation loop
+            val_loss_avg = tf.keras.metrics.Mean()
+            val_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
+
+            for data, label in test_dataset:
+                logits = model(data, training=False)
+                val_loss_value = loss_func(label, logits)
+                val_loss_avg.update_state(val_loss_value)
+                val_accuracy.update_state(label, logits)
+
+            val_loss_results.append(val_loss_avg.result().numpy())
+            val_accuracy_results.append(val_accuracy.result().numpy())
+
+            print("   Test Loss: ", f"{val_loss_avg.result().numpy(): .4f}",
+                  " | Test Accuracy: ", f"{val_accuracy.result().numpy(): .4f}", "| Learning Rate:",
+                  optimizer.learning_rate.numpy(), f"| {optimizer.optimizer_name} {optimizer.compression_name}")
+
+            # Early Stopping Check
+            if val_accuracy.result() > best_val_acc:
+                best_val_acc = val_accuracy.result()
+                patience_counter = 0
             else:
-                decompressed_grads = compressed_data["compressed_grads"]
-            optimizer.apply_gradients(zip(decompressed_grads, model.trainable_variables))
-            epoch_loss_avg.update_state(loss_value)
-            epoch_accuracy.update_state(label, model(data, training=False))
-            # Update progress bar
-            progress_bar.set_postfix({"Training loss": f"{epoch_loss_avg.result().numpy():.4f}",
-                                      "Training accuracy": f"{epoch_accuracy.result().numpy():.4f}",
-                                      "Compression ratio": f"{np.mean(optimizer.compression_rates()):.2f}"})
+                patience_counter += 1
+                if patience_counter > args.stop_patience:
+                    print("Early stopping...")
+                    break
 
-        # End of epoch
-        time_history.append(time.time() - epoch_start_time)
-
-        train_loss_results.append(epoch_loss_avg.result().numpy())
-        train_accuracy_results.append(epoch_accuracy.result().numpy())
-
-        print("   Train Loss:", f"{epoch_loss_avg.result().numpy(): .4f}",
-              " | Train Accuracy:", f"{epoch_accuracy.result().numpy(): .4f}",
-              "| Time per Epoch:", f"{time_history[-1]:.1f}s")
-
-        # Validation loop
-        val_loss_avg = tf.keras.metrics.Mean()
-        val_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
-
-        for data, label in test_dataset:
-            logits = model(data, training=False)
-            val_loss_value = loss_func(label, logits)
-            val_loss_avg.update_state(val_loss_value)
-            val_accuracy.update_state(label, logits)
-
-        val_loss_results.append(val_loss_avg.result().numpy())
-        val_accuracy_results.append(val_accuracy.result().numpy())
-
-        print("   Test Loss: ", f"{val_loss_avg.result().numpy(): .4f}",
-              " | Test Accuracy: ", f"{val_accuracy.result().numpy(): .4f}", "| Learning Rate:",
-              optimizer.learning_rate.numpy())
-
-        # Early Stopping Check
-        if val_accuracy.result() > best_val_acc:
-            best_val_acc = val_accuracy.result()
-            patience_counter = 0
-        else:
-            patience_counter += 1
-            if patience_counter > args.stop_patience:
-                print("Early stopping...")
-                break
-
-        # Adjust learning rate
-        lr_scheduler(optimizer=optimizer, epoch=epoch, drop_epochs=drop_epochs,
-                     drop_factor=drop_factor, min_lr=min_lr)
-
-    history = {
-        'loss': train_loss_results,
-        'accuracy': train_accuracy_results,
-        'val_loss': val_loss_results,
-        'val_accuracy': val_accuracy_results
-    }
-    train_metrics = {"batch_size": BATCH_SIZE, "lr_decay": drop_epochs, "drop_factor": drop_factor, "min_lr": min_lr}
-    return history, strategy, time_history, train_metrics
+            # Adjust learning rate
+            lr_scheduler(optimizer=optimizer, epoch=epoch, drop_epochs=drop_epochs,
+                         drop_factor=drop_factor, min_lr=min_lr)
+            interrupt = False
+    except KeyboardInterrupt:
+        print('Interrupting..')
+        interrupt = True
+    finally:
+        history = {
+            'loss': train_loss_results,
+            'accuracy': train_accuracy_results,
+            'val_loss': val_loss_results,
+            'val_accuracy': val_accuracy_results
+        }
+        train_metrics = {"batch_size": BATCH_SIZE, "lr_decay": drop_epochs, "drop_factor": drop_factor,
+                         "min_lr": min_lr}
+    return history, strategy, time_history, train_metrics, interrupt
 
 
 def train_model_non_mini_batch(train_images, train_labels, val_images, val_labels, lambda_l2, input_shape, num_classes,
@@ -423,11 +427,10 @@ def worker(args):
     np.random.seed(seed_value)
 
     if args.gpu != 1:
-        print("Using CPU")
+        print("==> Running on CPU")
         tf.config.set_visible_devices([], 'GPU')
-        print(tf.config.get_visible_devices())
     else:
-        print("Using GPU")
+        print("==> Running on GPU")
         gpus = tf.config.list_physical_devices('GPU')
         if gpus:
             for gpu in gpus:
@@ -441,7 +444,6 @@ def worker(args):
                                                                                           fullset=args.fullset)
     strategy_params = json.loads(args.strategy)
     strategy = strategy_factory(**strategy_params)
-    print(strategy_params)
 
     if args.bayesian_search:
         print("--- Bayesian Search ---")
@@ -455,7 +457,6 @@ def worker(args):
 
         strategy = strategy_factory(**strategy_params)
         strategy.summary()
-        print(strategy.get_file_name())
 
         @use_named_args(search_space)
         def objective(**params):
@@ -478,11 +479,13 @@ def worker(args):
                 train_labels, val_labels = label_train[train_index], label_train[val_index]
                 k_step += 1
 
-                history, strategy, time_history, train_metrics = train_model(train_images, train_labels, val_images,
-                                                                             val_labels,
-                                                                             params["lambda_l2"],
-                                                                             input_shape, num_classes, strategy_params,
-                                                                             args)
+                history, strategy, time_history, train_metrics, interrupt = train_model(train_images, train_labels,
+                                                                                        val_images,
+                                                                                        val_labels,
+                                                                                        params["lambda_l2"],
+                                                                                        input_shape, num_classes,
+                                                                                        strategy_params,
+                                                                                        args)
 
                 training_acc_per_epoch[k_step].append(history['accuracy'])
                 validation_acc_per_epoch[k_step].append(history['val_accuracy'])
@@ -529,7 +532,7 @@ def worker(args):
         print(f"Finished search for {strategy.get_plot_title()}")
 
     else:
-        print("--- Training ---")
+        print("==> Starting Training")
         if args.train_on_baseline == 1:
             lambda_l2 = get_l2_lambda(args, **{"optimizer": "sgd", "compression": "none"})
         elif args.train_on_baseline == 2:
@@ -553,11 +556,13 @@ def worker(args):
                 train_labels, val_labels = label_train[train_index], label_train[val_index]
                 k_step += 1
 
-                history, strategy, time_history, train_metrics = train_model(train_images, train_labels, val_images,
-                                                                             val_labels,
-                                                                             lambda_l2,
-                                                                             input_shape, num_classes, strategy_params,
-                                                                             args)
+                history, strategy, time_history, train_metrics, interrupt = train_model(train_images, train_labels,
+                                                                                        val_images,
+                                                                                        val_labels,
+                                                                                        lambda_l2,
+                                                                                        input_shape, num_classes,
+                                                                                        strategy_params,
+                                                                                        args)
 
                 training_acc_per_epoch[k_step] = history['accuracy']
                 validation_acc_per_epoch[k_step] = history['val_accuracy']
@@ -565,10 +570,12 @@ def worker(args):
                 validation_losses_per_epoch[k_step] = history['val_loss']
                 compression_rates[k_step].append(strategy.compression.compression_rates)
         else:
-            history, strategy, time_history, train_metrics = train_model(img_train, label_train, img_test, label_test,
-                                                                         lambda_l2,
-                                                                         input_shape, num_classes, strategy_params,
-                                                                         args)
+            history, strategy, time_history, train_metrics, interrupt = train_model(img_train, label_train, img_test,
+                                                                                    label_test,
+                                                                                    lambda_l2,
+                                                                                    input_shape, num_classes,
+                                                                                    strategy_params,
+                                                                                    args)
 
             training_acc_per_epoch = history['accuracy']
             validation_acc_per_epoch = history['val_accuracy']
@@ -591,13 +598,22 @@ def worker(args):
             "setup": train_metrics,
             "time_per_epoch": time_history  # .epoch_times,
         }
-        file = open('../results/compression/training_{}_{}_'
-                    '{}.json'.format(strategy.get_file_name(), args.model.lower(),
-                                     datetime.now().strftime('%m_%d_%H_%M_%S')),
-                    "w")
+        if interrupt:
+            file = open('../results/compression/interrupted_training_{}_{}_'
+                        '{}.json'.format(strategy.get_file_name(), args.model.lower(),
+                                         datetime.now().strftime('%m_%d_%H_%M_%S')),
+                        "w")
+        else:
+            file = open('../results/compression/training_{}_{}_'
+                        '{}.json'.format(strategy.get_file_name(), args.model.lower(),
+                                         datetime.now().strftime('%m_%d_%H_%M_%S')),
+                        "w")
         json.dump(metrics, file, indent=4)
         file.close()
         print(f"Finished training for {strategy.get_plot_title()}")
+
+        if interrupt:
+            raise KeyboardInterrupt
 
 
 def main():

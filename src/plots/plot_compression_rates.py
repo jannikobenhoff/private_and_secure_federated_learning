@@ -291,7 +291,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool, epochs: int, save=False):
     for file_path in all_files:
         if "DS" in file_path:
             continue
-        if "Bucket" in file_path and not bsgd:
+        if ("Bucket" in file_path or "SGD_mom" in file_path) and not bsgd:
             continue
         # if not "MEM" in file_path:
         #     continue
@@ -307,6 +307,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool, epochs: int, save=False):
         val_loss = np.array(ast.literal_eval(file["val_loss"]))
         cr = file["compression_rates"][0]
 
+        print(len(train_loss))
         # print(strat_key, np.max(val_acc))
         if lean_strat_key not in metrics:
             metrics[lean_strat_key] = {}
@@ -986,7 +987,7 @@ if __name__ == "__main__":
 
     # plot_compression_metrics("memsgd", "lenet_32")
 
-    plot_compare_all("resnet_256", True, 100, save=False)
+    plot_compare_all("lenet_64", False, 100, save=False)
 
     # plot_compression_rates()
 

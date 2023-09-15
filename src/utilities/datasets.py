@@ -8,8 +8,8 @@ def load_dataset(dataset_name: str, fullset=100):
     seed_value = 100
     tf.random.set_seed(seed_value)
     np.random.seed(seed_value)
+    print(f'==> Preparing {dataset_name.upper()} dataset..')
 
-    print(f"Loading {dataset_name.upper()} dataset")
     img_train, label_train, img_test, label_test, input_shape, num_classes = None, None, None, None, None, None
     if dataset_name == "mnist":
         (img_train_full, label_train_full), (img_test_full, label_test_full) = tf.keras.datasets.mnist.load_data()
