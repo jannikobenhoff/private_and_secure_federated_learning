@@ -1,12 +1,7 @@
-import argparse
 import os
 import time
 from datetime import datetime
 import json
-from pprint import pprint
-
-import keras.layers
-from keras import layers
 
 from tqdm import tqdm
 
@@ -16,11 +11,9 @@ from sklearn.model_selection import KFold
 from skopt import dump, gp_minimize
 from skopt.space import Real
 from skopt.utils import use_named_args
-from tensorflow.python.keras.callbacks import EarlyStopping, ReduceLROnPlateau, LearningRateScheduler
 
 from models.LeNet import LeNet, LeNet5
 from models.ResNet import ResNet, resnet
-from models.MobileNet import MobileNet
 from models.DenseNet import DenseNet
 from compressions.bSGD import bSGD
 from models.VGG import VGG
@@ -28,7 +21,7 @@ from models.MobileNetV2 import MobileNetV2
 from utilities.parameters import parse_args
 from utilities import Strategy
 
-from utilities.custom_callbacks import TimeHistory, CosineDecayCallback, step_decay
+from utilities.custom_callbacks import step_decay
 from utilities.datasets import load_dataset
 
 from compressions.TernGrad import TernGrad
