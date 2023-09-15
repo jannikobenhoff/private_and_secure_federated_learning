@@ -611,8 +611,8 @@ def worker(args):
 
 
 def main():
-    tf.get_logger().setLevel('ERROR')
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    # tf.get_logger().setLevel('ERROR')
+    # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
     args = parse_args()
     worker(args)
