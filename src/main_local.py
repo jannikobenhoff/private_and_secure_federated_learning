@@ -425,12 +425,12 @@ def worker(args):
         tf.config.set_visible_devices([], 'GPU')
     else:
         print("==> Running on GPU")
-        gpus = tf.config.list_physical_devices('GPU')
-        if gpus:
-            for gpu in gpus:
-                tf.config.set_logical_device_configuration(
-                    gpus[0],
-                    [tf.config.LogicalDeviceConfiguration(memory_limit=2048)])
+        # gpus = tf.config.list_physical_devices('GPU')
+        # if gpus:
+        #     for gpu in gpus:
+        #         tf.config.set_logical_device_configuration(
+        #             gpus[0],
+        #             [tf.config.LogicalDeviceConfiguration(memory_limit=2048)])
     tf.config.run_functions_eagerly(run_eagerly=True)
     tf.data.experimental.enable_debug_mode()
 
