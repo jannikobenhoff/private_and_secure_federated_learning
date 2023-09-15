@@ -64,6 +64,29 @@ def fed_worker(args):
     print("Using L2 lambda:", lambda_l2)
     model_client = model_factory(args.model.lower(), lambda_l2, input_shape, num_classes)
 
+    base_model = tf.keras.applications.ResNet50V2(
+        include_top=False,
+        weights=None,
+        input_shape=input_shape  # Specify input_shape as per your requirements
+    )
+
+    # Add L2 regularization to the pre-built model's layers
+    for layer in base_model.layers:
+        if hasattr(layer, 'kernel_regularizer'):
+            setattr(layer, 'kernel_regularizer', tf.keras.regularizers.l2(lambda_l2))
+
+    # Create new top layers (classification layers) with L2 regularization
+    x = base_model.output
+    x = tf.keras.layers.GlobalAveragePooling2D()(x)
+    x = tf.keras.layers.Dense(1024, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(lambda_l2))(
+        x)  # Adding L2 regularization here
+    predictions = tf.keras.layers.Dense(10, activation='softmax',
+                                        kernel_regularizer=tf.keras.regularizers.l2(lambda_l2))(
+        x)  # Adding L2 regularization here
+
+    # Construct the full model
+    model_client = tf.keras.models.Model(inputs=base_model.input, outputs=predictions)
+
     # if args.dataset == "cifar10":
     #     model_client.build(input_shape=(None, 32, 32, 3))
 
