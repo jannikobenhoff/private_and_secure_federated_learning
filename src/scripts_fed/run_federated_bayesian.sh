@@ -46,7 +46,7 @@ for beta in "${beta_values[@]}"; do
     if [[ "$beta" == "2" && "$local_iter_type" == "dirichlet" ]]; then
       max_iter=350
     fi
-    python ../main_federated.py --model lenet --dataset mnist \
+    python ../main_federated.py --model resnet18 --dataset cifar10 \
       --max_iter=$max_iter \
       --gpu=1 \
       --fullset=100 \
