@@ -4,8 +4,7 @@ import tensorflow as tf
 import numpy as np
 import time
 
-from keras.models import Model
-from numpy.linalg import norm
+from tensorflow.python.keras.models import Model
 from tqdm import tqdm
 
 
