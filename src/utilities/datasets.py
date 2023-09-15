@@ -1,5 +1,4 @@
 import numpy as np
-from keras.utils import to_categorical
 import keras
 import tensorflow as tf
 
