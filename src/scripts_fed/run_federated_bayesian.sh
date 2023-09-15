@@ -39,7 +39,7 @@ local_iter_types=(same)
 
 for beta in "${beta_values[@]}"; do
   for local_iter_type in "${local_iter_types[@]}"; do
-    max_iter=300
+    max_iter=200
     if [[ "$beta" == "0.125" && "$local_iter_type" == "dirichlet" ]]; then
       max_iter=850
     fi
@@ -51,12 +51,12 @@ for beta in "${beta_values[@]}"; do
       --gpu=1 \
       --fullset=100 \
       --batch_size=500 \
-      --learning_rate=0.001 \
+      --learning_rate=0.01 \
       --bayesian_search \
       --stop_patience=7 \
       --beta="$beta" \
       --split_type=dirichlet \
-      --const_local_iter=2 \
+      --const_local_iter=5 \
       --local_iter_type="$local_iter_type" \
       --number_clients=10 \
       --strategy="$base_strategy"
