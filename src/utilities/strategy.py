@@ -6,6 +6,7 @@ import tensorflow as tf
 from optimizer.EFsignSGD import EFsignSGD
 from optimizer.MemSGD import MemSGD
 from optimizer.FetchSGD import FetchSGD
+from tensorflow.python.keras.optimizer_v2.gradient_descent import SGD
 
 
 class Strategy(optimizer_v2.OptimizerV2):
@@ -63,6 +64,8 @@ class Strategy(optimizer_v2.OptimizerV2):
                 self.optimizer = MemSGD(learning_rate=learning_rate, rand_k=params["rand_k"])
             else:
                 self.optimizer = MemSGD(learning_rate=learning_rate, top_k=params["top_k"])
+        if self.optimizer_name == "sgd":
+            self.optimizer = SGD(learning_rate=learning_rate)
 
     def _create_slots(self, var_list):
         if self._momentum:
