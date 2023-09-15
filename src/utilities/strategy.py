@@ -66,6 +66,7 @@ class Strategy(optimizer_v2.OptimizerV2):
                 self.optimizer = MemSGD(learning_rate=learning_rate, top_k=params["top_k"])
         if self.optimizer_name == "sgd":
             self.optimizer = SGD(learning_rate=learning_rate)
+        self.optimizer_update = SGD(learning_rate=learning_rate)
 
     def _create_slots(self, var_list):
         if self._momentum:
