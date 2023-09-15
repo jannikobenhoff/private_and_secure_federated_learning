@@ -15,6 +15,8 @@ from models.ResNet import resnet
 from utilities.datasets import load_dataset
 from utilities.client_data import client_datasets, stratified_sampling, label_splitter  # plot_client_distribution, \
 
+import matplotlib.pyplot as plt
+
 # initialize GPU usage
 # Restrict TensorFlow to only allocate 2GB of memory on GPUs
 """
@@ -66,7 +68,7 @@ def fed_worker(args):
 
     base_model = tf.keras.applications.ResNet50V2(
         include_top=False,
-        weights=None,
+        weights='imagenet',
         input_shape=input_shape  # Specify input_shape as per your requirements
     )
 
@@ -87,6 +89,10 @@ def fed_worker(args):
     # Construct the full model
     model_client = tf.keras.models.Model(inputs=base_model.input, outputs=predictions)
 
+    for layer in model_client.layers:
+        if isinstance(layer, tf.keras.layers.BatchNormalization):
+            layer.trainable = False
+            layer._per_input_updates = {}
     # if args.dataset == "cifar10":
     #     model_client.build(input_shape=(None, 32, 32, 3))
 

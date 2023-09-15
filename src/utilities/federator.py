@@ -4,7 +4,9 @@ import tensorflow as tf
 import numpy as np
 import time
 
+from keras.models import clone_model
 from tensorflow.python.keras.models import Model
+from tensorflow.python.keras.optimizer_v2.gradient_descent import SGD
 from tqdm import tqdm
 
 
@@ -60,6 +62,10 @@ def local_train_loop(trainset, model, number_of_batches, local_iter, loss_func, 
     epoch_loss_avg = tf.keras.metrics.Mean()
     epoch_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
     client_average_grads = [tf.zeros_like(var) for var in model.trainable_variables]
+
+    # client_model = clone_model(model)
+    # client_model.set_weights(model.get_weights())
+
     # local training
     for _ in tf.range(local_iter):  # wie oft updates
         trainable_variables = model.trainable_variables
@@ -80,8 +86,10 @@ def local_train_loop(trainset, model, number_of_batches, local_iter, loss_func, 
 
         iter_avg_grads = tf.nest.map_structure(lambda x: x / number_of_batches, iter_avg_grads)
         client_average_grads = tf.nest.map_structure(lambda x, y: x + y, client_average_grads, iter_avg_grads)
+
         optimizer.apply_gradients(zip(iter_avg_grads, model.trainable_variables))
 
+    # client_average_grads = [a - b for a, b in zip(client_model.trainable_variables, initial_weights)]
     # Normalize iterations
     if local_iter > 1:
         client_average_grads = tf.nest.map_structure(lambda x: x / local_iter, client_average_grads)
@@ -172,6 +180,7 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
 
             # Update federator weights with averaged client weights
             optimizer.apply_gradients(zip(client_grads, model_federator.trainable_variables))
+
             federator_weights = model_federator.get_weights()
 
             # val_loss_avg = tf.keras.metrics.Mean()
