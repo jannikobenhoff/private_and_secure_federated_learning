@@ -50,8 +50,8 @@ for beta in "${beta_values[@]}"; do
       --max_iter=$max_iter \
       --gpu=1 \
       --fullset=100 \
-      --batch_size=500 \
-      --learning_rate=0.05 \
+      --batch_size=128 \
+      --learning_rate=0.1 \
       --bayesian_search \
       --stop_patience=7 \
       --beta="$beta" \

@@ -174,18 +174,18 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
             optimizer.apply_gradients(zip(client_grads, model_federator.trainable_variables))
             federator_weights = model_federator.get_weights()
 
-            val_loss_avg = tf.keras.metrics.Mean()
-            val_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
-            for i in range(num_class):
-                validation_data = val_data[i]
-                validation_label = val_label[i]
-
-                val_dataset = tf.data.Dataset.from_tensor_slices((validation_data, validation_label)).batch(batch_size)
-                for data, label in val_dataset:
-                    logits = model(data, training=False)
-                    val_loss_value = loss_func(label, logits)
-                    val_loss_avg.update_state(val_loss_value)
-                    val_accuracy.update_state(label, logits)
+            # val_loss_avg = tf.keras.metrics.Mean()
+            # val_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
+            # for i in range(num_class):
+            #     validation_data = val_data[i]
+            #     validation_label = val_label[i]
+            #
+            #     val_dataset = tf.data.Dataset.from_tensor_slices((validation_data, validation_label)).batch(batch_size)
+            #     for data, label in val_dataset:
+            #         logits = model(data, training=False)
+            #         val_loss_value = loss_func(label, logits)
+            #         val_loss_avg.update_state(val_loss_value)
+            #         val_accuracy.update_state(label, logits)
 
             # Evaluation on Test Data
             test_loss_avg = tf.keras.metrics.Mean()
