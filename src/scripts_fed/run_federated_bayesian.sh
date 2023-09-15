@@ -56,7 +56,7 @@ for beta in "${beta_values[@]}"; do
       --stop_patience=7 \
       --beta="$beta" \
       --split_type=dirichlet \
-      --const_local_iter=5 \
+      --const_local_iter=2 \
       --local_iter_type="$local_iter_type" \
       --number_clients=10 \
       --strategy="$base_strategy"
