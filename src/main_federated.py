@@ -67,9 +67,9 @@ def fed_worker(args):
     # if args.dataset == "cifar10":
     #     model_client.build(input_shape=(None, 32, 32, 3))
 
-    model_client.compile(optimizer=strategy.optimizer_update,
-                         loss='sparse_categorical_crossentropy',
-                         metrics=['accuracy'])
+    # model_client.compile(optimizer=strategy.optimizer_update,
+    #                      loss='sparse_categorical_crossentropy',
+    #                      metrics=['accuracy'])
 
     # model_client.summary()
 
