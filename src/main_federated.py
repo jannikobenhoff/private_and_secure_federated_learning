@@ -250,7 +250,7 @@ def bayesian_search(args):
         print("Iteration:", len(iteration_dummy) + 1)
         all_scores = []
 
-        for i in range(3):
+        for i in range(2):
             print(f"Step {i + 1}/3")
             args.search_lambda = params["l2_reg"]
             max_test_acc = fed_worker(args)
