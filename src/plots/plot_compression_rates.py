@@ -987,7 +987,7 @@ if __name__ == "__main__":
 
     # plot_compression_metrics("memsgd", "lenet_32")
 
-    plot_compare_all("lenet_64", False, 100, save=False)
+    plot_compare_all("resnet_256", False, 100, save=False)
 
     # plot_compression_rates()
 
