@@ -14,11 +14,11 @@ base_strategy='{"optimizer": "sgd", "compression": "atomo", "learning_rate": 0.0
 base_strategy_resnet='{"optimizer": "sgd", "compression": "atomo", "learning_rate": 0.1, "svd_rank":RANK}'
 base_strategy_vgg11='{"optimizer": "sgd", "compression": "atomo", "learning_rate": 0.05, "svd_rank":RANK}'
 
-ranks=(1)
+ranks=(1 3 6)
 #ranks=(6 6)
 
 parallel=0
-runs=1
+runs=2
 for ((i=1; i<=runs; i++))
 do
     case $mode in

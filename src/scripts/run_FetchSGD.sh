@@ -24,14 +24,14 @@ counters_resnet=(5000 10000 100000)
 counters_vgg11=(500000)
 
 parallel=0
-runs=1
+runs=2
 for ((i=1; i<=runs; i++))
 do
 case $mode in
     "search_lenet"|"l2_lenet"|"baseline_l2_lenet"|"no_l2_lenet")
         for c in "${counters[@]}"; do
             modified_strategy="${base_strategy//C_VALUE/$c}"
-            modified_strategy="${modified_strategy//K_VALUE/$((c/30))}"
+            modified_strategy="${modified_strategy//K_VALUE/$((c))}"
 
            if [ "$parallel" -eq 1 ]; then
                     ./run_main.sh "$modified_strategy" "$mode" &

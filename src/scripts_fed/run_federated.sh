@@ -19,7 +19,7 @@ onebitsgd='{"optimizer": "sgd", "compression": "onebitsgd"}'
 
 terngrad='{"optimizer": "sgd", "compression": "terngrad", "clip": 2.5}'
 
-topk='{"optimizer": "sgd", "compression": "topk", "k": 1000}'
+topk='{"optimizer": "sgd", "compression": "topk", "k": 10000}'
 
 naturalcompression='{"optimizer": "sgd", "compression": "naturalcompression"}'
 
@@ -39,7 +39,7 @@ local_iter_types=(same)
 
 for beta in "${beta_values[@]}"; do
   for local_iter_type in "${local_iter_types[@]}"; do
-    max_iter=300
+    max_iter=500
     if [[ "$beta" == "0.125" && "$local_iter_type" == "dirichlet" ]]; then
       max_iter=850
     fi

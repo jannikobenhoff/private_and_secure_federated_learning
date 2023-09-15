@@ -10,6 +10,7 @@ import tensorflow as tf
 import os
 import seaborn as sns
 
+from src.optimizer.FetchSGD import FetchSGD
 from src.plots.plot_utils import markers
 
 # from src.utilities.client_data import client_datasets, label_splitter
@@ -207,5 +208,32 @@ def plot_local_iter():
     plt.savefig("local_iter_same.pdf")
 
 
+def plot_variance():
+    epochs = np.linspace(1, 50, 50)
+    metrics = np.linspace(0.89, 0.99, 50)
+    print(epochs, metrics)
+    mean_metric = np.mean(metrics, axis=0)
+    std_metric = np.std(metrics, axis=0)
+    print(mean_metric)
+
+    plt.figure()
+    plt.plot(epochs, mean_metric, label='Mean')
+    plt.fill_between(epochs, mean_metric - 1.96 * std_metric, mean_metric + 1.96 * std_metric, alpha=0.2,
+                     label='95% CI')
+    plt.xlabel('Epoch')
+    plt.ylabel('Metric')
+    plt.legend()
+    plt.show()
+
+
+def plot_fetch():
+    fed = FetchSGD(c=1000, r=1, topk=33, momentum=0.9, learning_rate=0.05)
+
+    test_gradient = [tf.random.uniform(shape=[100, 20])]
+
+    c = fed.compress(test_gradient, test_gradient, 0.05)
+    print(fed.decompress(c, test_gradient))
+
+
 if __name__ == "__main__":
-    plot_atomo()
+    plot_variance()

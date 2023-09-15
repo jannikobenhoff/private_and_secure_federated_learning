@@ -18,7 +18,7 @@ repetitions=(250 500 1000 1500)
 repetitions_vgg11=(30000)
 repetitions_resnet=(20000 50000)
 
-runs=1
+runs=3
 for ((i=1; i<=runs; i++))
 do
 case $mode in

@@ -15,7 +15,7 @@ def plot_bayesian_search(folder: str, title: str):
     all_files = get_all_files_in_directory(directory_path)
 
     fig, axs = plt.subplots(1, 1, figsize=(9, 6))
-    cs = iter(["g", "b", "r", "y"])
+    cs = iter(["b", "g", "r", "y"])
 
     print(len(all_files), "Files")
     plot_title = ""
@@ -73,7 +73,7 @@ def plot_bayesian_search(folder: str, title: str):
     # plt.suptitle(label_name, fontsize=8)
     plt.tight_layout()
     # print(str(metrics["args"]).replace("Namespace", "").replace("}', e", "}',\ne")[1:-1])
-    # plt.savefig("../../figures/bayesian_" + plot_title + ".pdf", bbox_inches='tight')
+    plt.savefig("../../figures/bayesian_" + plot_title + ".pdf", bbox_inches='tight')
     plt.show()
 
 
@@ -89,7 +89,7 @@ def plot_bayesian_search_fed(folder: str, title: str):
     for file in all_files:
 
         result = load(file)
-
+        print(result)
         metrics = result["metrics"]
         param = ast.literal_eval(metrics["args"].strategy)
         label_name = names[(param["optimizer"] + " " +
@@ -128,6 +128,6 @@ def plot_bayesian_search_fed(folder: str, title: str):
 
 
 if __name__ == "__main__":
-    # plot_bayesian_search("fed", "bayesian_result_lenet_09_12_18_34_05.pkl")
+    # plot_bayesian_search("new", "bayesian_result_SGD_resnet18_09_08_03_17_15.pkl")
 
-    plot_bayesian_search_fed("fed", "bayesian_result_lenet_09_12_18_34_05.pkl")
+    plot_bayesian_search_fed("fed", "bayesian_result_lenet_09_14_18_32_44.pkl")

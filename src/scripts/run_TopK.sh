@@ -14,12 +14,12 @@ base_strategy='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.01
 base_strategy_resnet='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.1, "k": K_VALUE}'
 base_strategy_vgg11='{"optimizer": "sgd", "compression": "topk", "learning_rate": 0.05, "k": K_VALUE}'
 
-top_ks=(100 500 1000)
+top_ks=(6000 100 500 1000)
 top_ks_resnet=(2000 5000 10000)
 top_ks_vgg11=(1000 5000 10000) # 2000
 
 parallel=0
-runs=1
+runs=3
 for ((i=1; i<=runs; i++))
 do
 case $mode in

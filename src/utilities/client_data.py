@@ -53,8 +53,10 @@ def client_datasets(number_clients: int, split_type: str, list_data: list, list_
 
         for k in range(number_label):
             data = np.empty(shape=[1, height, weight, channel], dtype=int)
-            # label = np.empty(shape=[1,1], dtype=int)
-            label = np.empty(shape=[1], dtype=int)
+            if dataset == "cifar10":
+                label = np.empty(shape=[1, 1], dtype=int)
+            else:
+                label = np.empty(shape=[1], dtype=int)
 
             for n in range(number_label):
                 if k == n:
@@ -82,8 +84,10 @@ def client_datasets(number_clients: int, split_type: str, list_data: list, list_
 
         for k in range(number_clients):
             data = np.empty(shape=[1, height, weight, channel], dtype=int)
-            # label = np.empty(shape=[1,1], dtype=int)
-            label = np.empty(shape=[1], dtype=int)
+            if dataset == "cifar10":
+                label = np.empty(shape=[1, 1], dtype=int)
+            else:
+                label = np.empty(shape=[1], dtype=int)
 
             for n in range(number_label):
                 data = np.concatenate((data, split_data_array[n][k]), axis=0)
@@ -105,8 +109,10 @@ def client_datasets(number_clients: int, split_type: str, list_data: list, list_
 
         for k in range(number_clients):
             data = np.empty(shape=[1, height, weight, channel], dtype=int)
-            # label = np.empty(shape=[1, 1], dtype=int)
-            label = np.empty(shape=[1], dtype=int)
+            if dataset == "cifar10":
+                label = np.empty(shape=[1, 1], dtype=int)
+            else:
+                label = np.empty(shape=[1], dtype=int)
 
             for n in range(number_label):
                 data = np.concatenate((data, split_data_array[n][k]), axis=0)

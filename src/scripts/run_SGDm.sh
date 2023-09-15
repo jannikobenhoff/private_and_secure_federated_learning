@@ -14,8 +14,6 @@ base_strategy='{"optimizer": "sgdm", "compression": "none", "learning_rate": 0.0
 base_strategy_resnet='{"optimizer": "sgdm", "compression": "none", "learning_rate": 0.01, "momentum": 0.9}'
 base_strategy_vgg11='{"optimizer": "sgdm", "compression": "none", "learning_rate": 0.01, "momentum": 0.9}'
 
-# TODO check lambda vgg11
-
 runs=1
 for ((i=1; i<=runs; i++))
 do

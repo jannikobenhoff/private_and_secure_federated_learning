@@ -41,6 +41,9 @@ def fed_worker(args):
     img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset(args.dataset,
                                                                                           fullset=args.fullset)
 
+    # (img_train, label_train), (img_test, label_test) = keras.datasets.cifar10.load_data()
+    # img_train, img_test = img_train / 255.0, img_test / 255.0
+
     # Initialize Strategy (Optimizer / Compression)
     learning_rate = args.learning_rate
     strategy_params = json.loads(args.strategy)
@@ -53,7 +56,7 @@ def fed_worker(args):
     if args.bayesian_search:
         lambda_l2 = args.search_lambda
     elif True:  # args.train_on_baseline == 1:
-        lambda_l2 = get_l2_lambda(args, **{"optimizer": "sgd", "compression": "federated"})
+        lambda_l2 = None  # get_l2_lambda(args, fed=True, **{"optimizer": "sgd", "compression": "none"})
     else:
         lambda_l2 = None
     # lambda_l2 = None
@@ -210,11 +213,13 @@ def fed_worker(args):
 
 def bayesian_search(args):
     space = [Real(1e-6, 1e-1, "log-uniform", name='l2_reg')]
+    iteration_dummy = []
 
     @use_named_args(space)
     def objective(**params):
         # params["l2_reg"] = params["l2_reg"]
-        print("Lambda: ", params["l2_reg"])
+        print("Lambda:", params["l2_reg"])
+        print("Iteration:", len(iteration_dummy) + 1)
         all_scores = []
 
         for i in range(3):
@@ -223,6 +228,7 @@ def bayesian_search(args):
             max_test_acc = fed_worker(args)
             all_scores.append(max_test_acc)
 
+        iteration_dummy.append(1)
         return - np.mean(all_scores)
 
     result = gp_minimize(objective, space, n_calls=10, verbose=0, random_state=45)

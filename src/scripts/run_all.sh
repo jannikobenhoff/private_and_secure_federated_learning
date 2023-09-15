@@ -1,53 +1,44 @@
 #!/bin/bash
 
-# Kill
-# pkill -f run_EFsignSGD.sh
-# pkill -f run_all.sh
+echo "Starting the Gradient Sparsification script..."
+/bin/bash /Users/jannikobenhoff/Documents/pythonProjects/private_and_secure_federated_learning/src/scripts/run_sgd.sh
 
-# Master script
-DEFAULT_MODE="baseline_l2_vgg11"
+if [ $? -eq 0 ]; then
+    echo "Gradient Sparsification script completed successfully."
+else
+    echo "Gradient Sparsification script failed. Exiting..."
+    exit 1
+fi
 
-# LeNet: search_lenet  l2_lenet  baseline_l2_lenet  no_l2_lenet
-# ResNet18: search_resnet18  no_l2_resnet18  baseline_l2_resnet18
-# VGG11: search_vgg11  baseline_l2_vgg11
+echo "Starting the SGD script..."
+/bin/bash /Users/jannikobenhoff/Documents/pythonProjects/private_and_secure_federated_learning/src/scripts/run_NaturalCompression.sh
 
-mode=${1:-$DEFAULT_MODE}
+if [ $? -eq 0 ]; then
+    echo "SGD script completed successfully."
+else
+    echo "SGD script failed. Exiting..."
+    exit 1
+fi
 
-scripts=(
-    "run_EFsignSGD.sh"
-    #"run_FetchSGD.sh"
-    #"run_GradientSparsification.sh"
-    #"run_memSGD.sh"
-    #"run_NaturalCompression.sh"
-    "run_OneBitSGD.sh"
-    #"run_SGD.sh"
-    #"run_SparseGradient.sh"
-    #"run_TernGrad.sh"
-    #"run_TopK.sh"
-    #"run_vqSGD.sh"
-)
+echo "Starting the SGD script..."
+/bin/bash /Users/jannikobenhoff/Documents/pythonProjects/private_and_secure_federated_learning/src/scripts/run_EFsignSGD.sh
 
-pids=()
+if [ $? -eq 0 ]; then
+    echo "SGD script completed successfully."
+else
+    echo "SGD script failed. Exiting..."
+    exit 1
+fi
 
-# This function will be called when you interrupt the script
-stop_scripts() {
-    echo "Shutting down all subprocesses..."
-    for pid in "${pids[@]}"; do
-        kill $pid
-    done
-}
+echo "Starting the SGD script..."
+/bin/bash /Users/jannikobenhoff/Documents/pythonProjects/private_and_secure_federated_learning/src/scripts/run_OneBitSGD.sh
 
-# Set the trap
-trap stop_scripts SIGINT SIGTERM
+if [ $? -eq 0 ]; then
+    echo "SGD script completed successfully."
+else
+    echo "SGD script failed. Exiting..."
+    exit 1
+fi
 
-execute_scripts() {
-    for script in "${scripts[@]}"; do
-        ./$script $1 &
-        pids+=($!)
-        echo "$pids"
-    done
-    wait
-}
 
-execute_scripts "$mode"
-
+echo "All scripts executed successfully."

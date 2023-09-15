@@ -27,6 +27,7 @@ class FetchSGD(Optimizer):
         self.momentum_parameter = momentum
         self.momentum = tf.Variable(tf.zeros(shape=[self.r, self.c], dtype=tf.float32))
         self.error = tf.Variable(tf.zeros(shape=[self.r, self.c], dtype=tf.float32))
+        self.clients = 1
 
     def build(self, var_list, clients=1):
         """Initialize optimizer variables.
@@ -39,6 +40,7 @@ class FetchSGD(Optimizer):
         super().build(var_list)
         if hasattr(self, "_built") and self._built:
             return
+        self.clients = clients
         # self.momentums = []
         # self.error = {}
         #
@@ -86,8 +88,11 @@ class FetchSGD(Optimizer):
         self.momentum.assign(self.momentum_parameter * self.momentum + sketch)
 
         cs = CSVec(d=d, c=self.c, r=self.r, numBlocks=self.blocks)
-        # self.error.assign_add(self.momentum)
-        self.error.assign_add(self.momentum)
+
+        if self.clients == 1:
+            self.error.assign(self.lr * self.momentum)
+        else:
+            self.error.assign_add(self.lr * self.momentum)
 
         cs.accumulateTable(self.error.numpy())
 
@@ -119,7 +124,7 @@ class FetchSGD(Optimizer):
         for var in variables:
             size = tf.reduce_prod(var.shape).numpy()
             segment = tf.Variable(update[start: start + size])
-            decompressed_grads.append(tf.reshape(segment, var.shape))
+            decompressed_grads.append(tf.reshape(segment, var.shape) / self.lr)
             start += size
         return decompressed_grads
 

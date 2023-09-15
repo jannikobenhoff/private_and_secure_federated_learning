@@ -30,7 +30,7 @@ sgdm='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
 base_strategy=$sgd
 
 beta_values=(2)
-local_iter_types=(same)
+local_iter_types=(dirichlet)
 
 # dirichlet 2    -> 700
 # dirichlet 0125 -> 850
@@ -39,12 +39,12 @@ local_iter_types=(same)
 
 for beta in "${beta_values[@]}"; do
   for local_iter_type in "${local_iter_types[@]}"; do
-    max_iter=400
+    max_iter=350
     if [[ "$beta" == "0.125" && "$local_iter_type" == "dirichlet" ]]; then
       max_iter=850
     fi
     if [[ "$beta" == "2" && "$local_iter_type" == "dirichlet" ]]; then
-      max_iter=500
+      max_iter=350
     fi
     python ../main_federated.py --model lenet --dataset mnist \
       --max_iter=$max_iter \

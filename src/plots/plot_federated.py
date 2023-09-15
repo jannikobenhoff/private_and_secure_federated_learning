@@ -8,6 +8,11 @@ import matplotlib.pyplot as plt
 import itertools
 
 import pandas as pd
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
+import numpy as np
+import matplotlib.pyplot as plt
+from skopt.learning.gaussian_process.kernels import Matern
 
 from plot_utils import names, colors, markers
 
@@ -389,6 +394,8 @@ def lambda_search(parent_folder):
             continue
         file = open(file_path, "r")
         file = json.load(file)
+        if file["args"]["local_iter_type"] == "same":
+            continue
         strat = ast.literal_eval(file["args"]["strategy"])
         strat_key = f"{strat} {file['args']['lambda_l2']}"
         lean_strat_key = f"{strat['optimizer']} {strat['compression']} {file['args']['lambda_l2']}"
@@ -422,6 +429,7 @@ def lambda_search(parent_folder):
 
     fig, axes = plt.subplots(1, 3, figsize=(12, 5))  # , gridspec_kw={'width_ratios': [1, 1.3]})
     axes = axes.flatten()
+    data_points = [[], []]
     for method in metrics:
         # label_name = names[method.lower().replace(" none", "").replace("none ", "")]
         cr_acc_pairs = []
@@ -431,11 +439,14 @@ def lambda_search(parent_folder):
         best_param_metrics = best_param[1]
         print(best_param_metrics["l2_lambda"], best_param_metrics["max_val_acc"])
 
+        data_points[0].append(best_param_metrics["l2_lambda"])
+        data_points[1].append(best_param_metrics["max_val_acc"])
         axes[0].scatter(best_param_metrics["l2_lambda"], best_param_metrics["max_val_acc"])
         axes[1].plot(best_param_metrics["test_acc"], label=best_param_metrics["l2_lambda"])
         axes[2].plot(best_param_metrics["test_loss"])
 
     axes[0].set_xscale("log")
+    axes[0].set_xlim([1e-6, 0.1])
     axes[1].legend()
     plt.show()
 
@@ -481,7 +492,7 @@ def plot_compare_to_diff_sets(parent_folders: list):
             metrics[lean_strat_key][strat_key]["max_val_acc"] = np.mean([
                 metrics[lean_strat_key][strat_key]["max_val_acc"], np.max(val_acc)])
 
-    fig, axes = plt.subplots(3, 4, figsize=(17, 8))
+    fig, axes = plt.subplots(4, 3, figsize=(17, 8))
     axes = axes.flatten()
 
     ax_index = 0
@@ -521,7 +532,8 @@ def plot_compare_to_diff_sets(parent_folders: list):
         # Hide axes
         axes[ax_index].xaxis.set_visible(False)
         axes[ax_index].yaxis.set_visible(False)
-
+        axes[ax_index].axis('off')
+        axes[ax_index].set_title(label_name)
         # Table from DataFrame
         table_data = []
         for row in df.index:
@@ -530,24 +542,18 @@ def plot_compare_to_diff_sets(parent_folders: list):
                                      colColours=['#f2f2f2'] * df.shape[1])
 
         # Apply color map to the cells
-        norm = plt.cm.colors.Normalize(vmax=abs(diff_matrix).max(), vmin=-abs(diff_matrix).max())
+        # norm = plt.cm.colors.Normalize(vmax=abs(diff_matrix).max(), vmin=-abs(diff_matrix).max())
+        norm = plt.cm.colors.Normalize(vmax=10, vmin=-10)
         colors = plt.cm.RdBu_r(norm(diff_matrix))
         for i, label1 in enumerate(labels):
             for j, label2 in enumerate(labels):
                 table[(i + 1, j)].set_facecolor(colors[i, j])
                 table[(i + 1, j)].set_text_props(
-                    color="w" if abs(diff_matrix[i, j]) > 0.5 * abs(diff_matrix).max() else "k")
-
-        # table.auto_set_font_size(False)
-        # table.set_fontsize(12)
-        # table.scale(1.5, 1.5)
-        # table.auto_set_font_size(False)
-        # table.set_fontsize(10)
-        # table.scale(1.1, 1.6)
+                    color="w" if abs(diff_matrix[i, j]) > 0.5 * 10 else "k")
 
         for (row, col), cell in table.get_celld().items():
             if row == 0:
-                cell.set_fontsize(5)
+                # cell.set_fontsize(5)
                 cell._text.set_weight('bold')
             if col == 0 and row > 0:
                 cell.set_fontsize(8)
@@ -568,10 +574,10 @@ if __name__ == "__main__":
     WINDOW_SIZE = 3
     # plot_compression_metrics("atomo", "same_2")
 
-    # plot_compare_all("dirichlet_2")
+    plot_compare_all("same_2")
 
     # plot_compare_to_diff_sets(["same_2", "dirichlet_2", "same_0125", "dirichlet_0125"])
 
-    lambda_search("reg")
+    # lambda_search("n")
 
     # plot_compression_rates()

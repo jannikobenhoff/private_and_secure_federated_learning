@@ -104,32 +104,44 @@ def strategy_factory(**params) -> Strategy:
                         compression=None, optimizer=params["optimizer"].lower())
 
 
-def get_l2_lambda(args, **params) -> float:
+def get_l2_lambda(args, fed=False, **params) -> float:
     lambdas = None
-    if args.model.lower() == "lenet":
-        lambdas = json.load(open("../results/lambda_lookup.json", "r"))
-    elif args.model.lower() == "resnet18":
-        lambdas = json.load(open("../results/lambda_lookup_resnet18.json", "r"))
-    elif args.model.lower() == "vgg11":
-        lambdas = json.load(open("../results/lambda_lookup_vgg11.json", "r"))
+    if fed:
+        if args.model.lower() == "lenet":
+            lambdas = json.load(open("../results/lambda_lookup_federated.json", "r"))
+        # elif args.model.lower() == "resnet18":
+        #     lambdas = json.load(open("../results/lambda_lookup_resnet18.json", "r"))
+        # elif args.model.lower() == "vgg11":
+        #     lambdas = json.load(open("../results/lambda_lookup_vgg11.json", "r"))
+        setup = args.local_iter_type + str(args.beta)
+        return lambdas["sgd"][setup]
 
-    opt = params["optimizer"]
-    comp = params["compression"]
+    else:
+        if args.model.lower() == "lenet":
+            lambdas = json.load(open("../results/lambda_lookup.json", "r"))
+        elif args.model.lower() == "resnet18":
+            lambdas = json.load(open("../results/lambda_lookup_resnet18.json", "r"))
+        elif args.model.lower() == "vgg11":
+            lambdas = json.load(open("../results/lambda_lookup_vgg11.json", "r"))
 
-    if (opt in ["efsignsgd", "sgd"] and comp in ["none", "federated"]) or comp in ["onebitsgd", "naturalcompression"]:
-        return lambdas[opt][comp]
+        opt = params["optimizer"]
+        comp = params["compression"]
 
-    keys = [k for k in params.keys() if k != "compression" and k != "optimizer" and k != "learning_rate"]
-    first_key = list(lambdas[opt][comp].keys())[0]
-    first_key_value = lambdas[opt][comp][first_key][str(params[first_key])]
+        if (opt in ["efsignsgd", "sgd"] and comp in ["none", "federated"]) or comp in ["onebitsgd",
+                                                                                       "naturalcompression"]:
+            return lambdas[opt][comp]
 
-    if type(first_key_value) != float:
-        second_key = list(first_key_value.keys())[0]
-        print(second_key, first_key_value)
-        if second_key in keys:
-            second_key_value = first_key_value[second_key][str(params[second_key])]
-            return second_key_value
-    return first_key_value
+        keys = [k for k in params.keys() if k != "compression" and k != "optimizer" and k != "learning_rate"]
+        first_key = list(lambdas[opt][comp].keys())[0]
+        first_key_value = lambdas[opt][comp][first_key][str(params[first_key])]
+
+        if type(first_key_value) != float:
+            second_key = list(first_key_value.keys())[0]
+            print(second_key, first_key_value)
+            if second_key in keys:
+                second_key_value = first_key_value[second_key][str(params[second_key])]
+                return second_key_value
+        return first_key_value
 
 
 @tf.function
@@ -167,17 +179,17 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
     strategy = strategy_factory(**strategy_params)
     strategy.summary()
 
-    BATCH_SIZE = 32
+    BATCH_SIZE = 64
     initial_lr = strategy_params["learning_rate"]
     drop_factor = 0.1
     drop_epochs = []
     min_lr = initial_lr * 0.1 * 0.1
 
     if args.dataset == "cifar10" and args.model.lower() == "resnet18":
-        BATCH_SIZE = 128
+        BATCH_SIZE = 256  # 128
         initial_lr = strategy_params["learning_rate"]
         drop_factor = 0.1
-        drop_epochs = [15]
+        drop_epochs = [20]  # [15]
         min_lr = initial_lr * 0.1 * 0.1
 
     elif args.dataset == "cifar10" and args.model.lower() == "vgg11":
@@ -416,6 +428,12 @@ def worker(args):
         print(tf.config.get_visible_devices())
     else:
         print("Using GPU")
+        gpus = tf.config.list_physical_devices('GPU')
+        if gpus:
+            for gpu in gpus:
+                tf.config.set_logical_device_configuration(
+                    gpus[0],
+                    [tf.config.LogicalDeviceConfiguration(memory_limit=2048)])
     tf.config.run_functions_eagerly(run_eagerly=True)
     tf.data.experimental.enable_debug_mode()
 

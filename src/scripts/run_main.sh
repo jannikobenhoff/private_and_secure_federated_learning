@@ -58,13 +58,26 @@ case $mode in
 
     "baseline_l2_lenet")
         python ../main_local.py --model LeNet --dataset mnist \
-            --epochs=60 \
+            --epochs=100 \
             --k_fold=1 \
             --fullset=100 \
             --stop_patience=20 \
             --train_on_baseline=1 \
             --lr_decay=3 \
             --gpu=0 \
+            --log=1 \
+            --strategy="$compression_strategy"
+        ;;
+
+    "baseline_l2_resnet18")
+        python ../main_local.py --model ResNet18 --dataset cifar10 \
+            --epochs=40 \
+            --gpu=1 \
+            --k_fold=1 \
+            --fullset=100 \
+            --stop_patience=12 \
+            --train_on_baseline=1 \
+            --lr_decay=3 \
             --log=1 \
             --strategy="$compression_strategy"
         ;;
@@ -119,18 +132,6 @@ case $mode in
             --strategy="$compression_strategy"
         ;;
 
-    "baseline_l2_resnet18")
-        python ../main_local.py --model ResNet18 --dataset cifar10 \
-            --epochs=30 \
-            --gpu=1 \
-            --k_fold=1 \
-            --fullset=100 \
-            --stop_patience=7 \
-            --train_on_baseline=1 \
-            --lr_decay=3 \
-            --log=1 \
-            --strategy="$compression_strategy"
-        ;;
     *)
         echo "Invalid mode provided. Please use: search, training, baseline_l2, etc."
         exit 1
