@@ -1,5 +1,5 @@
 import tensorflow as tf
-from keras.optimizers.optimizer import Optimizer
+from tensorflow.python.keras.optimizers import Optimizer
 from tensorflow import Tensor
 
 

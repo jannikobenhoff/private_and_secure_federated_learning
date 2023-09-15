@@ -1,27 +1,26 @@
 import tensorflow as tf
-from keras.optimizers.legacy import optimizer_v2
-from keras.optimizers.optimizer import Optimizer
+from tensorflow.python.keras.optimizers import Optimizer
 from tensorflow import Tensor
 from src.compressions.TopK import TopK
 
 
 class SGD(Optimizer):
     def __init__(
-        self,
-        learning_rate=0.01,
-        momentum=0.0,
-        nesterov=False,
-        amsgrad=False,
-        weight_decay=None,
-        clipnorm=None,
-        clipvalue=None,
-        global_clipnorm=None,
-        use_ema=False,
-        ema_momentum=0.99,
-        ema_overwrite_frequency=None,
-        jit_compile=True,
-        name="SGD",
-        **kwargs
+            self,
+            learning_rate=0.01,
+            momentum=0.0,
+            nesterov=False,
+            amsgrad=False,
+            weight_decay=None,
+            clipnorm=None,
+            clipvalue=None,
+            global_clipnorm=None,
+            use_ema=False,
+            ema_momentum=0.99,
+            ema_overwrite_frequency=None,
+            jit_compile=True,
+            name="SGD",
+            **kwargs
     ):
         super().__init__(
             name=name,
@@ -40,7 +39,7 @@ class SGD(Optimizer):
         self.momentum = momentum
         self.nesterov = nesterov
         if isinstance(momentum, (int, float)) and (
-            momentum < 0 or momentum > 1
+                momentum < 0 or momentum > 1
         ):
             raise ValueError("`momentum` must be between [0, 1].")
 
@@ -91,6 +90,7 @@ class SGD(Optimizer):
                 delta=grad,
                 use_locking=self._use_locking,
             )
+
     def update_step(self, gradient, variable):
         """Update step given gradient and the associated model variable."""
         gradient = TopK(k=10).compress(gradient, variable)

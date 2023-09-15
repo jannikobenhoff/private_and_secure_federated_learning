@@ -1,5 +1,5 @@
 import numpy as np
-from keras.optimizers.legacy import optimizer_v2
+from tensorflow.python.keras.optimizer_v2 import optimizer_v2
 from tensorflow import Tensor
 import tensorflow as tf
 
