@@ -422,6 +422,7 @@ def train_model_non_mini_batch(train_images, train_labels, val_images, val_label
 
 
 def worker(args):
+    print("WORKER")
     seed_value = 100
     tf.random.set_seed(seed_value)
     np.random.seed(seed_value)
