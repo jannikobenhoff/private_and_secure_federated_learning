@@ -71,4 +71,4 @@ def load_dataset(dataset_name: str, fullset=100):
 
 
 if __name__ == "__main__":
-    print(load_dataset("cifar100"))
+    print(load_dataset("cifar10"))
