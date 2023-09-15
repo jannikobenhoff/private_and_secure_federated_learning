@@ -2,7 +2,6 @@ import json
 from datetime import datetime
 import os
 
-import keras
 from keras.losses import SparseCategoricalCrossentropy
 from keras.metrics import SparseCategoricalAccuracy
 from skopt import gp_minimize
@@ -68,7 +67,7 @@ def fed_worker(args):
     # if args.dataset == "cifar10":
     #     model_client.build(input_shape=(None, 32, 32, 3))
 
-    model_client.compile(optimizer=strategy,
+    model_client.compile(optimizer=strategy.optimizer,
                          loss='sparse_categorical_crossentropy',
                          metrics=['accuracy'])
 
