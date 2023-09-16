@@ -51,7 +51,7 @@ for beta in "${beta_values[@]}"; do
       --gpu=1 \
       --fullset=100 \
       --batch_size=500 \
-      --learning_rate=0.005 \
+      --learning_rate=0.001 \
       --bayesian_search \
       --stop_patience=7 \
       --beta="$beta" \

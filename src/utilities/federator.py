@@ -127,9 +127,9 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
         iter_start_time = time.time()
 
         # lr decay
-        if num_iter in [120]:
-            learning_rate = learning_rate * 0.1
-            optimizer.learning_rate = learning_rate
+        # if num_iter in [120]:
+        #     learning_rate = learning_rate * 0.1
+        #     optimizer.learning_rate = learning_rate
         progress_bar_clients = tqdm(range(number_clients), desc=f"Iteration {num_iter + 1}/{max_iter}", unit="client",
                                     ncols=150)
         for k in progress_bar_clients:
