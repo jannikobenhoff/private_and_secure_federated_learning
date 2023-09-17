@@ -3,10 +3,10 @@ from tensorflow.python.keras.optimizers import Optimizer
 from tensorflow import Tensor
 
 
-class EFsignSGD(Optimizer):
+class EFsignSGD:
     def __init__(self, learning_rate, name="EFsignSGD"):
-        super().__init__(name=name)
-        self._learning_rate = self._build_learning_rate(learning_rate)
+        # super().__init__(name=name)
+        # self._learning_rate = self._build_learning_rate(learning_rate)
         self.compression_rates = []
         self.errors = {}
 
@@ -18,7 +18,7 @@ class EFsignSGD(Optimizer):
         Args:
           var_list: list of model variables to build EFsignSGD variables on.
         """
-        super().build(var_list)
+        # super().build(var_list)
         if hasattr(self, "_built") and self._built:
             return
         for client in range(1, clients + 1):

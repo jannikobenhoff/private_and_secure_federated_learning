@@ -63,7 +63,8 @@ def LeNet5(input_shape=(int, int, int), l2_lambda=None):
     )(model_layers)
     outputs = Dense(
         units=10,
-        activation='softmax'
+        activation='softmax',
+        kernel_regularizer=regularizers.l2(l2_lambda)
     )(model_layers)
 
     model = Model(inputs, outputs)

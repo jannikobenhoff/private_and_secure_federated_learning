@@ -11,10 +11,10 @@ DEFAULT_MODE="baseline_l2_resnet18"
 mode=${1:-$DEFAULT_MODE}
 
 base_strategy='{"optimizer": "sgd", "compression": "terngrad", "learning_rate": 0.01, "clip": 2.5}'
-base_strategy_resnet='{"optimizer": "sgd", "compression": "terngrad", "learning_rate": 0.1, "clip": 2.5}'
+base_strategy_resnet='{"optimizer": "sgd", "compression": "terngrad", "learning_rate": 0.001, "clip": 2.5}'
 base_strategy_vgg11='{"optimizer": "sgd", "compression": "terngrad", "learning_rate": 0.01, "clip": 2.5}'
 
-runs=3
+runs=1
 for ((i=1; i<=runs; i++))
 do
     case $mode in

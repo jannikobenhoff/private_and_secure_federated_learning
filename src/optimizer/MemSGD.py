@@ -4,10 +4,10 @@ from tensorflow.python.keras.optimizers import Optimizer
 from tensorflow import Tensor
 
 
-class MemSGD(Optimizer):
+class MemSGD:
     def __init__(self, learning_rate, top_k: int = None, rand_k: int = None, name="MemSGD"):
-        super().__init__(name=name)
-        self._learning_rate = self._build_learning_rate(learning_rate)
+        # super().__init__(name=name)
+        # self._learning_rate = self._build_learning_rate(learning_rate)
 
         if rand_k is not None and top_k is not None:
             raise "Please only select top-k or random-k sparsification."
@@ -26,7 +26,7 @@ class MemSGD(Optimizer):
         Args:
           var_list: list of model variables to build MemSGD variables on.
         """
-        super().build(var_list)
+        # super().build(var_list)
         if hasattr(self, "_built") and self._built:
             return
 

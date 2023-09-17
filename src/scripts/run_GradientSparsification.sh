@@ -11,15 +11,15 @@ DEFAULT_MODE="baseline_l2_resnet18"
 mode=${1:-$DEFAULT_MODE}
 
 base_strategy='{"optimizer": "sgd", "compression": "gradientsparsification", "learning_rate": 0.01, "k": K_VALUE, "max_iter": 2}'
-base_strategy_resnet='{"optimizer": "sgd", "compression": "gradientsparsification", "learning_rate": 0.1, "k": K_VALUE, "max_iter": 2}'
+base_strategy_resnet='{"optimizer": "sgd", "compression": "gradientsparsification", "learning_rate": 0.001, "k": K_VALUE, "max_iter": 2}'
 base_strategy_vgg11='{"optimizer": "sgd", "compression": "gradientsparsification", "learning_rate": 0.01, "k": K_VALUE, "max_iter": 2}'
 
 k_values=(0.1 0.01 0.001)
 k_values_vgg=(0.3 0.1 0.05) #0.05 0.1 0.3)
-k_values_resnet=(0.3 0.1 0.05 )
+k_values_resnet=(0.01)
 
 parallel=0
-runs=3
+runs=1
 for ((i=1; i<=runs; i++))
 do
     case $mode in

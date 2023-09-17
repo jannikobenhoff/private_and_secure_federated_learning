@@ -1,6 +1,7 @@
 {
   "sgd": {
-    "same2.0": 0.0001,
+    "same2.0": 0.0015,
+    "same2.0_new": 0.0001,
     "same0125": 0.0,
     "dirichlet2": 0.0,
     "dirichlet0125": 0.0

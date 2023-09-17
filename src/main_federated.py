@@ -57,7 +57,7 @@ def fed_worker(args):
     if args.bayesian_search:
         lambda_l2 = args.search_lambda
     elif True:  # args.train_on_baseline == 1:
-        lambda_l2 = None  # get_l2_lambda(args, fed=True, **{"optimizer": "sgd", "compression": "none"})
+        lambda_l2 = get_l2_lambda(args, fed=True, **{"optimizer": "sgd", "compression": "none"})
     else:
         lambda_l2 = None
     # lambda_l2 = None
@@ -66,33 +66,33 @@ def fed_worker(args):
     print("Using L2 lambda:", lambda_l2)
     model_client = model_factory(args.model.lower(), lambda_l2, input_shape, num_classes)
 
-    base_model = tf.keras.applications.ResNet50V2(
-        include_top=False,
-        weights='imagenet',
-        input_shape=input_shape  # Specify input_shape as per your requirements
-    )
-
-    # Add L2 regularization to the pre-built model's layers
-    for layer in base_model.layers:
-        if hasattr(layer, 'kernel_regularizer'):
-            setattr(layer, 'kernel_regularizer', tf.keras.regularizers.l2(lambda_l2))
+    # base_model = tf.keras.applications.ResNet50V2(
+    #     include_top=False,
+    #     weights='imagenet',
+    #     input_shape=input_shape  # Specify input_shape as per your requirements
+    # )
+    #
+    # # Add L2 regularization to the pre-built model's layers
+    # for layer in base_model.layers:
+    #     if hasattr(layer, 'kernel_regularizer'):
+    #         setattr(layer, 'kernel_regularizer', tf.keras.regularizers.l2(lambda_l2))
 
     # Create new top layers (classification layers) with L2 regularization
-    x = base_model.output
-    x = tf.keras.layers.GlobalAveragePooling2D()(x)
-    x = tf.keras.layers.Dense(1024, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(lambda_l2))(
-        x)  # Adding L2 regularization here
-    predictions = tf.keras.layers.Dense(10, activation='softmax',
-                                        kernel_regularizer=tf.keras.regularizers.l2(lambda_l2))(
-        x)  # Adding L2 regularization here
-
-    # Construct the full model
-    model_client = tf.keras.models.Model(inputs=base_model.input, outputs=predictions)
-
-    for layer in model_client.layers:
-        if isinstance(layer, tf.keras.layers.BatchNormalization):
-            layer.trainable = False
-            layer._per_input_updates = {}
+    # x = base_model.output
+    # x = tf.keras.layers.GlobalAveragePooling2D()(x)
+    # x = tf.keras.layers.Dense(1024, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(lambda_l2))(
+    #     x)  # Adding L2 regularization here
+    # predictions = tf.keras.layers.Dense(10, activation='softmax',
+    #                                     kernel_regularizer=tf.keras.regularizers.l2(lambda_l2))(
+    #     x)  # Adding L2 regularization here
+    #
+    # # Construct the full model
+    # model_client = tf.keras.models.Model(inputs=base_model.input, outputs=predictions)
+    #
+    # for layer in model_client.layers:
+    #     if isinstance(layer, tf.keras.layers.BatchNormalization):
+    #         layer.trainable = False
+    #         layer._per_input_updates = {}
     # if args.dataset == "cifar10":
     #     model_client.build(input_shape=(None, 32, 32, 3))
 

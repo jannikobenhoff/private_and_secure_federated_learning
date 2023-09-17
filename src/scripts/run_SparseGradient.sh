@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="baseline_l2_lenet"
+DEFAULT_MODE="baseline_l2_resnet18"
 
 # LeNet:    search_lenet      baseline_l2_lenet       l2_lenet        no_l2_lenet
 # ResNet18: search_resnet18   baseline_l2_resnet18    no_l2_resnet18
@@ -11,14 +11,14 @@ DEFAULT_MODE="baseline_l2_lenet"
 mode=${1:-$DEFAULT_MODE}
 
 base_strategy='{"optimizer": "sgd", "compression": "sparsegradient", "learning_rate": 0.01, "drop_rate": K_VALUE}'
-base_strategy_resnet='{"optimizer": "sgd", "compression": "sparsegradient", "learning_rate": 0.1, "drop_rate": K_VALUE}'
+base_strategy_resnet='{"optimizer": "sgd", "compression": "sparsegradient", "learning_rate": 0.001, "drop_rate": K_VALUE}'
 base_strategy_vgg11='{"optimizer": "sgd", "compression": "sparsegradient", "learning_rate": 0.05, "drop_rate": K_VALUE}'
 
-drop_rates=(85 89 95 99) #89
-#drop_rates=(85 85 85)
+#drop_rates=(85 89 95 99) #89
+drop_rates=(90)
 
 parallel=0
-runs=4
+runs=1
 for ((i=1; i<=runs; i++))
 do
     case $mode in

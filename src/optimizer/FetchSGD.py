@@ -13,10 +13,10 @@ LARGEPRIME = 2 ** 61 - 1
 cache = {}
 
 
-class FetchSGD(Optimizer):
+class FetchSGD():
     def __init__(self, learning_rate, c: int, topk: int, r: int = 1, momentum: float = 0.9, name="FetchSGD"):
-        super().__init__(name=name)
-        self._learning_rate = self._build_learning_rate(learning_rate)
+        #        super().__init__(name=name)
+        # self._learning_rate = self._build_learning_rate(learning_rate)
         self.r = r
         self.c = c
         self.d = None
@@ -37,7 +37,7 @@ class FetchSGD(Optimizer):
         Args:
           var_list: list of model variables to build FetchSGD variables on.
         """
-        super().build(var_list)
+        # super().build(var_list)
         if hasattr(self, "_built") and self._built:
             return
         self.clients = clients

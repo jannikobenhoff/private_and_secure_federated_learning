@@ -208,6 +208,35 @@ def ResNet(model_type, num_classes, lambda_l2):
 
 
 if __name__ == "__main__":
-    a = ResNet("resnet18", 10, None)
-    a.build(input_shape=(None, 32, 32, 3))
-    a.summary()
+    # a = ResNet("resnet18", 10, None)
+    # a.build(input_shape=(None, 32, 32, 3))
+    # a.summary()
+
+    base_model = tf.keras.applications.ResNet50V2(
+        include_top=False,
+        weights='imagenet',
+        input_shape=(32, 32, 3)
+    )
+
+    # Add L2 regularization to the pre-built model's layers
+    for layer in base_model.layers:
+        if hasattr(layer, 'kernel_regularizer'):
+            setattr(layer, 'kernel_regularizer', tf.keras.regularizers.l2(None))
+            # setattr(layer, 'kernel_initializer', 'he_normal')
+
+    # Create new top layers (classification layers) with L2 regularization
+    x = base_model.output
+    x = tf.keras.layers.GlobalAveragePooling2D()(x)
+    x = tf.keras.layers.Dense(1024, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(None),
+                              # kernel_initializer='he_normal',
+                              )(
+        x)  # Adding L2 regularization here
+    predictions = tf.keras.layers.Dense(10, activation='softmax',
+                                        kernel_regularizer=tf.keras.regularizers.l2(None),
+                                        # kernel_initializer='he_normal',
+                                        )(
+        x)  # Adding L2 regularization here
+
+    # Construct the full model
+    model = tf.keras.models.Model(inputs=base_model.input, outputs=predictions)
+    model.summary()

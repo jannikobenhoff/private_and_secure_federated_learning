@@ -40,18 +40,36 @@ class NaturalCompression(Compression):
             "needs_decompress": False
         }
 
-    def natural_compress(self, input_tensor: Tensor) -> Tensor:
+    # def natural_compress(self, input_tensor: Tensor) -> Tensor:
+    #     """
+    #     Performing a randomized logarithmic rounding of input t
+    #     """
+    #     abs_tensor = tf.abs(input_tensor)
+    #     a = tf.experimental.numpy.log2(abs_tensor)
+    #     a_up = tf.math.ceil(a)
+    #     tf.clip_by_value(a_up, clip_value_min=self.clip_min, clip_value_max=self.clip_max)
+    #     a_down = tf.math.floor(a)
+    #     tf.clip_by_value(a_down, clip_value_min=self.clip_min, clip_value_max=self.clip_max)
+    #
+    #     p_down = (tf.pow(2.0, a_up) - abs_tensor) / tf.pow(2.0, a_down)
+    #     rand = tf.random.uniform(shape=p_down.shape)
+    #
+    #     return tf.sign(input_tensor) * tf.where(p_down > rand, tf.pow(2.0, a_down), tf.pow(2.0, a_up))
+
+    def natural_compress(self, input_tensor: tf.Tensor) -> tf.Tensor:
         """
-        Performing a randomized logarithmic rounding of input t
+        Performing a randomized logarithmic rounding of input tensor
         """
         abs_tensor = tf.abs(input_tensor)
-        a = tf.experimental.numpy.log2(abs_tensor)
-        a_up = tf.math.ceil(a)
-        tf.clip_by_value(a_up, clip_value_min=self.clip_min, clip_value_max=self.clip_max)
-        a_down = tf.math.floor(a)
-        tf.clip_by_value(a_down, clip_value_min=self.clip_min, clip_value_max=self.clip_max)
+        a = tf.math.log(abs_tensor) / tf.math.log(2.0)
 
-        p_down = (tf.pow(2.0, a_up) - abs_tensor) / tf.pow(2.0, a_down)
-        rand = tf.random.uniform(shape=p_down.shape)
+        a_up = tf.math.ceil(a)
+        a_up = tf.clip_by_value(a_up, clip_value_min=self.clip_min, clip_value_max=self.clip_max)
+
+        a_down = tf.math.floor(a)
+        a_down = tf.clip_by_value(a_down, clip_value_min=self.clip_min, clip_value_max=self.clip_max)
+
+        p_down = (tf.pow(2.0, a_up) - abs_tensor) / (tf.pow(2.0, a_up) - tf.pow(2.0, a_down))
+        rand = tf.random.uniform(shape=p_down.shape, dtype=p_down.dtype)
 
         return tf.sign(input_tensor) * tf.where(p_down > rand, tf.pow(2.0, a_down), tf.pow(2.0, a_up))

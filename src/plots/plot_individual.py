@@ -1,3 +1,4 @@
+import json
 import math
 
 import numpy as np
@@ -12,6 +13,7 @@ import seaborn as sns
 
 from src.optimizer.FetchSGD import FetchSGD
 from src.plots.plot_utils import markers
+from src.plots.plot_compression_rates import get_all_files_in_directory
 
 # from src.utilities.client_data import client_datasets, label_splitter
 # from src.utilities.datasets import load_dataset
@@ -235,5 +237,31 @@ def plot_fetch():
     print(fed.decompress(c, test_gradient))
 
 
+def plot_error(parent_folder):
+    directory_path = '../results/compression/' + parent_folder
+    all_files = get_all_files_in_directory(directory_path)
+
+    metrics = {}
+    fig, ax = plt.subplots(1, 1)
+    idx = 0
+    for file_path in all_files:
+        if "DS" in file_path:
+            continue
+        if ("Bucket" in file_path or "SGD_mom" in file_path):
+            continue
+
+        print(file_path)
+        file = open(file_path)
+        file = json.load(file)
+        print(file["setup"])
+        ax.bar(idx, float(file["setup"]["euclid"]))
+        idx += 1
+        ax.bar(idx, float(file["setup"]["cosine"]))
+        idx += 1
+        ax.bar(idx, float(file["setup"]["mse"]) * 100)
+        idx += 1
+    plt.show()
+
+
 if __name__ == "__main__":
-    plot_variance()
+    plot_error("error")
