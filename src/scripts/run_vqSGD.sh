@@ -16,7 +16,7 @@ base_strategy_vgg11='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate
 
 repetitions=(250 500 1000 1500)
 repetitions_vgg11=(30000)
-repetitions_resnet=(50000)  #10000
+repetitions_resnet=(100000)  #10000
 
 runs=1
 for ((i=1; i<=runs; i++))

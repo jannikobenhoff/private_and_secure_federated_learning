@@ -12,6 +12,34 @@ from keras.layers import Input, Conv2D, ReLU, BatchNormalization, Add, AveragePo
 from keras.models import Model
 
 
+def resnet50v2(input_shape, lambda_l2):
+    base_model = tf.keras.applications.ResNet50V2(
+        include_top=False,
+        weights='imagenet',
+        input_shape=input_shape
+    )
+
+    for layer in base_model.layers:
+        if hasattr(layer, 'kernel_regularizer'):
+            setattr(layer, 'kernel_regularizer', tf.keras.regularizers.l2(lambda_l2))
+            # setattr(layer, 'kernel_initializer', 'he_normal')
+
+    x = base_model.output
+    x = tf.keras.layers.GlobalAveragePooling2D()(x)
+    x = tf.keras.layers.Dense(1024, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(lambda_l2),
+                              # kernel_initializer='he_normal',
+                              )(
+        x)
+    predictions = tf.keras.layers.Dense(10, activation='softmax',
+                                        kernel_regularizer=tf.keras.regularizers.l2(lambda_l2),
+                                        # kernel_initializer='he_normal',
+                                        )(
+        x)
+
+    model = tf.keras.models.Model(inputs=base_model.input, outputs=predictions)
+    return model
+
+
 def resnet(num_filters: int, size: int, input_shape=(int, int, int), lambda_l2=None):
     inputs = Input(shape=input_shape)
 

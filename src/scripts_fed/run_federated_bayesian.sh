@@ -29,8 +29,8 @@ sgdm='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
 
 base_strategy=$sgd
 
-beta_values=(2)
-local_iter_types=(same)
+beta_values=(0.125)
+local_iter_types=(dirichlet)
 
 # dirichlet 2    -> 700
 # dirichlet 0125 -> 850
@@ -39,19 +39,19 @@ local_iter_types=(same)
 
 for beta in "${beta_values[@]}"; do
   for local_iter_type in "${local_iter_types[@]}"; do
-    max_iter=220
+    max_iter=320
     if [[ "$beta" == "0.125" && "$local_iter_type" == "dirichlet" ]]; then
-      max_iter=850
+      max_iter=320
     fi
     if [[ "$beta" == "2" && "$local_iter_type" == "dirichlet" ]]; then
-      max_iter=350
+      max_iter=320
     fi
-    python ../main_federated.py --model resnet18 --dataset cifar10 \
+    python ../main_federated.py --model lenet --dataset mnist \
       --max_iter=$max_iter \
-      --gpu=1 \
+      --gpu=0 \
       --fullset=100 \
       --batch_size=500 \
-      --learning_rate=0.001 \
+      --learning_rate=0.05 \
       --bayesian_search \
       --stop_patience=7 \
       --beta="$beta" \

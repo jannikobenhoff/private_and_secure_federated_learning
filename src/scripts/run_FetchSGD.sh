@@ -20,7 +20,7 @@ base_strategy_vgg11='{"optimizer": "fetchsgd", "compression": "none", "learning_
                       "topk": K_VALUE, "momentum": 0.9}'
 
 counters=(30000) # 10000 20000 ) # 2000 5000)
-counters_resnet=(10000000)
+counters_resnet=(1000000)  #10000000
 counters_vgg11=(1000000)
 
 parallel=0

@@ -34,21 +34,25 @@ def VGG(vgg_name, input_shape=(32, 32, 3), num_classes=10, batch_norm=True, l2_l
             if batch_norm:
                 layers_list.extend([
                     layers.Conv2D(x, (3, 3), padding='same', kernel_regularizer=l2(l2_lambda),
-                                  kernel_initializer='he_normal'),
+                                  # kernel_initializer='he_normal'
+                                  ),
                     layers.BatchNormalization(),
                     layers.ReLU(),
                 ])
             else:
                 layers_list.extend([
                     layers.Conv2D(x, (3, 3), padding='same', kernel_regularizer=l2(l2_lambda),
-                                  kernel_initializer='he_normal'),
+                                  # kernel_initializer='he_normal'
+                                  ),
                     layers.ReLU(),
                 ])
 
     layers_list.append(layers.GlobalAveragePooling2D())
 
     model = models.Sequential(layers_list)
-    model.add(layers.Dense(num_classes, activation='softmax', kernel_initializer='he_normal'))
+    model.add(layers.Dense(num_classes, activation='softmax',  # kernel_initializer='he_normal'
+
+                           kernel_regularizer=l2(l2_lambda)), )
 
     return model
 

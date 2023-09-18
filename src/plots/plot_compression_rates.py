@@ -1072,7 +1072,7 @@ def plot_compare_batches(parent_folders: list, epochs):
 if __name__ == "__main__":
     WINDOW_SIZE = 3
 
-    # plot_compression_metrics("atomo", "lenet_32")
+    # plot_compression_metrics("atomo", "resnet_500")
 
     plot_compare_all("resnet_500", False, 60, save=False)
 
@@ -1080,7 +1080,7 @@ if __name__ == "__main__":
 
     # plot_bit_all("lenet_64", False, 0.05, 60)
 
-    # plot_bit_all2("lenet_64", False)
+    # plot_bit_all2("lenet_32", False)
 
     # plot_time_all("lenet_32", True)
 
