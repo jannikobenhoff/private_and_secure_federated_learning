@@ -27,7 +27,7 @@ memsgd='{"optimizer": "memsgd", "compression": "none", "top_k": 1000, "rand_k": 
 
 sgdm='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
 
-base_strategy=$sgd
+base_strategy=$atomo
 
 beta_values=(2)
 local_iter_types=(dirichlet)

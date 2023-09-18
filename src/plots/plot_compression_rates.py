@@ -970,7 +970,7 @@ def plot_compare_batches(parent_folders: list, epochs):
         val_acc = np.array(ast.literal_eval(file["val_acc"]))[:epochs]
         val_loss = np.array(ast.literal_eval(file["val_loss"]))[:epochs]
         cr = file["compression_rates"][0]
-
+        bs = file["setup"]["batch_size"]
         print(len(train_loss))
         # print(strat_key, np.max(val_acc))
         if lean_strat_key not in metrics:
@@ -984,6 +984,7 @@ def plot_compare_batches(parent_folders: list, epochs):
             metrics[lean_strat_key][strat_key]["val_loss"] = val_loss
             metrics[lean_strat_key][strat_key]["cr"] = cr
             metrics[lean_strat_key][strat_key]["max_val_acc"] = np.max(val_acc)
+            metrics[lean_strat_key][strat_key]["batch_size"] = bs
 
         else:
             metrics[lean_strat_key][strat_key]["train_acc"] = mean_of_arrays_with_padding(train_acc,
@@ -1001,33 +1002,39 @@ def plot_compare_batches(parent_folders: list, epochs):
             metrics[lean_strat_key][strat_key]["cr"] = np.mean([cr, metrics[lean_strat_key][strat_key]["cr"]])
             metrics[lean_strat_key][strat_key]["max_val_acc"] = np.mean([
                 metrics[lean_strat_key][strat_key]["max_val_acc"], np.max(val_acc)])
+            metrics[lean_strat_key][strat_key]["batch_size"] = bs
 
     vgl = {}
     for method in metrics:
-        print(method)
 
-        for batch_size in metrics[method]:
-            batch = batch_size.split("&")[-1]
-            params = ast.literal_eval(batch_size.split("&")[0])
-            label_name = names[method.replace("none", "")]
-            print(label_name)
-            params.pop("optimizer")
-            params.pop("compression")
-            params.pop("learning_rate")
+        cr_acc_pairs = []
+        for p in metrics[method]:
+            cr_acc_pairs.append((metrics[method][p]['cr'], metrics[method][p]['max_val_acc']))
+        best_param = max(metrics[method].items(), key=lambda x: x[1]['max_val_acc'])
+        best_param_metrics = best_param[1]
 
-            if params == {}:
-                l = "None"
-            else:
-                l = ', '.join(
-                    f"{key}: {value}" for key, value in params.items() if
-                    value != "None")
-            if label_name not in vgl:
-                vgl[label_name] = {l: {batch: metrics[method][batch_size]["max_val_acc"]}}
-            elif l not in vgl[label_name]:
-                vgl[label_name][l] = {batch: metrics[method][batch_size]["max_val_acc"]}
+        print(best_param_metrics)
 
-            elif l in vgl[label_name]:
-                vgl[label_name][l][batch] = metrics[method][batch_size]["max_val_acc"]
+        # for batch_size in best_param_metrics:  # metrics[method]:
+        #     batch = batch_size.split("&")[-1]
+        #     params = ast.literal_eval(batch_size.split("&")[0])
+        label_name = names[method.replace("none", "")]
+        print(label_name)
+        # best_param_metrics.pop("optimizer")
+        # best_param_metrics.pop("compression")
+        # best_param_metrics.pop("learning_rate")
+
+        # if params == {}:
+        #     l = "None"
+        # else:
+        #     l = ', '.join(
+        #         f"{key}: {value}" for key, value in params.items() if
+        #         value != "None")
+        batch = best_param_metrics["batch_size"]
+        if label_name not in vgl:
+            vgl[label_name] = {batch: metrics[method]["max_val_acc"]}
+        elif batch not in vgl[label_name]:
+            vgl[label_name][batch] = metrics[method]["max_val_acc"]
 
     fig, ax = plt.subplots(4, 4, figsize=(15, 12))
     ax = ax.flatten()
@@ -1074,7 +1081,7 @@ if __name__ == "__main__":
 
     # plot_compression_metrics("atomo", "resnet_500")
 
-    plot_compare_all("resnet_500", False, 60, save=False)
+    # plot_compare_all("resnet_500", False, 60, save=False)
 
     # plot_compression_rates()
 
@@ -1084,4 +1091,4 @@ if __name__ == "__main__":
 
     # plot_time_all("lenet_32", True)
 
-    # plot_compare_batches(["lenet_32", "lenet_64"], 60)
+    plot_compare_batches(["lenet_32", "lenet_64"], 60)

@@ -42,7 +42,7 @@ def model_factory(model_name, lambda_l2, input_shape, num_classes):
         model = LeNet5(input_shape=input_shape, l2_lambda=lambda_l2)
         model.build(input_shape=input_shape)
         return model
-    elif model_name == "resnet18":
+    elif "resnet" in model_name:
         model = ResNet("resnet18", num_classes, lambda_l2=lambda_l2)
         model = resnet(num_filters=64, size=18, input_shape=(32, 32, 3), lambda_l2=lambda_l2)
         model = resnet50v2(input_shape=input_shape, lambda_l2=lambda_l2)

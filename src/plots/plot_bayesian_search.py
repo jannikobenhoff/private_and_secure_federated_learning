@@ -130,6 +130,6 @@ def plot_bayesian_search_fed(folder: str, title: str, model):
 
 
 if __name__ == "__main__":
-    # plot_bayesian_search("new", "bayesian_result_SGD_resnet18_09_17_07_34_08.pkl", save=True, model="ResNet50")
+    plot_bayesian_search("new", "bayesian_result_SGD_resnet18_09_17_07_34_08.pkl", save=True, model="ResNet50")
 
-    plot_bayesian_search_fed("fed", "bayesian_result_lenet_09_14_05_26_59.pkl", "LeNet")
+    # plot_bayesian_search_fed("fed", "bayesian_result_resnet18_09_18_02_17_58.pkl", "ResNet")

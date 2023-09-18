@@ -547,9 +547,9 @@ def plot_compare_to_diff_sets(parent_folders: list):
 
 if __name__ == "__main__":
     WINDOW_SIZE = 3
-    plot_compression_metrics("fetchsgd", ["same_2", "same_0125"], save=False)
+    # plot_compression_metrics("fetchsgd", ["same_2", "same_0125"], save=False)
 
-    # plot_compare_all("n")
+    plot_compare_all("lenet_same2")
 
     # plot_compare_to_diff_sets(["same_2", "dirichlet_2", "same_0125", "dirichlet_0125"])
 
