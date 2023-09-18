@@ -3,9 +3,9 @@ from tensorflow.python.keras.optimizer_v2 import optimizer_v2
 from tensorflow import Tensor
 import tensorflow as tf
 
-from optimizer.EFsignSGD import EFsignSGD
-from optimizer.MemSGD import MemSGD
-from optimizer.FetchSGD import FetchSGD
+# from optimizer.EFsignSGD import EFsignSGD
+# from optimizer.MemSGD import MemSGD
+# from optimizer.FetchSGD import FetchSGD
 from tensorflow.python.keras.optimizer_v2.gradient_descent import SGD
 
 

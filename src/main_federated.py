@@ -42,9 +42,6 @@ def fed_worker(args):
     img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset(args.dataset,
                                                                                           fullset=args.fullset)
 
-    # (img_train, label_train), (img_test, label_test) = keras.datasets.cifar10.load_data()
-    # img_train, img_test = img_train / 255.0, img_test / 255.0
-
     # Initialize Strategy (Optimizer / Compression)
     learning_rate = args.learning_rate
     strategy_params = json.loads(args.strategy)
@@ -56,11 +53,8 @@ def fed_worker(args):
     # Initialize Model and build if needed
     if args.bayesian_search:
         lambda_l2 = args.search_lambda
-    elif True:  # args.train_on_baseline == 1:
-        lambda_l2 = get_l2_lambda(args, fed=True, **{"optimizer": "sgd", "compression": "none"})
     else:
-        lambda_l2 = None
-    # lambda_l2 = None
+        lambda_l2 = get_l2_lambda(args, fed=True, **{"optimizer": "sgd", "compression": "none"})
 
     args.lambda_l2 = lambda_l2
     print("Using L2 lambda:", lambda_l2)

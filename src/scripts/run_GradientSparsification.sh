@@ -16,7 +16,7 @@ base_strategy_vgg11='{"optimizer": "sgd", "compression": "gradientsparsification
 
 k_values=(0.1 0.01 0.001)
 k_values_vgg=(0.3 0.1 0.05) #0.05 0.1 0.3)
-k_values_resnet=(0.01)
+k_values_resnet=(0.001)
 
 parallel=0
 runs=1

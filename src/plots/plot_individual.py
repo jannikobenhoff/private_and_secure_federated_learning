@@ -14,9 +14,10 @@ import seaborn as sns
 from src.optimizer.FetchSGD import FetchSGD
 from src.plots.plot_utils import markers
 from src.plots.plot_compression_rates import get_all_files_in_directory
+from src.utilities.client_data import label_splitter, client_datasets
 
 # from src.utilities.client_data import client_datasets, label_splitter
-# from src.utilities.datasets import load_dataset
+from src.utilities.datasets import load_dataset
 
 tf.get_logger().setLevel('ERROR')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -157,7 +158,7 @@ def plot_diri():
     (split_data, split_labels) = label_splitter(img_train, label_train)
 
     (client_data, client_labels) = client_datasets(number_clients=number_clients, split_type="dirichlet",
-                                                   list_data=split_data, list_labels=split_labels, beta=2)
+                                                   list_data=split_data, list_labels=split_labels, beta=0.1)
 
     label_counts = count_labels_per_client(client_labels, num_classes)
 
@@ -167,7 +168,6 @@ def plot_diri():
 
     data = np.array(label_counts)
 
-    fig = plt.plot(figsize=(7, 5))
     # Create a heatmap
     sns.heatmap(data, annot=True, fmt="d", cmap='coolwarm')
     plt.xlabel('Class', fontsize=8)
@@ -179,7 +179,7 @@ def plot_diri():
     plt.tight_layout()
     # plt.show()
 
-    plt.savefig("dirichlet2.pdf")
+    plt.savefig("d.pdf")
 
 
 def plot_local_iter():
@@ -264,4 +264,4 @@ def plot_error(parent_folder):
 
 
 if __name__ == "__main__":
-    plot_error("error")
+    plot_diri()

@@ -3,8 +3,6 @@ import time
 from datetime import datetime
 import json
 
-import sklearn
-from keras.models import clone_model
 from tqdm import tqdm
 
 import numpy as np
@@ -15,7 +13,7 @@ from skopt.space import Real
 from skopt.utils import use_named_args
 
 from models.LeNet import LeNet, LeNet5
-from models.ResNet import ResNet, resnet
+from models.ResNet import ResNet, resnet, resnet50v2
 from models.DenseNet import DenseNet
 from compressions.bSGD import bSGD
 from models.VGG import VGG
@@ -47,6 +45,7 @@ def model_factory(model_name, lambda_l2, input_shape, num_classes):
     elif model_name == "resnet18":
         model = ResNet("resnet18", num_classes, lambda_l2=lambda_l2)
         model = resnet(num_filters=64, size=18, input_shape=(32, 32, 3), lambda_l2=lambda_l2)
+        model = resnet50v2(input_shape=input_shape, lambda_l2=lambda_l2)
         return model
     elif model_name == "mobilenet":
         model = MobileNetV2(num_classes, lambda_l2=lambda_l2)
@@ -101,15 +100,14 @@ def strategy_factory(**params) -> Strategy:
 def get_l2_lambda(args, fed=False, **params) -> float:
     lambdas = None
     if fed:
-        if args.model.lower() == "lenet":
-            lambdas = json.load(open("../results/lambda_lookup_federated.json", "r"))
-        # elif args.model.lower() == "resnet18":
-        #     lambdas = json.load(open("../results/lambda_lookup_resnet18.json", "r"))
-        # elif args.model.lower() == "vgg11":
-        #     lambdas = json.load(open("../results/lambda_lookup_vgg11.json", "r"))
+        lambdas = json.load(open("../results/lambda_lookup_federated.json", "r"))
         setup = args.local_iter_type + str(args.beta)
-        return lambdas["sgd"][setup]
-
+        if "lenet" in args.model.lower():
+            return lambdas["lenet"]["sgd"][setup]
+        elif "resnet" in args.model.lower():
+            return lambdas["resnet"]["sgd"][setup]
+        else:
+            raise ValueError("check model!")
     else:
         if args.model.lower() == "lenet":
             lambdas = json.load(open("../results/lambda_lookup.json", "r"))
@@ -169,34 +167,6 @@ def lr_scheduler(optimizer, epoch, drop_factor, drop_epochs, min_lr):
 def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, input_shape, num_classes,
                 strategy_params, args):
     model = model_factory(args.model.lower(), lambda_l2, input_shape, num_classes)
-
-    base_model = tf.keras.applications.ResNet50V2(
-        include_top=False,
-        weights='imagenet',
-        input_shape=input_shape
-    )
-
-    # Add L2 regularization to the pre-built model's layers
-    for layer in base_model.layers:
-        if hasattr(layer, 'kernel_regularizer'):
-            setattr(layer, 'kernel_regularizer', tf.keras.regularizers.l2(lambda_l2))
-            # setattr(layer, 'kernel_initializer', 'he_normal')
-
-    # Create new top layers (classification layers) with L2 regularization
-    x = base_model.output
-    x = tf.keras.layers.GlobalAveragePooling2D()(x)
-    x = tf.keras.layers.Dense(1024, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(lambda_l2),
-                              # kernel_initializer='he_normal',
-                              )(
-        x)  # Adding L2 regularization here
-    predictions = tf.keras.layers.Dense(10, activation='softmax',
-                                        kernel_regularizer=tf.keras.regularizers.l2(lambda_l2),
-                                        # kernel_initializer='he_normal',
-                                        )(
-        x)  # Adding L2 regularization here
-
-    # Construct the full model
-    model = tf.keras.models.Model(inputs=base_model.input, outputs=predictions)
 
     for layer in model.layers:
         if isinstance(layer, tf.keras.layers.BatchNormalization):
@@ -258,18 +228,9 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
             trainable_variables = model.trainable_variables
             for data, label in progress_bar:
                 grads, loss_value = train_step(data, label, model, loss_func)
-                # avg_sketch = [tf.zeros_like(var) for var in trainable_variables]
-                # for ia in range(10):
+
                 compressed_data = optimizer.compress(grads, model.trainable_variables)
-                # avg_sketch = tf.nest.map_structure(lambda x, y: x + y, avg_sketch,
-                #                                    compressed_data["compressed_grads"])
-                #     avg_sketch = tf.cond(tf.equal(ia, 0),
-                #                          lambda: compressed_data["compressed_grads"],
-                #                          lambda: tf.nest.map_structure(lambda x, y: x + y, avg_sketch,
-                #                                                        compressed_data["compressed_grads"]))
-                #
-                # avg_sketch = tf.nest.map_structure(lambda x: x / 10, avg_sketch)
-                # compressed_data["compressed_grads"] = avg_sketch
+
                 if compressed_data["needs_decompress"]:
                     decompressed_grads = optimizer.decompress(compressed_data, model.trainable_variables)
                 else:
@@ -352,132 +313,6 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
                          "min_lr": min_lr, "euclid": str(np.mean(eucl_history)), "cosine": str(np.mean(cos_history)),
                          "mse": str(np.mean(mse_history))}
     return history, strategy, time_history, train_metrics, interrupt
-
-
-def train_model_non_mini_batch(train_images, train_labels, val_images, val_labels, lambda_l2, input_shape, num_classes,
-                               strategy_params, args):
-    model = model_factory(args.model.lower(), lambda_l2, input_shape, num_classes)
-    strategy = strategy_factory(**strategy_params)
-    strategy.summary()
-
-    # BATCH_SIZE = 256
-    # initial_lr = strategy_params["learning_rate"]
-    # drop_factor = 0.1
-    # drop_epochs = [0]
-    # min_lr = initial_lr * 0.1 * 0.1
-    #
-    # if args.dataset == "cifar10" and args.model.lower() == "resnet18":
-    #     BATCH_SIZE = 128  # 256
-    #     initial_lr = strategy_params["learning_rate"]
-    #     drop_factor = 0.1
-    #     drop_epochs = [10, 20]
-    #     min_lr = initial_lr * 0.1 * 0.1 * 0.1
-    #
-    # elif args.dataset == "cifar10" and args.model.lower() == "vgg11":
-    #     BATCH_SIZE = 128  # 128
-    #     initial_lr = strategy_params["learning_rate"]
-    #     drop_factor = 0.2  # 0.2
-    #     drop_epochs = [6, 15]  # [15, 30]
-    #     min_lr = initial_lr * 0.1 * 0.1
-    #
-    # print("BATCH SIZE:", BATCH_SIZE)
-    # optimizer = strategy
-    # optimizer.build(model.trainable_variables)
-    # loss_func = tf.keras.losses.SparseCategoricalCrossentropy()
-    #
-    # train_dataset = tf.data.Dataset.from_tensor_slices((train_images, train_labels)).batch(BATCH_SIZE).shuffle(
-    #     len(train_images))
-    # val_dataset = tf.data.Dataset.from_tensor_slices((val_images, val_labels)).batch(BATCH_SIZE)
-    #
-    # train_loss_results = []
-    # train_accuracy_results = []
-    # val_loss_results = []
-    # val_accuracy_results = []
-    # time_history = []
-    #
-    # best_val_loss = float('inf')
-    # patience_counter = 0
-    #
-    # for epoch in range(args.epochs):
-    #     epoch_loss_avg = tf.keras.metrics.Mean()
-    #     epoch_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
-    #
-    #     # Training loop over batches
-    #     progress_bar = tqdm(train_dataset, desc=f"Epoch {epoch + 1}/{args.epochs}", unit="batch", ncols=150)
-    #     epoch_start_time = time.time()
-    #     iter_avg_grads = [tf.zeros_like(var) for var in model.trainable_variables]
-    #     for data, label in progress_bar:
-    #         grads, loss_value = train_step(data, label, model, loss_func)
-    #
-    #         iter_avg_grads = tf.nest.map_structure(lambda x, y: x + y, iter_avg_grads, grads)
-    #
-    #         epoch_loss_avg.update_state(loss_value)
-    #         epoch_accuracy.update_state(label, model(data, training=False))
-    #         # Update progress bar
-    #         progress_bar.set_postfix({"Training loss": f"{epoch_loss_avg.result().numpy():.4f}",
-    #                                   "Training accuracy": f"{epoch_accuracy.result().numpy():.4f}",
-    #                                   "Compression ratio": f"{np.mean(optimizer.compression_rates()):.2f}"})
-    #
-    #     iter_avg_grads = tf.nest.map_structure(lambda x: x / len(train_dataset), iter_avg_grads)
-    #
-    #     compressed_data = optimizer.compress(iter_avg_grads, model.trainable_variables)
-    #
-    #     if compressed_data["needs_decompress"]:
-    #         decompressed_grads = optimizer.decompress(compressed_data, model.trainable_variables)
-    #     else:
-    #         decompressed_grads = compressed_data["compressed_grads"]
-    #     optimizer.apply_gradients(zip(decompressed_grads, model.trainable_variables))
-    #
-    #     # End of epoch
-    #     time_history.append(time.time() - epoch_start_time)
-    #
-    #     train_loss_results.append(epoch_loss_avg.result().numpy())
-    #     train_accuracy_results.append(epoch_accuracy.result().numpy())
-    #
-    #     print("   Train Loss:     ", f"{epoch_loss_avg.result().numpy(): .4f}",
-    #           " | Train Accuracy:     ", f"{epoch_accuracy.result().numpy(): .4f}",
-    #           "| Time per Epoch:", f"{time_history[-1]:.1f}s")
-    #
-    #     # Validation loop
-    #     val_loss_avg = tf.keras.metrics.Mean()
-    #     val_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
-    #
-    #     for data, label in val_dataset:
-    #         logits = model(data, training=False)
-    #         val_loss_value = loss_func(label, logits)
-    #         val_loss_avg.update_state(val_loss_value)
-    #         val_accuracy.update_state(label, logits)
-    #
-    #     val_loss_results.append(val_loss_avg.result().numpy())
-    #     val_accuracy_results.append(val_accuracy.result().numpy())
-    #
-    #     print("   Validation Loss:", f"{val_loss_avg.result().numpy(): .4f}",
-    #           " | Validation Accuracy:", f"{val_accuracy.result().numpy(): .4f}", "| Learning Rate:",
-    #           optimizer.learning_rate.numpy())
-    #
-    #     # Early Stopping Check
-    #     if val_loss_avg.result() < best_val_loss:
-    #         best_val_loss = val_loss_avg.result()
-    #         patience_counter = 0
-    #     else:
-    #         patience_counter += 1
-    #         if patience_counter > args.stop_patience:
-    #             print("Early stopping...")
-    #             break
-    #
-    #     # Adjust learning rate
-    #     lr_scheduler(optimizer=optimizer, epoch=epoch, drop_epochs=drop_epochs,
-    #                  drop_factor=drop_factor, min_lr=min_lr)
-    #
-    # history = {
-    #     'loss': train_loss_results,
-    #     'accuracy': train_accuracy_results,
-    #     'val_loss': val_loss_results,
-    #     'val_accuracy': val_accuracy_results
-    # }
-    # train_metrics = {"batch_size": BATCH_SIZE, "lr_decay": drop_epochs, "drop_factor": drop_factor, "min_lr": min_lr}
-    # return history, strategy, time_history, train_metrics
-    return
 
 
 def worker(args):

@@ -80,19 +80,18 @@ def plot_bayesian_search(folder: str, title: str, save=False, model="LeNet"):
     plt.show()
 
 
-def plot_bayesian_search_fed(folder: str, title: str):
+def plot_bayesian_search_fed(folder: str, title: str, model):
     directory_path = '../results/bayesian/' + folder
     all_files = get_all_files_in_directory(directory_path)
 
     fig, axs = plt.subplots(1, 1, figsize=(9, 6))
-    cs = iter(["g", "b", "r", "y"])
+    cs = iter(["b", "g", "r", "y"])
 
     print(len(all_files), "Files")
     plot_title = ""
     for file in all_files:
 
         result = load(file)
-        print(result)
         metrics = result["metrics"]
         param = ast.literal_eval(metrics["args"].strategy)
         label_name = names[(param["optimizer"] + " " +
@@ -105,6 +104,7 @@ def plot_bayesian_search_fed(folder: str, title: str):
                                                                param["compression"]).replace(
             " none", ""):
             continue
+        print(result)
 
         result.func_vals = -1 * result.func_vals
         result.fun = -1 * result.fun
@@ -116,7 +116,7 @@ def plot_bayesian_search_fed(folder: str, title: str):
         plot_title = label_name
 
     axs.set_title(
-        "Bayesian Search L2 regularization - {} - {}".format(metrics["args"].model, plot_title),
+        "Bayesian Search L2 regularization - {} - {}".format(model, plot_title),
         fontsize=10, fontweight="bold")
     axs.set_xlabel("Lambda", fontsize=10)
     axs.set_ylabel("Test Accuracy", fontsize=10)
@@ -125,12 +125,11 @@ def plot_bayesian_search_fed(folder: str, title: str):
 
     # plt.suptitle(label_name, fontsize=8)
     plt.tight_layout()
-    # print(str(metrics["args"]).replace("Namespace", "").replace("}', e", "}',\ne")[1:-1])
     # plt.savefig("../../figures/bayesian_" + plot_title + ".pdf", bbox_inches='tight')
     plt.show()
 
 
 if __name__ == "__main__":
-    plot_bayesian_search("new", "bayesian_result_SGD_resnet18_09_17_07_34_08.pkl", save=True, model="ResNet50")
+    # plot_bayesian_search("new", "bayesian_result_SGD_resnet18_09_17_07_34_08.pkl", save=True, model="ResNet50")
 
-    # plot_bayesian_search_fed("fed", "bayesian_result_lenet_09_14_18_32_44.pkl")
+    plot_bayesian_search_fed("fed", "bayesian_result_lenet_09_14_05_26_59.pkl", "LeNet")

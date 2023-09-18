@@ -27,10 +27,10 @@ memsgd='{"optimizer": "memsgd", "compression": "none", "top_k": 1000, "rand_k": 
 
 sgdm='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
 
-base_strategy=$fetchsgd
+base_strategy=$sgd
 
 beta_values=(2)
-local_iter_types=(same)
+local_iter_types=(dirichlet)
 
 # dirichlet 2    -> 700
 # dirichlet 0125 -> 850
@@ -41,7 +41,7 @@ for beta in "${beta_values[@]}"; do
   for local_iter_type in "${local_iter_types[@]}"; do
     max_iter=500
     if [[ "$beta" == "0.125" && "$local_iter_type" == "dirichlet" ]]; then
-      max_iter=850
+      max_iter=500
     fi
     if [[ "$beta" == "2" && "$local_iter_type" == "dirichlet" ]]; then
       max_iter=500

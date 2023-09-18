@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 from tensorflow import Tensor
 
@@ -40,6 +41,24 @@ class NaturalCompression(Compression):
             "needs_decompress": False
         }
 
+    def natural_compress(self, input_array):
+        """
+        Performing a randomized logarithmic rounding of input array
+        """
+        abs_array = np.abs(input_array)
+        a = np.log(abs_array) / np.log(2.0)
+
+        a_up = np.ceil(a)
+        a_up = np.clip(a_up, a_min=self.clip_min, a_max=self.clip_max)
+
+        a_down = np.floor(a)
+        a_down = np.clip(a_down, a_min=self.clip_min, a_max=self.clip_max)
+
+        p_down = (np.power(2.0, a_up) - abs_array) / (np.power(2.0, a_up) - np.power(2.0, a_down))
+        rand = np.random.uniform(size=p_down.shape)
+
+        return np.sign(input_array) * np.where(p_down > rand, np.power(2.0, a_down), np.power(2.0, a_up))
+
     # def natural_compress(self, input_tensor: Tensor) -> Tensor:
     #     """
     #     Performing a randomized logarithmic rounding of input t
@@ -56,20 +75,20 @@ class NaturalCompression(Compression):
     #
     #     return tf.sign(input_tensor) * tf.where(p_down > rand, tf.pow(2.0, a_down), tf.pow(2.0, a_up))
 
-    def natural_compress(self, input_tensor: tf.Tensor) -> tf.Tensor:
-        """
-        Performing a randomized logarithmic rounding of input tensor
-        """
-        abs_tensor = tf.abs(input_tensor)
-        a = tf.math.log(abs_tensor) / tf.math.log(2.0)
-
-        a_up = tf.math.ceil(a)
-        a_up = tf.clip_by_value(a_up, clip_value_min=self.clip_min, clip_value_max=self.clip_max)
-
-        a_down = tf.math.floor(a)
-        a_down = tf.clip_by_value(a_down, clip_value_min=self.clip_min, clip_value_max=self.clip_max)
-
-        p_down = (tf.pow(2.0, a_up) - abs_tensor) / (tf.pow(2.0, a_up) - tf.pow(2.0, a_down))
-        rand = tf.random.uniform(shape=p_down.shape, dtype=p_down.dtype)
-
-        return tf.sign(input_tensor) * tf.where(p_down > rand, tf.pow(2.0, a_down), tf.pow(2.0, a_up))
+    # def natural_compress(self, input_tensor: tf.Tensor) -> tf.Tensor:
+    #     """
+    #     Performing a randomized logarithmic rounding of input tensor
+    #     """
+    #     abs_tensor = tf.abs(input_tensor)
+    #     a = tf.math.log(abs_tensor) / tf.math.log(2.0)
+    #
+    #     a_up = tf.math.ceil(a)
+    #     a_up = tf.clip_by_value(a_up, clip_value_min=self.clip_min, clip_value_max=self.clip_max)
+    #
+    #     a_down = tf.math.floor(a)
+    #     a_down = tf.clip_by_value(a_down, clip_value_min=self.clip_min, clip_value_max=self.clip_max)
+    #
+    #     p_down = (tf.pow(2.0, a_up) - abs_tensor) / (tf.pow(2.0, a_up) - tf.pow(2.0, a_down))
+    #     rand = tf.random.uniform(shape=p_down.shape, dtype=p_down.dtype)
+    #
+    #     return tf.sign(input_tensor) * tf.where(p_down > rand, tf.pow(2.0, a_down), tf.pow(2.0, a_up))
