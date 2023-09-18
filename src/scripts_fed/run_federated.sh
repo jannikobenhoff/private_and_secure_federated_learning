@@ -1,6 +1,6 @@
 #!/bin/bash
 
-sparsegradient='{"optimizer": "sgd", "compression": "sparsegradient", "drop_rate": 99}'
+sparsegradient='{"optimizer": "sgd", "compression": "sparsegradient", "drop_rate": DROP}'
 
 vqsgd='{"optimizer": "sgd", "compression": "vqsgd", "repetition": 500}'
 
@@ -19,25 +19,28 @@ onebitsgd='{"optimizer": "sgd", "compression": "onebitsgd"}'
 
 terngrad='{"optimizer": "sgd", "compression": "terngrad", "clip": 2.5}'
 
-topk='{"optimizer": "sgd", "compression": "topk", "k": 10000}'
+topk='{"optimizer": "sgd", "compression": "topk", "k": 1000}'  # 100 1000 6000
 
 naturalcompression='{"optimizer": "sgd", "compression": "naturalcompression"}'
 
-memsgd='{"optimizer": "memsgd", "compression": "none", "top_k": 1000, "rand_k": "None"}'
+memsgd='{"optimizer": "memsgd", "compression": "none", "top_k": DROP, "rand_k": "None"}'
 
 sgdm='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
 
-base_strategy=$atomo
+base_strategy=$memsgd
 
 beta_values=(2)
-local_iter_types=(dirichlet)
+local_iter_types=(same dirichlet)
 
+drops=(100 1000 6000)
 # dirichlet 2    -> 700
 # dirichlet 0125 -> 850
 # same 2         -> 500
 # same 0125      -> 500
 
-for beta in "${beta_values[@]}"; do
+for drop in "${drops[@]}"; do
+  modified_strategy="${base_strategy//DROP/$drop}"
+  for beta in "${beta_values[@]}"; do
   for local_iter_type in "${local_iter_types[@]}"; do
     max_iter=500
     if [[ "$beta" == "0.125" && "$local_iter_type" == "dirichlet" ]]; then
@@ -58,6 +61,7 @@ for beta in "${beta_values[@]}"; do
       --const_local_iter=2 \
       --local_iter_type="$local_iter_type" \
       --number_clients=10 \
-      --strategy="$base_strategy"
+      --strategy="$modified_strategy"
   done
+done
 done

@@ -1004,74 +1004,57 @@ def plot_compare_batches(parent_folders: list, epochs):
                 metrics[lean_strat_key][strat_key]["max_val_acc"], np.max(val_acc)])
             metrics[lean_strat_key][strat_key]["batch_size"] = bs
 
+    fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+
     vgl = {}
+    table_data = []
     for method in metrics:
+        cr_acc_pairs = []
+        for p in metrics[method]:
+            if p.split("&")[-1] == "64":
+                continue
+            cr_acc_pairs.append(metrics[method][p])
+        best_param = max(cr_acc_pairs, key=lambda x: x['max_val_acc'])
+        best_param_metrics_32 = best_param
 
         cr_acc_pairs = []
         for p in metrics[method]:
-            cr_acc_pairs.append((metrics[method][p]['cr'], metrics[method][p]['max_val_acc']))
-        best_param = max(metrics[method].items(), key=lambda x: x[1]['max_val_acc'])
-        best_param_metrics = best_param[1]
+            if p.split("&")[-1] == "32":
+                continue
+            cr_acc_pairs.append(metrics[method][p])
+        best_param = max(cr_acc_pairs, key=lambda x: x['max_val_acc'])
+        best_param_metrics_64 = best_param
 
-        print(best_param_metrics)
+        print(best_param_metrics_32)
+        print(best_param_metrics_64)
 
-        # for batch_size in best_param_metrics:  # metrics[method]:
-        #     batch = batch_size.split("&")[-1]
-        #     params = ast.literal_eval(batch_size.split("&")[0])
         label_name = names[method.replace("none", "")]
         print(label_name)
-        # best_param_metrics.pop("optimizer")
-        # best_param_metrics.pop("compression")
-        # best_param_metrics.pop("learning_rate")
 
-        # if params == {}:
-        #     l = "None"
-        # else:
-        #     l = ', '.join(
-        #         f"{key}: {value}" for key, value in params.items() if
-        #         value != "None")
-        batch = best_param_metrics["batch_size"]
-        if label_name not in vgl:
-            vgl[label_name] = {batch: metrics[method]["max_val_acc"]}
-        elif batch not in vgl[label_name]:
-            vgl[label_name][batch] = metrics[method]["max_val_acc"]
+        vgl[label_name] = {
+            "32": best_param_metrics_32,
+            "64": best_param_metrics_64
+        }
 
-    fig, ax = plt.subplots(4, 4, figsize=(15, 12))
-    ax = ax.flatten()
+        ax.axis("off")
 
-    for ii, m in enumerate(vgl):
-        p = []
-        for item in vgl[m]:
-            if len(vgl[m][item]) == 1:
-                p.append(item)
+        table_data.append(
+            [label_name, round(100 * (best_param_metrics_32['max_val_acc'] - best_param_metrics_64['max_val_acc']), 2)])
 
-        for item in p:
-            vgl[m].pop(item)
+        # table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
+        #
+        # table_data = [[t[0], str(t[1]) + "MB", str(t[2]) + "%"] for t in table_data]
+        # table_data[0][-1] = "-"
 
-        # df_data = [
-        #     {m: k, "Batch Size 32": round(v['32'] * 100, 2), "Batch Size 64": round(v['64'] * 100, 2)}
-        #     for k, v in vgl[m].items()
-        # ]
-        df_data = [
-            {m: k, "32 - 64": round((v['32'] - v['64']) * 100, 2)}
-            for k, v in vgl[m].items()
-        ]
-        df = pd.DataFrame(df_data)
+    table = ax.table(cellText=table_data,
+                     colLabels=["Method", "Total Data Communication"],
+                     cellLoc='center',
+                     loc='center')
 
-        # Hide axes
-        ax[ii].axis("off")
-
-        # Table from DataFrame
-        table_data = []
-        for row in df.itertuples(index=False):
-            table_data.append(row)
-        table = ax[ii].table(cellText=table_data, colLabels=df.columns, loc='center', cellLoc='center',
-                             colColours=['#f2f2f2'] * df.shape[1])
-
-        table.auto_set_font_size(False)
-        table.set_fontsize(12)
-        table.scale(1.5, 1.5)
-        table.auto_set_column_width(col=list(range(2)))
+    table.auto_set_font_size(False)
+    table.set_fontsize(12)
+    table.scale(1.5, 1.5)
+    table.auto_set_column_width(col=list(range(2)))
 
     plt.show()
 
