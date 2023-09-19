@@ -28,6 +28,7 @@ class FetchSGD():
         self.momentum = tf.Variable(tf.zeros(shape=[self.r, self.c], dtype=tf.float32))
         self.error = tf.Variable(tf.zeros(shape=[self.r, self.c], dtype=tf.float32))
         self.clients = 1
+        self.name = "FetchSGD"
 
     def build(self, var_list, clients=1):
         """Initialize optimizer variables.

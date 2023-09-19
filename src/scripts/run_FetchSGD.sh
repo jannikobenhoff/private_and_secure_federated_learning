@@ -10,8 +10,8 @@ DEFAULT_MODE="baseline_l2_lenet"
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
 
-base_strategy='{"optimizer": "fetchsgd", "compression": "none", "learning_rate": 0.01, "c": C_VALUE, "r": 1,
-                "topk": K_VALUE, "momentum": 0.2}'
+base_strategy='{"optimizer": "fetchsgd", "compression": "none", "learning_rate": 0.1, "c": C_VALUE, "r": 1,
+                "topk": K_VALUE, "momentum": 0.9}'
 
 base_strategy_resnet='{"optimizer": "fetchsgd", "compression": "none", "learning_rate": 0.001, "c": C_VALUE, "r": 1,
                       "topk": K_VALUE, "momentum": 0.9}'
@@ -19,7 +19,7 @@ base_strategy_resnet='{"optimizer": "fetchsgd", "compression": "none", "learning
 base_strategy_vgg11='{"optimizer": "fetchsgd", "compression": "none", "learning_rate": 0.05, "c": C_VALUE, "r": 1,
                       "topk": K_VALUE, "momentum": 0.9}'
 
-counters=(20000) # 10000 20000 ) # 2000 5000)
+counters=(10000) # 10000 20000 ) # 2000 5000)
 counters_resnet=(1000000)  #10000000
 counters_vgg11=(1000000)
 
@@ -31,7 +31,7 @@ case $mode in
     "search_lenet"|"l2_lenet"|"baseline_l2_lenet"|"no_l2_lenet")
         for c in "${counters[@]}"; do
             modified_strategy="${base_strategy//C_VALUE/$c}"
-            modified_strategy="${modified_strategy//K_VALUE/$((c))}"
+            modified_strategy="${modified_strategy//K_VALUE/$((c/30))}"
 
            if [ "$parallel" -eq 1 ]; then
                     ./run_main.sh "$modified_strategy" "$mode" &

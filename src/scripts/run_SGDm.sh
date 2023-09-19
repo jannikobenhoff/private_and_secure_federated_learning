@@ -11,7 +11,7 @@ DEFAULT_MODE="baseline_l2_resnet18"
 mode=${1:-$DEFAULT_MODE}
 
 base_strategy='{"optimizer": "sgdm", "compression": "none", "learning_rate": 0.01, "momentum": 0.9}'
-base_strategy_resnet='{"optimizer": "sgdm", "compression": "none", "learning_rate": 0.001, "momentum": 0.9}'
+base_strategy_resnet='{"optimizer": "sgdm", "compression": "none", "learning_rate": 0.001, "momentum": 0.5}'
 base_strategy_vgg11='{"optimizer": "sgdm", "compression": "none", "learning_rate": 0.01, "momentum": 0.9}'
 
 runs=1

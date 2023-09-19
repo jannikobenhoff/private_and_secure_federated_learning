@@ -541,7 +541,7 @@ if __name__ == "__main__":
     WINDOW_SIZE = 3
     # plot_compression_metrics("gradientsparsification", ["lenet_same2", "lenet_dirichlet2"], save=False)
 
-    plot_compare_all("lenet_same2", [0.73, 1])
+    plot_compare_all("single", [0.73, 1])
 
     # plot_compare_to_diff_sets(["same_2", "dirichlet_2", "same_0125", "dirichlet_0125"])
 

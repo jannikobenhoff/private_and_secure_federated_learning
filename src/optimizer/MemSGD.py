@@ -17,6 +17,7 @@ class MemSGD:
         self.rand_k = rand_k
         self.compression_rates = []
         self.cr = {}
+        self.name = "MemSGD"
 
     def build(self, var_list, clients=1):
         """Initialize optimizer variables.

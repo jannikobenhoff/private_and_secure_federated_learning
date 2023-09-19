@@ -58,7 +58,7 @@ case $mode in
 
     "baseline_l2_lenet")
         python ../main_local.py --model LeNet --dataset mnist \
-            --epochs=60 \
+            --epochs=250 \
             --k_fold=1 \
             --fullset=100 \
             --stop_patience=20 \

@@ -27,10 +27,10 @@ memsgd='{"optimizer": "memsgd", "compression": "none", "top_k": DROP, "rand_k": 
 
 sgdm='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
 
-base_strategy=$vqsgd
+base_strategy=$sgd
 
 beta_values=(2)
-local_iter_types=(same dirichlet)
+local_iter_types=(same)
 
 drops=(250)
 # dirichlet 2    -> 700
@@ -42,25 +42,25 @@ for drop in "${drops[@]}"; do
   # modified_strategy="${base_strategy//DROP/$drop}"
   for beta in "${beta_values[@]}"; do
   for local_iter_type in "${local_iter_types[@]}"; do
-    max_iter=500
-    if [[ "$beta" == "0.125" && "$local_iter_type" == "dirichlet" ]]; then
-      max_iter=500
-    fi
-    if [[ "$beta" == "2" && "$local_iter_type" == "dirichlet" ]]; then
-      max_iter=500
-    fi
+    max_iter=100
+#    if [[ "$beta" == "0.125" && "$local_iter_type" == "dirichlet" ]]; then
+#      max_iter=500
+#    fi
+#    if [[ "$beta" == "2" && "$local_iter_type" == "dirichlet" ]]; then
+#      max_iter=500
+#    fi
     python ../main_federated.py --model lenet --dataset mnist \
       --max_iter=$max_iter \
       --gpu=0 \
       --fullset=100 \
-      --batch_size=500 \
+      --batch_size=32 \
       --learning_rate=0.05 \
       --stop_patience=7 \
       --beta="$beta" \
       --split_type=dirichlet \
-      --const_local_iter=2 \
+      --const_local_iter=1 \
       --local_iter_type="$local_iter_type" \
-      --number_clients=10 \
+      --number_clients=1 \
       --strategy="$base_strategy"
   done
 done
