@@ -1257,7 +1257,7 @@ if __name__ == "__main__":
 
     # plot_compression_metrics("atomo", "resnet_500")
 
-    plot_compare_all("batchdescent", True, 1000, save=False)
+    plot_compare_all("batchdescent", True, 250, save=False)
 
     # plot_compare_all_selected(["sgd", "sgd topk", "memsgd"], "resnet_500", True, 1000, save=True, selected=2)
 

@@ -65,3 +65,17 @@ for drop in "${drops[@]}"; do
   done
 done
 done
+
+main_federated.py --model resnet --dataset cifar10 \
+      --max_iter=650 \
+      --gpu=1 \
+      --fullset=100 \
+      --batch_size=500 \
+      --learning_rate=0.001 \
+      --stop_patience=7 \
+      --beta="2" \
+      --split_type=dirichlet \
+      --const_local_iter=2 \
+      --local_iter_type="same" \
+      --number_clients=10 \
+      --strategy='{"optimizer": "efsignsgd", "compression": "none"}'
