@@ -49,18 +49,18 @@ for drop in "${drops[@]}"; do
 #    if [[ "$beta" == "2" && "$local_iter_type" == "dirichlet" ]]; then
 #      max_iter=500
 #    fi
-    python ../main_federated.py --model lenet --dataset mnist \
+    python ../main_federated.py --model resnet --dataset cifar10 \
       --max_iter=$max_iter \
-      --gpu=0 \
+      --gpu=1 \
       --fullset=100 \
-      --batch_size=32 \
-      --learning_rate=0.05 \
+      --batch_size=500 \
+      --learning_rate=0.0005 \
       --stop_patience=7 \
       --beta="$beta" \
       --split_type=dirichlet \
-      --const_local_iter=1 \
+      --const_local_iter=2 \
       --local_iter_type="$local_iter_type" \
-      --number_clients=1 \
+      --number_clients=10 \
       --strategy="$base_strategy"
   done
 done

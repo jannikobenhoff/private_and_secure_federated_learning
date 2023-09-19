@@ -8,11 +8,11 @@ mode=$2
 case $mode in
     "search_lenet")
         python ../main_local.py --model LeNet --dataset mnist \
-          --epochs=50 \
+          --epochs=250 \
           --n_calls=10 \
-          --k_fold=5 \
+          --k_fold=3 \
           --fullset=100 \
-          --stop_patience=5 \
+          --stop_patience=20 \
           --bayesian_search \
           --log=1 \
           --strategy="$compression_strategy"

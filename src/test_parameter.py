@@ -19,7 +19,7 @@ from keras import models, layers, regularizers
 
 from src.compressions.Atomo import Atomo
 from src.compressions.vqSGD import vqSGD
-from src.models.ResNet import ResNet
+from src.models.ResNet import resnet50v2
 from src.optimizer.FetchSGD import FetchSGD
 from src.optimizer.EFsignSGD import EFsignSGD
 from src.compressions.GradientSparsification import GradientSparsification
@@ -34,16 +34,18 @@ from src.plots.plot_training_result import plot_training_result
 from src.utilities.datasets import load_dataset
 
 if __name__ == "__main__":
-    tf.config.set_visible_devices([], 'GPU')
+    # tf.config.set_visible_devices([], 'GPU')
     tf.config.run_functions_eagerly(run_eagerly=True)
     tf.data.experimental.enable_debug_mode()
 
-    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("mnist", fullset=100)
+    img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset("cifar10", fullset=100)
 
-    model = LeNet5(input_shape=input_shape, l2_lambda=0.0015)
+    # model = LeNet5(input_shape=input_shape, l2_lambda=0.0015)
+    model = resnet50v2(input_shape=input_shape, lambda_l2=None)
 
-    model.compile(optimizer=SGD(learning_rate=0.1), loss="SparseCategoricalCrossentropy", metrics="accuracy")
+    model.compile(optimizer=SGD(learning_rate=0.01), loss="SparseCategoricalCrossentropy", metrics="accuracy")
 
-    n_samples = img_train.shape[0]
+    n_samples = 10000  # img_train.shape[0]
 
-    model.fit(img_train, label_train, batch_size=n_samples, validation_data=(img_test, label_test), epochs=150)
+    model.fit(img_train, label_train, batch_size=n_samples, validation_data=(img_test, label_test), epochs=10,
+              verbose=1)

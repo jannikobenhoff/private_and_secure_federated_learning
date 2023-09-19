@@ -11,7 +11,7 @@ DEFAULT_MODE="baseline_l2_lenet"
 mode=${1:-$DEFAULT_MODE}
 
 base_strategy='{"optimizer": "fetchsgd", "compression": "none", "learning_rate": 0.1, "c": C_VALUE, "r": 1,
-                "topk": K_VALUE, "momentum": 0.9}'
+                "topk": K_VALUE, "momentum": 0.5}'
 
 base_strategy_resnet='{"optimizer": "fetchsgd", "compression": "none", "learning_rate": 0.001, "c": C_VALUE, "r": 1,
                       "topk": K_VALUE, "momentum": 0.9}'

@@ -39,7 +39,8 @@ class OneBitSGD(Compression):
         compressed_grads = []
         decompress_info = []
         for i, gradient in enumerate(gradients):
-            gradient_quantized = tf.sign(gradient + self.error[variables[i].name + str(client_id)])
+            gradient_corrected = gradient + self.error[variables[i].name + str(client_id)]
+            gradient_quantized = tf.where(gradient_corrected >= 0, 1, -1)
             compressed_grads.append(gradient_quantized)
             (a, b) = self.un_quantize_info(gradient_quantized, gradient)
             self.error[variables[i].name + str(client_id)].assign(gradient - tf.where(gradient_quantized == -1, a, b))
