@@ -35,14 +35,14 @@ class EFsignSGD:
             d = tf.size(gradient)
             d = tf.cast(d, dtype=gradient.dtype)
 
-            p_t = lr * gradient + error
+            p_t = gradient + error  # lr *
             norm = tf.divide(tf.norm(p_t, ord=1), d)
             delta_t = tf.multiply(norm, tf.sign(p_t))
 
             # update residual error
             self.errors[variables[i].name + str(client_id)].assign(p_t - delta_t)
             compressed_grads.append(tf.sign(p_t))
-            decompress_info.append(norm / lr)
+            decompress_info.append(norm)  # / lr)
 
         # Norm is divided by lr because lr will be multiplied later in keras process
         return {

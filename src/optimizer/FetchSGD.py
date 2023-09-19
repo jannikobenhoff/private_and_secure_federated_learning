@@ -89,7 +89,7 @@ class FetchSGD():
 
         cs = CSVec(d=d, c=self.c, r=self.r, numBlocks=self.blocks)
 
-        if self.clients == 1:
+        if False:  # self.clients == 1:
             self.error.assign(self.lr * self.momentum)
         else:
             self.error.assign_add(self.lr * self.momentum)

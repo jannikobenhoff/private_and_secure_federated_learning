@@ -2,16 +2,16 @@
 
 sparsegradient='{"optimizer": "sgd", "compression": "sparsegradient", "drop_rate": DROP}'
 
-vqsgd='{"optimizer": "sgd", "compression": "vqsgd", "repetition": 500}'
+vqsgd='{"optimizer": "sgd", "compression": "vqsgd", "repetition": 100}'  # 100 250 500
 
-gradientsparsification='{"optimizer": "sgd", "compression": "gradientsparsification", "max_iter": 2, "k": 0.01}'
+gradientsparsification='{"optimizer": "sgd", "compression": "gradientsparsification", "max_iter": 2, "k": DROP}'
 
 atomo='{"optimizer": "sgd", "compression": "atomo", "svd_rank": 1}'
 
 efsignsgd='{"optimizer": "efsignsgd", "compression": "none"}'
 
-fetchsgd='{"optimizer": "fetchsgd", "compression": "none", "c": 10000, "r": 1,
-                "topk": 333, "momentum": 0.9}'
+fetchsgd='{"optimizer": "fetchsgd", "compression": "none", "c": DROP, "r": 1,
+                "topk": DROP2, "momentum": 0.9}'
 
 sgd='{"optimizer": "sgd", "compression": "none"}'
 
@@ -19,7 +19,7 @@ onebitsgd='{"optimizer": "sgd", "compression": "onebitsgd"}'
 
 terngrad='{"optimizer": "sgd", "compression": "terngrad", "clip": 2.5}'
 
-topk='{"optimizer": "sgd", "compression": "topk", "k": 1000}'  # 100 1000 6000
+topk='{"optimizer": "sgd", "compression": "topk", "k": 6000}'  # 100 1000 6000
 
 naturalcompression='{"optimizer": "sgd", "compression": "naturalcompression"}'
 
@@ -27,19 +27,19 @@ memsgd='{"optimizer": "memsgd", "compression": "none", "top_k": DROP, "rand_k": 
 
 sgdm='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
 
-base_strategy=$memsgd
+base_strategy=$vqsgd
 
 beta_values=(2)
 local_iter_types=(same dirichlet)
 
-drops=(100 1000 6000)
+drops=(250)
 # dirichlet 2    -> 700
 # dirichlet 0125 -> 850
 # same 2         -> 500
 # same 0125      -> 500
 
 for drop in "${drops[@]}"; do
-  modified_strategy="${base_strategy//DROP/$drop}"
+  # modified_strategy="${base_strategy//DROP/$drop}"
   for beta in "${beta_values[@]}"; do
   for local_iter_type in "${local_iter_types[@]}"; do
     max_iter=500
@@ -61,7 +61,7 @@ for drop in "${drops[@]}"; do
       --const_local_iter=2 \
       --local_iter_type="$local_iter_type" \
       --number_clients=10 \
-      --strategy="$modified_strategy"
+      --strategy="$base_strategy"
   done
 done
 done

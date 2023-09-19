@@ -1064,7 +1064,7 @@ if __name__ == "__main__":
 
     # plot_compression_metrics("atomo", "resnet_500")
 
-    # plot_compare_all("resnet_500", False, 60, save=False)
+    plot_compare_all("resnet_500", False, 60, save=False)
 
     # plot_compression_rates()
 
@@ -1074,4 +1074,4 @@ if __name__ == "__main__":
 
     # plot_time_all("lenet_32", True)
 
-    plot_compare_batches(["lenet_32", "lenet_64"], 60)
+    # plot_compare_batches(["lenet_32", "lenet_64"], 60)

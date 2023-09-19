@@ -206,7 +206,7 @@ def mean_of_arrays_with_padding(arr1, arr2):
     return mean_arr
 
 
-def plot_compare_all(parent_folder: str, bsgd: bool = True):
+def plot_compare_all(parent_folder: str, limit):
     directory_path = '../results/federated/' + parent_folder
     all_files = get_all_files_in_directory(directory_path)
 
@@ -214,13 +214,9 @@ def plot_compare_all(parent_folder: str, bsgd: bool = True):
     for file_path in all_files:
         if "DS" in file_path:
             continue
-        if "Bucket" in file_path and not bsgd:
-            continue
-        # if not "MEM" in file_path:
-        #     continue
         file = open(file_path, "r")
         file = json.load(file)
-        #        print(file["args"]["local_iter_type"], file["args"]["beta"])
+        print(file["args"]["local_iter_type"], file["args"]["beta"])
         strat = ast.literal_eval(file["args"]["strategy"])
         strat_key = f"{strat}"  # {file['args']['lambda_l2']}"
         lean_strat_key = f"{strat['optimizer']} {strat['compression']}"
@@ -320,11 +316,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool = True):
     axes[1].legend(fontsize=7)  # , bbox_to_anchor=(0.75, 0.7))
     axes[1].set_xscale('log')
     axes[1].tick_params(axis='both', which='major', labelsize=8)
-    axes[1].set_ylim([0.75, 0.995])
-    # axes[0].grid(alpha=0.2)
-    # axes[0].set_title("Training Accuracy", fontsize=10, fontweight='bold')
-    # axes[0].legend(fontsize=8)
-    # axes[0].tick_params(axis='both', which='major', labelsize=8)
+    axes[1].set_ylim(limit)
 
     axes[2].grid(alpha=0.2)
     axes[2].tick_params(axis='both', which='major', labelsize=8)
@@ -547,9 +539,9 @@ def plot_compare_to_diff_sets(parent_folders: list):
 
 if __name__ == "__main__":
     WINDOW_SIZE = 3
-    # plot_compression_metrics("fetchsgd", ["same_2", "same_0125"], save=False)
+    # plot_compression_metrics("gradientsparsification", ["lenet_same2", "lenet_dirichlet2"], save=False)
 
-    plot_compare_all("lenet_same2")
+    plot_compare_all("lenet_same2", [0.73, 1])
 
     # plot_compare_to_diff_sets(["same_2", "dirichlet_2", "same_0125", "dirichlet_0125"])
 
