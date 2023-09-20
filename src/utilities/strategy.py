@@ -94,7 +94,11 @@ class Strategy(optimizer_v2.OptimizerV2):
         #     compressed_data = self.compression.compress(grads, variables, client_id=client_id, lr=self.learning_rate)
         #     return compressed_data
         if self.compression is not None:
-            compressed_data = self.compression.compress(grads, variables, client_id=client_id, lr=self.learning_rate)
+            if self.compression_name.lower() in ["fetchsgd", "efsignsgd", "memsgd"]:
+                compressed_data = self.compression.compress(grads, variables, client_id=client_id,
+                                                            lr=self.learning_rate)
+            else:
+                compressed_data = self.compression.compress(grads, variables)
             return compressed_data
         else:
             return {

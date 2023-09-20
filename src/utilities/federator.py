@@ -220,8 +220,6 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
 
     if optimizer.compression is not None:
         compression_rates = [np.mean(optimizer.compression.compression_rates)]
-    elif optimizer.optimizer_name != "sgd":
-        compression_rates = [np.mean(optimizer.compression.compression_rates)]
     else:
         # If SGD was used without compression method
         compression_rates = [1]

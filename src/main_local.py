@@ -497,8 +497,6 @@ def worker(args):
             validation_losses_per_epoch = history['val_loss']
             if strategy.compression is not None:
                 compression_rates = [np.mean(strategy.compression.compression_rates)]
-            elif strategy.optimizer_name != "sgd":
-                compression_rates = [np.mean(strategy.optimizer.compression_rates)]
             else:
                 compression_rates = [1]
 

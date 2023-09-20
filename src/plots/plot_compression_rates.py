@@ -1261,9 +1261,9 @@ if __name__ == "__main__":
 
     # plot_compression_metrics("atomo", "resnet_500")
 
-    # plot_compare_all("resnet_500", True, 500, save=False)
+    plot_compare_all("resnet_500", True, 500, save=False)
 
-    plot_compare_all_selected(["fetchsgd", "sgd", "sgdm"], "resnet_500", True, 1000, save=False, selected=1)
+    # plot_compare_all_selected(["fetchsgd", "sgd", "sgdm"], "resnet_500", True, 1000, save=False, selected=1)
 
     # plot_compression_rates()
 

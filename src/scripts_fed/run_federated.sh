@@ -27,10 +27,10 @@ memsgd='{"optimizer": "memsgd", "compression": "none", "top_k": DROP, "rand_k": 
 
 sgdm='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
 
-base_strategy=$sgd
+base_strategy=$terngrad
 
 beta_values=(2)
-local_iter_types=(same)
+local_iter_types=(dirichlet)
 
 drops=(250)
 # dirichlet 2    -> 700
@@ -42,19 +42,19 @@ for drop in "${drops[@]}"; do
   # modified_strategy="${base_strategy//DROP/$drop}"
   for beta in "${beta_values[@]}"; do
   for local_iter_type in "${local_iter_types[@]}"; do
-    max_iter=100
+    max_iter=500
 #    if [[ "$beta" == "0.125" && "$local_iter_type" == "dirichlet" ]]; then
 #      max_iter=500
 #    fi
 #    if [[ "$beta" == "2" && "$local_iter_type" == "dirichlet" ]]; then
 #      max_iter=500
 #    fi
-    python ../main_federated.py --model resnet --dataset cifar10 \
+    python ../main_federated.py --model lenet --dataset mnist \
       --max_iter=$max_iter \
-      --gpu=1 \
+      --gpu=0 \
       --fullset=100 \
       --batch_size=500 \
-      --learning_rate=0.001 \
+      --learning_rate=0.05 \
       --stop_patience=7 \
       --beta="$beta" \
       --split_type=dirichlet \
@@ -66,16 +66,16 @@ for drop in "${drops[@]}"; do
 done
 done
 
-#../main_federated.py --model resnet --dataset cifar10 \
-#      --max_iter=650 \
-#      --gpu=1 \
-#      --fullset=100 \
-#      --batch_size=500 \
-#      --learning_rate=0.001 \
-#      --stop_patience=7 \
-#      --beta="2" \
-#      --split_type=dirichlet \
-#      --const_local_iter=2 \
-#      --local_iter_type="same" \
-#      --number_clients=10 \
-#      --strategy='{"optimizer": "efsignsgd", "compression": "none"}'
+../main_federated.py --model resnet --dataset cifar10 \
+      --max_iter=1000 \
+      --gpu=1 \
+      --fullset=100 \
+      --batch_size=500 \
+      --learning_rate=0.001 \
+      --stop_patience=7 \
+      --beta="2" \
+      --split_type=dirichlet \
+      --const_local_iter=2 \
+      --local_iter_type="same" \
+      --number_clients=10 \
+      --strategy='{"optimizer": "sgd", "compression": "efsignsgd"}'
