@@ -18,6 +18,9 @@ from models.DenseNet import DenseNet
 from compressions.bSGD import bSGD
 from models.VGG import VGG
 from models.MobileNetV2 import MobileNetV2
+from compressions.EFsignSGD import EFsignSGD
+from compressions.FetchSGD import FetchSGD
+from compressions.MemSGD import MemSGD
 from utilities.parameters import parse_args
 from utilities import Strategy
 
@@ -92,6 +95,23 @@ def strategy_factory(**params) -> Strategy:
     elif params["optimizer"].lower() == "sgdm":
         return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=None, optimizer="sgd", momentum=params["momentum"])
+    elif params["compression"].lower() == "efsignsgd":
+        compression = EFsignSGD(learning_rate=params["learning_rate"])
+        return Strategy(learning_rate=params["learning_rate"], params=params,
+                        compression=compression)
+    elif params["compression"].lower() == "fetchsgd":
+        compression = FetchSGD(learning_rate=params["learning_rate"], c=params["c"], r=params["r"],
+                               momentum=params["momentum"], topk=params["topk"])
+        return Strategy(learning_rate=params["learning_rate"], params=params,
+                        compression=compression)
+    elif params["compression"].lower() == "memsgd":
+        if params["top_k"] == "None":
+            compression = MemSGD(learning_rate=params["learning_rate"], rand_k=params["rand_k"])
+        else:
+            compression = MemSGD(learning_rate=params["learning_rate"], top_k=params["top_k"])
+
+        return Strategy(learning_rate=params["learning_rate"], params=params,
+                        compression=compression)
     elif params["compression"].lower() == "none":
         return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=None, optimizer=params["optimizer"].lower())

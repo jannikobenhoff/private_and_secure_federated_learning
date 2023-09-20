@@ -7,16 +7,17 @@ import math
 import numpy as np
 import copy
 import torch
+from .Compression import Compression
 
 LARGEPRIME = 2 ** 61 - 1
 
 cache = {}
 
 
-class FetchSGD():
+class FetchSGD(Compression):
     def __init__(self, learning_rate, c: int, topk: int, r: int = 1, momentum: float = 0.9, name="FetchSGD"):
-        #        super().__init__(name=name)
         # self._learning_rate = self._build_learning_rate(learning_rate)
+        super().__init__(name)
         self.r = r
         self.c = c
         self.d = None
@@ -54,6 +55,7 @@ class FetchSGD():
         #     self.error[var.ref()] = self.add_variable_from_reference(
         #         model_variable=var, variable_name="error", shape=(self.r, self.c)
         #     )
+        print(f"FetchSGD built - c: {self.c}, r: {self.r}, momentum: {self.momentum_parameter}\n")
         self._built = True
 
     def compress(self, grads: list[Tensor], variables: list[Tensor], lr, client_id=1):

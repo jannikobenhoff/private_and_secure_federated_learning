@@ -3,9 +3,6 @@ from tensorflow.python.keras.optimizer_v2 import optimizer_v2
 from tensorflow import Tensor
 import tensorflow as tf
 
-from optimizer.EFsignSGD import EFsignSGD
-from optimizer.MemSGD import MemSGD
-from optimizer.FetchSGD import FetchSGD
 from tensorflow.python.keras.optimizer_v2.gradient_descent import SGD
 
 
@@ -52,18 +49,20 @@ class Strategy(optimizer_v2.OptimizerV2):
         self._set_hyper("momentum", momentum)
         self.nesterov = nesterov
         self.params = params
-        self.optimizer = None
-
-        if self.optimizer_name == "efsignsgd":
-            self.compression = EFsignSGD(learning_rate=learning_rate)
-        if self.optimizer_name == "fetchsgd":
-            self.compression = FetchSGD(learning_rate=learning_rate, c=params["c"], r=params["r"],
-                                        momentum=params["momentum"], topk=params["topk"])
-        if self.optimizer_name == "memsgd":
-            if params["top_k"] == "None":
-                self.compression = MemSGD(learning_rate=learning_rate, rand_k=params["rand_k"])
-            else:
-                self.compression = MemSGD(learning_rate=learning_rate, top_k=params["top_k"])
+        # self.optimizer = None
+        #
+        # if self.optimizer_name == "efsignsgd":
+        #     self.compression = EFsignSGD(learning_rate=learning_rate)
+        # if self.optimizer_name == "fetchsgd":
+        #     self.compression = FetchSGD(learning_rate=learning_rate, c=params["c"], r=params["r"],
+        #                                 momentum=params["momentum"], topk=params["topk"])
+        # if self.optimizer_name == "memsgd":
+        #     if params["top_k"] == "None":
+        #         self.compression = MemSGD(learning_rate=learning_rate, rand_k=params["rand_k"])
+        #     else:
+        #         self.compression = MemSGD(learning_rate=learning_rate, top_k=params["top_k"])
+        #
+        # self.optimizer = SGD(learning_rate=learning_rate)
 
     def _create_slots(self, var_list):
         if self._momentum:
@@ -71,8 +70,8 @@ class Strategy(optimizer_v2.OptimizerV2):
                 self.add_slot(var, "momentum")
         if self.compression is not None:
             self.compression.build(var_list)
-        if self.optimizer_name != "sgd":
-            self.compression.build(var_list)
+        # if self.optimizer_name != "sgd":
+        #     self.compression.build(var_list)
 
     def _prepare_local(self, var_device, var_dtype, apply_state):
         super()._prepare_local(var_device, var_dtype, apply_state)
@@ -84,18 +83,18 @@ class Strategy(optimizer_v2.OptimizerV2):
         self.num_clients = num_clients
         if self.compression is not None:
             self.compression.build(variables, num_clients)
-        elif self.optimizer_name != "sgd":
-            self.compression.build(variables, num_clients)
+        # elif self.optimizer_name != "sgd":
+        #     self.compression.build(variables, num_clients)
 
     def compress(self, grads, variables, client_id=1, number_clients=1):
         """
         Gradients from loss function and trainable model weights
         """
-        if self.optimizer_name != "sgd":
+        # if self.optimizer_name != "sgd":
+        #     compressed_data = self.compression.compress(grads, variables, client_id=client_id, lr=self.learning_rate)
+        #     return compressed_data
+        if self.compression is not None:
             compressed_data = self.compression.compress(grads, variables, client_id=client_id, lr=self.learning_rate)
-            return compressed_data
-        elif self.compression is not None:
-            compressed_data = self.compression.compress(grads, variables)
             return compressed_data
         else:
             return {
@@ -118,7 +117,7 @@ class Strategy(optimizer_v2.OptimizerV2):
                 # Average Gradients
                 client_grads = tf.nest.map_structure(lambda x: x / len(compressed_data.keys()), client_grads)
                 return client_grads
-            elif self.optimizer_name == "fetchsgd":
+            elif self.compression_name == "fetchsgd":
                 for client in range(1, len(compressed_data) + 1):
                     client = "client_" + str(client)
                     client_sketches = tf.cond(tf.equal(client, "client_1"),
@@ -130,17 +129,17 @@ class Strategy(optimizer_v2.OptimizerV2):
                 client_sketches = tf.nest.map_structure(lambda x: x / len(compressed_data.keys()), client_sketches)
                 decompressed_grads = self.compression.decompress({"compressed_grads": client_sketches}, variables)
                 return decompressed_grads
-            elif self.optimizer_name != "sgd":
-                for client in range(1, len(compressed_data) + 1):
-                    client = "client_" + str(client)
-                    client_grads = tf.cond(tf.equal(client, "client_1"),
-                                           lambda: self.compression.decompress(compressed_data[client], variables),
-                                           lambda: tf.nest.map_structure(lambda x, y: x + y, client_grads,
-                                                                         self.compression.decompress(
-                                                                             compressed_data[client], variables)))
-                # Average Gradients
-                client_grads = tf.nest.map_structure(lambda x: x / len(compressed_data.keys()), client_grads)
-                return client_grads
+            # elif self.optimizer_name != "sgd":
+            #     for client in range(1, len(compressed_data) + 1):
+            #         client = "client_" + str(client)
+            #         client_grads = tf.cond(tf.equal(client, "client_1"),
+            #                                lambda: self.compression.decompress(compressed_data[client], variables),
+            #                                lambda: tf.nest.map_structure(lambda x, y: x + y, client_grads,
+            #                                                              self.compression.decompress(
+            #                                                                  compressed_data[client], variables)))
+            #     # Average Gradients
+            #     client_grads = tf.nest.map_structure(lambda x: x / len(compressed_data.keys()), client_grads)
+            #     return client_grads
             elif self.compression is not None:
                 for client in range(1, len(compressed_data) + 1):
                     client = "client_" + str(client)
@@ -156,9 +155,9 @@ class Strategy(optimizer_v2.OptimizerV2):
             if self.compression is not None:
                 decompressed_grads = self.compression.decompress(compressed_data, variables)
                 return decompressed_grads
-            elif self.optimizer_name != "sgd":
-                decompressed_grads = self.compression.decompress(compressed_data, variables)
-                return decompressed_grads
+            # elif self.optimizer_name != "sgd":
+            #     decompressed_grads = self.compression.decompress(compressed_data, variables)
+            #     return decompressed_grads
 
     def _resource_apply_dense(self, grad, var, apply_state=None):
         var_device, var_dtype = var.device, var.dtype.base_dtype
@@ -188,8 +187,8 @@ class Strategy(optimizer_v2.OptimizerV2):
     def compression_rates(self):
         if self.compression is not None:
             return self.compression.compression_rates
-        elif self.optimizer_name != "sgd":
-            return self.optimizer.compression_rates
+        # elif self.optimizer_name != "sgd":
+        #     return self.optimizer.compression_rates
         else:
             return 1
 

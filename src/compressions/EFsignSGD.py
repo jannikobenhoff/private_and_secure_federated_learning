@@ -2,11 +2,14 @@ import tensorflow as tf
 from tensorflow.python.keras.optimizers import Optimizer
 from tensorflow import Tensor
 
+from .Compression import Compression
 
-class EFsignSGD:
+
+class EFsignSGD(Compression):
     def __init__(self, learning_rate, name="EFsignSGD"):
         # super().__init__(name=name)
         # self._learning_rate = self._build_learning_rate(learning_rate)
+        super().__init__(name)
         self.compression_rates = []
         self.errors = {}
         self.name = "EFsignSGD"

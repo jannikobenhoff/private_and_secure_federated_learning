@@ -60,6 +60,12 @@ def fed_worker(args):
     print("Using L2 lambda:", lambda_l2)
     model_client = model_factory(args.model.lower(), lambda_l2, input_shape, num_classes)
 
+    # Essential for ResNet -> If not disabled each client trains batch norm ind.
+    for layer in model_client.layers:
+        if isinstance(layer, tf.keras.layers.BatchNormalization):
+            layer.trainable = False
+            layer._per_input_updates = {}
+
     start_time = time.time()
     # VARIABLES
     max_iter = args.max_iter

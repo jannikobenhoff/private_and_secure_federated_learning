@@ -409,7 +409,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool, epochs: int, save=False):
     axes[3].grid(alpha=0.2)
     axes[3].set_title("Training Loss", fontsize=10, fontweight='bold')
     # axes[3].legend(fontsize=8)
-    # axes[3].set_yscale('log')
+    axes[3].set_yscale('log')
     axes[3].tick_params(axis='both', which='major', labelsize=8)
 
     axes[1].grid(alpha=0.2)
@@ -423,7 +423,11 @@ def plot_compare_all(parent_folder: str, bsgd: bool, epochs: int, save=False):
     axes[2].legend(fontsize=7)  # , bbox_to_anchor=(0.75, 0.7))
     axes[2].set_xscale('log')
     axes[2].tick_params(axis='both', which='major', labelsize=8)
-    if "lenet" in parent_folder:
+
+    if "lenet_batchdescent" in parent_folder:
+        axes[2].set_xlim([0.9, 500])
+        axes[2].set_ylim([0.85, 1])
+    elif "lenet" in parent_folder:
         axes[2].set_xlim([0.9, 500])
         axes[2].set_ylim([0.93, 1])
     else:
@@ -438,7 +442,7 @@ def plot_compare_all(parent_folder: str, bsgd: bool, epochs: int, save=False):
     axes[4].grid(alpha=0.2)
     axes[4].tick_params(axis='both', which='major', labelsize=8)
     axes[4].set_title("Test Loss", fontsize=10, fontweight='bold')
-    # axes[4].set_yscale('log')
+    axes[4].set_yscale('log')
 
     table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
 
@@ -616,8 +620,8 @@ def plot_compare_all_selected(selected_method, parent_folder: str, bsgd: bool, e
             axes.set_xlim([0.9, 500])
             axes.set_ylim([0.93, 1])
         else:
-            axes.set_xlim([0.9, 500])
-            axes.set_ylim([0.675, 0.8])
+            axes.set_xlim([0.9, 1000])
+            axes.set_ylim([0.5, 0.78])
     if selected == 0:
         axes.grid(alpha=0.2)
         axes.set_title("Training Accuracy", fontsize=10, fontweight='bold')
@@ -1257,9 +1261,9 @@ if __name__ == "__main__":
 
     # plot_compression_metrics("atomo", "resnet_500")
 
-    plot_compare_all("batchdescent", True, 250, save=False)
+    # plot_compare_all("resnet_500", True, 500, save=False)
 
-    # plot_compare_all_selected(["sgd", "sgd topk", "memsgd"], "resnet_500", True, 1000, save=True, selected=2)
+    plot_compare_all_selected(["fetchsgd", "sgd", "sgdm"], "resnet_500", True, 1000, save=False, selected=1)
 
     # plot_compression_rates()
 

@@ -10,7 +10,7 @@ DEFAULT_MODE="baseline_l2_resnet18"
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
 
-base_strategy='{"optimizer": "sgd", "compression": "atomo", "learning_rate": 0.01, "svd_rank":RANK}'
+base_strategy='{"optimizer": "sgd", "compression": "atomo", "learning_rate": 0.1, "svd_rank":RANK}'
 base_strategy_resnet='{"optimizer": "sgd", "compression": "atomo", "learning_rate": 0.001, "svd_rank":RANK}'
 base_strategy_vgg11='{"optimizer": "sgd", "compression": "atomo", "learning_rate": 0.05, "svd_rank":RANK}'
 
@@ -18,7 +18,7 @@ ranks=(1 3 6)
 #ranks=(6 6)
 
 parallel=0
-runs=1
+runs=2
 for ((i=1; i<=runs; i++))
 do
     case $mode in

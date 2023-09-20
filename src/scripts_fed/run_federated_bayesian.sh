@@ -40,12 +40,6 @@ local_iter_types=(dirichlet)
 for beta in "${beta_values[@]}"; do
   for local_iter_type in "${local_iter_types[@]}"; do
     max_iter=320
-    if [[ "$beta" == "0.125" && "$local_iter_type" == "dirichlet" ]]; then
-      max_iter=320
-    fi
-    if [[ "$beta" == "2" && "$local_iter_type" == "dirichlet" ]]; then
-      max_iter=320
-    fi
     python ../main_federated.py --model lenet --dataset mnist \
       --max_iter=$max_iter \
       --gpu=0 \

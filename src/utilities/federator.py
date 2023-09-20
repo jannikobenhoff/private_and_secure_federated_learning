@@ -153,6 +153,8 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
 
                 # prepare the data, shuffle, divide into batches
                 data = train_data[k]
+                size_of_batch = len(data)
+
                 label = train_label[k]
                 train_dataset = tf.data.Dataset.from_tensor_slices((data, label))
                 train_dataset = train_dataset.shuffle(len(label), reshuffle_each_iteration=True)
@@ -219,7 +221,7 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
     if optimizer.compression is not None:
         compression_rates = [np.mean(optimizer.compression.compression_rates)]
     elif optimizer.optimizer_name != "sgd":
-        compression_rates = [np.mean(optimizer.optimizer.compression_rates)]
+        compression_rates = [np.mean(optimizer.compression.compression_rates)]
     else:
         # If SGD was used without compression method
         compression_rates = [1]

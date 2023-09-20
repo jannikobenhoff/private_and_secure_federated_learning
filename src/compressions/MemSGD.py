@@ -3,12 +3,15 @@ import tensorflow as tf
 from tensorflow.python.keras.optimizers import Optimizer
 from tensorflow import Tensor
 
+from .Compression import Compression
 
-class MemSGD:
+
+class MemSGD(Compression):
     def __init__(self, learning_rate, top_k: int = None, rand_k: int = None, name="MemSGD"):
         # super().__init__(name=name)
         # self._learning_rate = self._build_learning_rate(learning_rate)
 
+        super().__init__(name)
         if rand_k is not None and top_k is not None:
             raise "Please only select top-k or random-k sparsification."
         elif rand_k is None and top_k is None:
@@ -74,31 +77,6 @@ class MemSGD:
         }
 
     @staticmethod
-    def top_k_sparsification(input_tensor: Tensor, k: int) -> Tensor:
-        """
-        Returns a sparse tensor of the input tensor, with the top k elements.
-        k = 2: [1, 2, 3] -> [0, 2, 3]
-        """
-        input_shape = input_tensor.shape
-        flattened_tensor: Tensor = tf.reshape(input_tensor, [-1])
-
-        if tf.size(flattened_tensor) <= k:
-            return input_tensor
-
-        ft_np = tf.abs(flattened_tensor).numpy()
-
-        indices = np.argpartition(np.abs(ft_np.ravel()), -k)[-k:]
-        mask = tf.zeros(flattened_tensor.shape, dtype=flattened_tensor.dtype)
-        mask = tf.tensor_scatter_nd_update(mask, tf.expand_dims(indices, axis=1),
-                                           tf.ones_like(indices, dtype=tf.float32))
-
-        spars_tensor = flattened_tensor * mask
-
-        spars_tensor = tf.reshape(spars_tensor, input_shape)
-
-        return spars_tensor
-
-    @staticmethod
     def rand_k_sparsification(input_tensor: Tensor, k: int) -> Tensor:
         """
         Returns a sparse tensor with random k elements != 0.
@@ -128,16 +106,3 @@ class MemSGD:
             }
         )
         return config
-
-    @staticmethod
-    def get_sparse_tensor_size_in_bits(tensor):
-        flattened_tensor = tf.reshape(tensor, [-1])
-        num_nonzero_entries = tf.math.count_nonzero(flattened_tensor)
-        from tensorflow.python.ops.numpy_ops import np_config
-        np_config.enable_numpy_behavior()
-        num_index_bits = tf.experimental.numpy.log2(flattened_tensor.shape[0])  # tf.int32.size * 8
-        num_value_bits = tf.constant(tensor.dtype.size * 8, dtype=tf.int64)
-
-        total_bits = num_nonzero_entries * (num_index_bits + num_value_bits)
-        return min(tf.cast(tf.maximum(total_bits, 1), dtype=tf.int32),
-                   tensor.dtype.size * 8 * np.prod(tensor.shape.as_list()))

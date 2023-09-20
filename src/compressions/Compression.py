@@ -3,7 +3,7 @@ import abc
 import numpy as np
 import tensorflow as tf
 from tensorflow import Tensor
-from typing import Final
+from typing import Final, Any
 
 
 class Compression:
@@ -81,7 +81,7 @@ class Compression:
         self._variables.append(variable)
         return variable
 
-    def compress(self, grads: list[Tensor], variables):
+    def compress(self, grads: list[Tensor], variables, client_id: Any, lr: Any):
         raise NotImplementedError("Subclasses must implement compress method")
 
     def decompress(self, compressed_data, variables):
