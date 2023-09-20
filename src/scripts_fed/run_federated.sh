@@ -1,33 +1,33 @@
 #!/bin/bash
 
-sparsegradient='{"optimizer": "sgd", "compression": "sparsegradient", "drop_rate": DROP}'
+sparsegradient='{ "compression": "sparsegradient", "drop_rate": DROP}'
 
-vqsgd='{"optimizer": "sgd", "compression": "vqsgd", "repetition": 100}'  # 100 250 500
+vqsgd='{"compression": "vqsgd", "repetition": 100}'  # 100 250 500
 
-gradientsparsification='{"optimizer": "sgd", "compression": "gradientsparsification", "max_iter": 2, "k": DROP}'
+gradientsparsification='{"compression": "gradientsparsification", "max_iter": 2, "k": DROP}'
 
-atomo='{"optimizer": "sgd", "compression": "atomo", "svd_rank": 1}'
+atomo='{"compression": "atomo", "svd_rank": 1}'
 
-efsignsgd='{"optimizer": "efsignsgd", "compression": "none"}'
+efsignsgd='{"compression": "efsignsgd"}'
 
-fetchsgd='{"optimizer": "fetchsgd", "compression": "none", "c": DROP, "r": 1,
+fetchsgd='{"compression": "fetchsgd", "c": DROP, "r": 1,
                 "topk": DROP2, "momentum": 0.9}'
 
-sgd='{"optimizer": "sgd", "compression": "none"}'
+sgd='{"compression": "none"}'
 
-onebitsgd='{"optimizer": "sgd", "compression": "onebitsgd"}'
+onebitsgd='{ "compression": "onebitsgd"}'
 
-terngrad='{"optimizer": "sgd", "compression": "terngrad", "clip": 2.5}'
+terngrad='{ "compression": "terngrad", "clip": 2.5}'
 
-topk='{"optimizer": "sgd", "compression": "topk", "k": 6000}'  # 100 1000 6000
+topk='{"compression": "topk", "k": 6000}'  # 100 1000 6000
 
-naturalcompression='{"optimizer": "sgd", "compression": "naturalcompression"}'
+naturalcompression='{"compression": "naturalcompression"}'
 
-memsgd='{"optimizer": "memsgd", "compression": "none", "top_k": DROP, "rand_k": "None"}'
+memsgd='{"compression": "memsgd", "top_k": DROP, "rand_k": "None"}'
 
 sgdm='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
 
-base_strategy=$terngrad
+base_strategy=$efsignsgd
 
 beta_values=(2)
 local_iter_types=(dirichlet)
@@ -66,16 +66,16 @@ for drop in "${drops[@]}"; do
 done
 done
 
-../main_federated.py --model resnet --dataset cifar10 \
-      --max_iter=1000 \
-      --gpu=1 \
-      --fullset=100 \
-      --batch_size=500 \
-      --learning_rate=0.001 \
-      --stop_patience=7 \
-      --beta="2" \
-      --split_type=dirichlet \
-      --const_local_iter=2 \
-      --local_iter_type="same" \
-      --number_clients=10 \
-      --strategy='{"optimizer": "sgd", "compression": "efsignsgd"}'
+#../main_federated.py --model resnet --dataset cifar10 \
+#      --max_iter=1000 \
+#      --gpu=1 \
+#      --fullset=100 \
+#      --batch_size=500 \
+#      --learning_rate=0.001 \
+#      --stop_patience=7 \
+#      --beta="2" \
+#      --split_type=dirichlet \
+#      --const_local_iter=2 \
+#      --local_iter_type="same" \
+#      --number_clients=10 \
+#      --strategy='{"optimizer": "sgd", "compression": "efsignsgd"}'
