@@ -202,6 +202,7 @@ def plot_compression_metrics(title: str, parent_folder: str):
     axes[1].grid(alpha=0.2)
     axes[1].set_title("Test Accuracy", fontsize=10, fontweight='bold')
     axes[1].tick_params(axis='both', which='major', labelsize=8)
+    axes[1].legend(fontsize=9)
 
     axes[2].grid(alpha=0.2)
     axes[2].set_title("Test Accuracy vs Overall Compression", fontsize=10, fontweight='bold')
@@ -222,6 +223,7 @@ def plot_compression_metrics(title: str, parent_folder: str):
     axes[4].tick_params(axis='both', which='major', labelsize=8)
     axes[4].set_title("Test Loss", fontsize=10, fontweight='bold')
     axes[4].set_yscale('log')
+    # axes[4].legend(fontsize=10)
 
     table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
 
@@ -484,8 +486,7 @@ def plot_compare_all_selected(selected_method, parent_folder: str, bsgd: bool, e
             continue
         if ("Bucket" in file_path or "SGD_mom" in file_path) and not bsgd:
             continue
-        # if not "MEM" in file_path:
-        #     continue
+
         file = open(file_path, "r")
         file = json.load(file)
         strat = ast.literal_eval(file["args"]["strategy"])
@@ -546,11 +547,13 @@ def plot_compare_all_selected(selected_method, parent_folder: str, bsgd: bool, e
         best_param = max(metrics[method].items(), key=lambda x: x[1]['max_val_acc'])
         best_param_metrics = best_param[1]
 
-        table_data.append(
-            [label_name, round(100 * best_param_metrics["max_val_acc"], 2), round(best_param_metrics["cr"], 1)])
         m = markers[label_name]
         c = colors[label_name]
+        if "1" in label_name:
+            label_name = "SignSGD"
 
+        table_data.append(
+            [label_name, round(100 * best_param_metrics["max_val_acc"], 2), round(best_param_metrics["cr"], 1)])
         sorted_data = sorted(cr_acc_pairs, key=lambda x: x[0], reverse=True)
 
         if selected == 0:
@@ -1259,11 +1262,11 @@ def plot_compare_batches(parent_folders: list, epochs):
 if __name__ == "__main__":
     WINDOW_SIZE = 3
 
-    # plot_compression_metrics("atomo", "resnet_500")
+    # plot_compression_metrics("ef_error", "efsignsgd")
 
     plot_compare_all("lenet_batchdescent", True, 500, save=False)
 
-    # plot_compare_all_selected(["fetchsgd", "sgd", "sgdm"], "resnet_500", True, 1000, save=False, selected=1)
+    # plot_compare_all_selected(["efsignsgd", "sgd", "sgd onebitsgd"], "ef_error", True, 500, save=True, selected=1)
 
     # plot_compression_rates()
 

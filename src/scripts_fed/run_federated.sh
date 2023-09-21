@@ -13,7 +13,7 @@ efsignsgd='{"compression": "efsignsgd"}'
 fetchsgd='{"compression": "fetchsgd", "c": DROP, "r": 1,
                 "topk": DROP2, "momentum": 0.9}'
 
-sgd='{"compression": "none"}'
+sgd='{"optimizer": "sgd","compression": "none"}'
 
 onebitsgd='{ "compression": "onebitsgd"}'
 
@@ -27,10 +27,10 @@ memsgd='{"compression": "memsgd", "top_k": DROP, "rand_k": "None"}'
 
 sgdm='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
 
-base_strategy=$efsignsgd
+base_strategy=$sgdm
 
-beta_values=(2)
-local_iter_types=(dirichlet)
+beta_values=(0.125)
+local_iter_types=(same)
 
 drops=(250)
 # dirichlet 2    -> 700
@@ -78,4 +78,4 @@ done
 #      --const_local_iter=2 \
 #      --local_iter_type="same" \
 #      --number_clients=10 \
-#      --strategy='{"optimizer": "sgd", "compression": "efsignsgd"}'
+#      --strategy='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'

@@ -92,9 +92,6 @@ def strategy_factory(**params) -> Strategy:
     elif params["compression"].lower() == "atomo":
         return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=Atomo(svd_rank=params["svd_rank"]))
-    elif params["optimizer"].lower() == "sgdm":
-        return Strategy(learning_rate=params["learning_rate"], params=params,
-                        compression=None, optimizer="sgd", momentum=params["momentum"])
     elif params["compression"].lower() == "efsignsgd":
         compression = EFsignSGD(learning_rate=params["learning_rate"])
         return Strategy(learning_rate=params["learning_rate"], params=params,
@@ -112,6 +109,9 @@ def strategy_factory(**params) -> Strategy:
 
         return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=compression)
+    elif params["optimizer"].lower() == "sgdm":
+        return Strategy(learning_rate=params["learning_rate"], params=params,
+                        compression=None, optimizer="sgd", momentum=params["momentum"])
     elif params["compression"].lower() == "none":
         return Strategy(learning_rate=params["learning_rate"], params=params,
                         compression=None, optimizer=params["optimizer"].lower())
