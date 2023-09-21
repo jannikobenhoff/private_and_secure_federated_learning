@@ -16,6 +16,7 @@ names = {
     "sgd atomo": "Atomic Sparsification",
     "efsignsgd": "EF-SignSGD",
     "efsignsgd ": "EF-SignSGD",
+    "sgd efsignsgd": "EF-SignSGD",
     "fetchsgd": "FetchSGD",
     "fetchsgd ": "FetchSGD",
     "vqsgd": "vqSGD",

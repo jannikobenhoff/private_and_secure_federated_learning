@@ -125,11 +125,11 @@ def plot_bayesian_search_fed(folder: str, title: str, model):
 
     # plt.suptitle(label_name, fontsize=8)
     plt.tight_layout()
-    # plt.savefig("../../figures/bayesian_" + plot_title + ".pdf", bbox_inches='tight')
+    plt.savefig("../../figures/bayesian_" + plot_title + ".pdf", bbox_inches='tight')
     plt.show()
 
 
 if __name__ == "__main__":
-    plot_bayesian_search("new", "bayesian_result_SGD_lenet_09_19_19_29_02.pkl", save=True, model="LeNet")
+    # plot_bayesian_search("new", "bayesian_result_SGD_lenet_09_19_19_29_02.pkl", save=True, model="LeNet")
 
-    # plot_bayesian_search_fed("fed", "bayesian_result_resnet18_09_18_02_17_58.pkl", "ResNet")
+    plot_bayesian_search_fed("fed", "bayesian_result_resnet18_09_18_02_17_58.pkl", "ResNet50")
