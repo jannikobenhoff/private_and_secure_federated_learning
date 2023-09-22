@@ -5,8 +5,6 @@ import os
 from pprint import pprint
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-
 from plot_utils import colors, names
 
 
@@ -156,84 +154,20 @@ def plot_times(selected_model):
                edgecolor='black', color=colors[names[method_name]])
 
     ax.set_ylabel('Average Time per Global Iteration (s)')
-    ax.set_ylim([0, 25])
+    ax.set_ylim([0, maximal + 5])
 
+    # ax.set_xticks(offset + index + len(data[model]) * (bar_width + gap_width) / 2)
+    # ax.set_xticks(offset + index + (len(data) - 1) * (bar_width + gap_width) / 2)
+    # ax.set_xticklabels(list(data.keys()))
     ax.set_xticklabels("")
-    # ax.grid(alpha=0.4)
-    # ax.legend(loc='upper center', bbox_to_anchor=(0.35, 1),
-    #           ncol=2, fancybox=False, shadow=False)
+    ax.grid(alpha=0.4)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.05),
+              ncol=3, fancybox=True, shadow=False)
     # ax.legend(fontsize=8)
-    handles, labels = ax.get_legend_handles_labels()
-    # fig.legend(handles, labels, loc='upper center', ncol=5)
 
     plt.tight_layout()
     plt.savefig(f"../../figures/times.pdf", bbox_inches='tight')
     plt.show()
-
-
-def plot_com_decom(selected_model):
-    file = open("../results/times.json")
-    data = json.load(file)
-
-    split_times = {'Communication': [], 'Encoding': [],
-                   'Decoding': [], "index": []}
-    for method, split in data['split'].items():
-        compress_time_list = split['compress'].split('/')
-        decompress_time_list = split['decompress'].split('/')
-        compress_time = np.mean(data[selected_model][method]) * int(compress_time_list[0]) / int(compress_time_list[1])
-        decompress_time = np.mean(data[selected_model][method]) * int(decompress_time_list[0]) / int(
-            decompress_time_list[1])
-        print(compress_time, decompress_time)
-        # split_times[method] = {
-        #     'compress': compress_time,
-        #     'decompress': decompress_time,
-        # }
-        split_times["Encoding"].append(compress_time * 70)
-        split_times["Decoding"].append(decompress_time * 70)
-        split_times["Communication"].append(11 * 1)
-        split_times["index"].append(names[method])
-
-    # Calculating the average times for each compression method
-    # avg_times = {method: np.mean(times) for method, times in data['resnet'].items() if method in split_times}
-    #
-    # # Getting the compression and decompression times
-    # compress_times = [avg_times[method] * split_times[method]['compress'] for method in avg_times]
-    # decompress_times = [avg_times[method] * split_times[method]['decompress'] for method in avg_times]
-
-    d = pd.DataFrame(split_times)  # , index=split_times["index"])
-    print(d)
-    # Bar chart
-    bar_width = 0.35
-    index = np.arange(len(split_times))
-
-    ax = d.plot(kind='bar', stacked=True, edgecolor="black", color=["b", "g", "orange"], figsize=(8, 6))
-    # bar1 = ax.bar(index, d, bar_width, label='Compression', stacked=True)
-    # # bar2 = ax.bar(index + bar_width, decompress_times, bar_width, label='Decompression')
-    #
-    ax.set_ylabel('Time (s)')
-    ax.set_ylim([0, 27])
-    ax.set_xlabel('')
-    ax.set_xticks([])
-    # for minor ticks
-    ax.set_xticks([], minor=True)
-    ax.legend(loc="upper left")
-    # ax.grid(alpha=0.4)
-    rects = ax.patches
-
-    for i, label in enumerate(split_times["index"]):
-        height = split_times["Decoding"][i] + split_times["Communication"][i] + split_times["Encoding"][i] + 1
-        ax.annotate(
-            label,
-            xy=(i, height),
-            xytext=(0, 3),  # 3 points vertical offset
-            textcoords="offset points",
-            ha='center',
-            rotation=90
-        )
-
-    plt.tight_layout()
-    # plt.show()
-    plt.savefig("comp_decomp.pdf")
 
 
 if __name__ == "__main__":
@@ -241,6 +175,4 @@ if __name__ == "__main__":
 
     # plot_total_run_time()
 
-    plot_times("lenet")
-
-    # plot_com_decom("resnet")
+    plot_times("resnet")
