@@ -219,7 +219,10 @@ def plot_compare_all(parent_folder: str, limit):
         print(file["args"]["local_iter_type"], file["args"]["beta"])
         strat = ast.literal_eval(file["args"]["strategy"])
         strat_key = f"{strat}"  # {file['args']['lambda_l2']}"
-        lean_strat_key = f"{strat['optimizer']} {strat['compression']}"
+        if "optimizer" in strat:
+            lean_strat_key = f"{strat['optimizer']} {strat['compression']}"
+        else:
+            lean_strat_key = f"{strat['compression']}"
 
         # train_acc = np.array(ast.literal_eval(file["training_acc"]))
         # train_loss = np.array(ast.literal_eval(file["training_loss"]))
@@ -227,7 +230,6 @@ def plot_compare_all(parent_folder: str, limit):
         val_loss = np.array(ast.literal_eval(file["test_loss"]))
         cr = file["compression_rates"][0]
 
-        # print(strat_key, np.max(val_acc))
         if lean_strat_key not in metrics:
             metrics[lean_strat_key] = {}
 
@@ -432,9 +434,25 @@ def plot_compare_to_diff_sets(parent_folders: list):
         file = json.load(file)
         print(file["args"]["local_iter_type"], file["args"]["beta"])
         strat = ast.literal_eval(file["args"]["strategy"])
-        strat_key = f"{strat}" + "&{}_{}".format(file["args"]["local_iter_type"], file["args"]["beta"])
-        lean_strat_key = f"{strat['optimizer']} {strat['compression']}"
+        if "optimizer" in strat:
+            if strat["optimizer"] == "sgd" and strat["compression"] == "none":
+                lean_strat_key = "sgd"
+            elif strat["optimizer"] == "sgdm":
+                lean_strat_key = "sgdm"
+            elif strat["optimizer"] == "fetchsgd":
+                lean_strat_key = "fetchsgd"
+            elif strat["optimizer"] == "memsgd":
+                lean_strat_key = "memsgd"
+            elif strat["optimizer"] == "efsignsgd":
+                lean_strat_key = "efsignsgd"
+            else:
+                lean_strat_key = f"{strat['compression']}"
+        else:
+            lean_strat_key = f"{strat['compression']}"
 
+        label_name = names[lean_strat_key.lower().replace(" none", "").replace("none ", "")]
+
+        strat_key = f"{label_name}" + "&{}_{}".format(file["args"]["local_iter_type"], file["args"]["beta"])
         val_acc = np.array(ast.literal_eval(file["test_acc"]))
         val_loss = np.array(ast.literal_eval(file["test_loss"]))
         cr = file["compression_rates"][0]
@@ -459,13 +477,13 @@ def plot_compare_to_diff_sets(parent_folders: list):
             metrics[lean_strat_key][strat_key]["max_val_acc"] = np.mean([
                 metrics[lean_strat_key][strat_key]["max_val_acc"], np.max(val_acc)])
 
-    fig, axes = plt.subplots(4, 3, figsize=(17, 8))
+    fig, axes = plt.subplots(5, 3, figsize=(17, 8))
     axes = axes.flatten()
 
     ax_index = 0
     for method in metrics:
         print(method)
-        label_name = names[method.lower().replace(" none", "").replace("none ", "")]
+        label_name = method  # names[method.lower().replace(" none", "").replace("none ", "")]
 
         setup_data = {"same": {}, "dirichlet": {}}
         for setup in metrics[method]:
@@ -539,11 +557,11 @@ def plot_compare_to_diff_sets(parent_folders: list):
 
 if __name__ == "__main__":
     WINDOW_SIZE = 3
-    # plot_compression_metrics("gradientsparsification", ["lenet_same2", "lenet_dirichlet2"], save=False)
+    # plot_compression_metrics("gradientsparsification", ["lenet_same0125"], save=False)
 
-    plot_compare_all("resnet_same2", [0.53, 1])
+    # plot_compare_all("lenet_dirichlet0125", [0.53, 1])
 
-    # plot_compare_to_diff_sets(["same_2", "dirichlet_2", "same_0125", "dirichlet_0125"])
+    plot_compare_to_diff_sets(["lenet_same2", "lenet_dirichlet2", "lenet_same0125", "lenet_dirichlet0125"])
 
     # lambda_search("n")
 

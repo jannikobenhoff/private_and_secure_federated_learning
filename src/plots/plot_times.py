@@ -5,23 +5,7 @@ import os
 from pprint import pprint
 import matplotlib.pyplot as plt
 import numpy as np
-
-names = {
-    "terngrad": "TernGrad",
-    "naturalcompression": "Natural Compression",
-    "onebitsgd": "1-Bit SGD",
-    "sparsegradient": "Sparse Gradient",
-    "gradientsparsification": "Gradient Sparsification",
-    "memsgd": "Sparsified SGD with Memory",
-    "atomo": "Atomic Sparsification",
-    "efsignsgd": "EF-SignSGD",
-    "fetchsgd": "FetchSGD",
-    "vqsgd": "vqSGD",
-    "topk": "TopK",
-    "sgd ": "SGD",
-    "sgd": "SGD",
-    "bsgd": "BucketSGD"
-}
+from plot_utils import colors, names
 
 
 def get_all_files_in_directory(root_path):
@@ -86,8 +70,6 @@ def plot_avg_times(parent_folders, bsgd: bool):
     print(data.keys())
 
     maximal = 0
-    colors = itertools.cycle(
-        ('r', 'g', "#32CD32", 'y', 'm', 'c', 'grey', 'orange', 'pink', "#D2691E", 'b', "#FFD700", "#a6bddb"))
 
     # Iterate over each model and plot
     for m, model in enumerate(data):
@@ -99,7 +81,7 @@ def plot_avg_times(parent_folders, bsgd: bool):
                 maximal = avg_times[0]
             ax.bar(m * 5 + index + offset + method_idx * (bar_width + gap_width), avg_times, bar_width,
                    label=names[method_name],
-                   edgecolor='black', color=next(colors))
+                   edgecolor='black', color=colors[names[method_name]])
 
     ax.set_ylabel('Average Time per Epoch (s)')
     ax.set_ylim([0, maximal + 10])
@@ -133,7 +115,64 @@ def plot_total_run_time():
     print("Total Run Time:\n", round(total_time / 3600, 1), "h\n", round(total_time / 3600 / 24, 1), "days")
 
 
+def plot_times(selected_model):
+    file = open("../results/times.json")
+    file = json.load(file)
+
+    bar_width = 0.05
+    gap_width = 0.01
+
+    index = np.arange(1) / 2.5
+    total_width = 2 * 12 * (bar_width + gap_width) - gap_width
+
+    offset = -(total_width / 2)
+
+    data = {}
+    for method in file[selected_model]:
+        data[method] = np.mean(file[selected_model][method])
+
+    data = dict(sorted(data.items(), key=lambda x: x[1]))
+    print(data)
+    # sorted_methods = sorted(
+    #     data.items(),
+    #     key=lambda kv: np.mean(kv), reverse=True
+    # )
+    # data = sorted_methods
+    # print(data.keys())
+
+    maximal = 0
+    # Iterate over each model and plot
+
+    fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+    for method_idx, (method_name, times) in enumerate(data.items()):
+        print(method_name)
+        avg_times = [np.mean(data[method_name])]
+        if avg_times[0] > maximal:
+            maximal = avg_times[0]
+        ax.bar(index + offset + method_idx * (bar_width + gap_width), avg_times, bar_width,
+               label=names[method_name],
+               edgecolor='black', color=colors[names[method_name]])
+
+    ax.set_ylabel('Average Time per Global Iteration (s)')
+    ax.set_ylim([0, maximal + 5])
+
+    # ax.set_xticks(offset + index + len(data[model]) * (bar_width + gap_width) / 2)
+    # ax.set_xticks(offset + index + (len(data) - 1) * (bar_width + gap_width) / 2)
+    # ax.set_xticklabels(list(data.keys()))
+    ax.set_xticklabels("")
+    ax.grid(alpha=0.4)
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, 1.05),
+              ncol=3, fancybox=True, shadow=False)
+    # ax.legend(fontsize=8)
+
+    plt.tight_layout()
+    plt.savefig(f"../../figures/times.pdf", bbox_inches='tight')
+    plt.show()
+
+
 if __name__ == "__main__":
     # plot_avg_times(["baseline_resnet"], True)
 
-    plot_total_run_time()
+    # plot_total_run_time()
+
+    plot_times("resnet")

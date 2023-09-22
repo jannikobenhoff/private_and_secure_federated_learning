@@ -29,8 +29,8 @@ sgdm='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
 
 base_strategy=$sgd
 
-beta_values=(0.125)
-local_iter_types=(same)
+beta_values=(2)
+local_iter_types=(dirichlet)
 
 # dirichlet 2    -> 700
 # dirichlet 0125 -> 850
