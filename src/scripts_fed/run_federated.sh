@@ -27,9 +27,15 @@ memsgd='{"compression": "memsgd", "top_k": DROP, "rand_k": "None"}'
 
 sgdm='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
 
+<<<<<<< HEAD
 base_strategy=$atomo
 
 beta_values=(2)
+=======
+base_strategy=$sgdm
+
+beta_values=(0.125)
+>>>>>>> a955793 (fed same 0.125)
 local_iter_types=(same)
 
 drops=(1)
@@ -79,6 +85,7 @@ done
 #      --const_local_iter=2 \
 #      --local_iter_type="same" \
 #      --number_clients=10 \
+<<<<<<< HEAD
 #      --strategy='{"optimizer": "sgd", "compression": "memsgd", "top_k": 500000, "rand_k": "None"}'
 #
 #
@@ -95,3 +102,6 @@ done
 #      --local_iter_type="same" \
 #      --number_clients=10 \
 #      --strategy='{"optimizer": "sgd", "compression": "topk", "k": 500000}'
+=======
+#      --strategy='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
+>>>>>>> a955793 (fed same 0.125)

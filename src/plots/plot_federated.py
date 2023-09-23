@@ -773,7 +773,11 @@ if __name__ == "__main__":
     WINDOW_SIZE = 5
     # plot_compression_metrics("gradientsparsification", ["lenet_same0125"], save=False)
 
+<<<<<<< HEAD
     # plot_compare_all("resnet_same2", [0.4, 1], save=False)
+=======
+    plot_compare_all("resnet_same2", [0.53, 1])
+>>>>>>> a955793 (fed same 0.125)
 
     plot_compare_all_selected(["sgd", "memsgd", "gradientsparsification", "vqsgd", "topk", "sparsegradient"],
                               "resnet_same2",
