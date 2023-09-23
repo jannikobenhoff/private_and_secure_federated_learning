@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Default mode set at the top of the script
-DEFAULT_MODE="baseline_l2_resnet18"
+DEFAULT_MODE="baseline_l2_lenet"
 
 # LeNet:    search_lenet      baseline_l2_lenet       l2_lenet        no_l2_lenet
 # ResNet18: search_resnet18   baseline_l2_resnet18    no_l2_resnet18
@@ -18,7 +18,7 @@ ranks=(1 3 6)
 #ranks=(6 6)
 
 parallel=0
-runs=2
+runs=1
 for ((i=1; i<=runs; i++))
 do
     case $mode in
