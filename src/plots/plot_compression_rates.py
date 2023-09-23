@@ -1266,11 +1266,7 @@ if __name__ == "__main__":
 
     plot_compare_all("lenet_batchdescent", True, 500, save=True)
 
-<<<<<<< HEAD
     plot_compare_all_selected(["efsignsgd", "sgd", "sgd onebitsgd"], "ef_error", True, 500, save=True, selected=1)
-=======
-    # plot_compare_all_selected(["efsignsgd", "sgd", "sgd onebitsgd"], "ef_error", True, 500, save=True, selected=1)
->>>>>>> a955793 (fed same 0.125)
 
     # plot_compression_rates()
 
