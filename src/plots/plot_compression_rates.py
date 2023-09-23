@@ -1264,9 +1264,9 @@ if __name__ == "__main__":
 
     # plot_compression_metrics("ef_error", "efsignsgd")
 
-    plot_compare_all("lenet_batchdescent", True, 500, save=False)
+    plot_compare_all("lenet_batchdescent", True, 500, save=True)
 
-    # plot_compare_all_selected(["efsignsgd", "sgd", "sgd onebitsgd"], "ef_error", True, 500, save=True, selected=1)
+    plot_compare_all_selected(["efsignsgd", "sgd", "sgd onebitsgd"], "ef_error", True, 500, save=True, selected=1)
 
     # plot_compression_rates()
 

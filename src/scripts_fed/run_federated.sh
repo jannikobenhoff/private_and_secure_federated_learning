@@ -6,7 +6,7 @@ vqsgd='{"compression": "vqsgd", "repetition": DROP}'  # 100 250 500
 
 gradientsparsification='{"compression": "gradientsparsification", "max_iter": 2, "k": DROP}'
 
-atomo='{"compression": "atomo", "svd_rank": DROP}'
+atomo='{"compression": "atomo", "svd_rank": 1}'
 
 efsignsgd='{"compression": "efsignsgd"}'
 
@@ -27,9 +27,9 @@ memsgd='{"compression": "memsgd", "top_k": DROP, "rand_k": "None"}'
 
 sgdm='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
 
-base_strategy=$naturalcompression
+base_strategy=$atomo
 
-beta_values=(0.125)
+beta_values=(2)
 local_iter_types=(same)
 
 drops=(1)
@@ -52,7 +52,7 @@ for drop in "${drops[@]}"; do
 #    fi
     python ../main_federated.py --model lenet --dataset mnist \
       --max_iter=$max_iter \
-      --gpu=0 \
+      --gpu=1 \
       --fullset=100 \
       --batch_size=500 \
       --learning_rate=0.05 \
@@ -67,7 +67,7 @@ for drop in "${drops[@]}"; do
 done
 done
 
-#../main_federated.py --model resnet --dataset cifar10 \
+#python ../main_federated.py --model resnet --dataset cifar10 \
 #      --max_iter=1000 \
 #      --gpu=1 \
 #      --fullset=100 \
@@ -79,19 +79,19 @@ done
 #      --const_local_iter=2 \
 #      --local_iter_type="same" \
 #      --number_clients=10 \
-#      --strategy='{"optimizer": "sgd", "compression": "gradientsparsification", "max_iter": 2, "k": 0.01}'
-
-
-../main_federated.py --model lenet --dataset mnist \
-      --max_iter=10 \
-      --gpu=0 \
-      --fullset=100 \
-      --batch_size=500 \
-      --learning_rate=0.001 \
-      --stop_patience=7 \
-      --beta="2" \
-      --split_type=dirichlet \
-      --const_local_iter=2 \
-      --local_iter_type="same" \
-      --number_clients=10 \
-      --strategy='{"optimizer": "sgd", "compression": "atomo", "svd_rank": 1}'
+#      --strategy='{"optimizer": "sgd", "compression": "memsgd", "top_k": 500000, "rand_k": "None"}'
+#
+#
+#python ../main_federated.py --model lenet --dataset mnist \
+#      --max_iter=10 \
+#      --gpu=0 \
+#      --fullset=100 \
+#      --batch_size=500 \
+#      --learning_rate=0.001 \
+#      --stop_patience=7 \
+#      --beta="2" \
+#      --split_type=dirichlet \
+#      --const_local_iter=2 \
+#      --local_iter_type="same" \
+#      --number_clients=10 \
+#      --strategy='{"optimizer": "sgd", "compression": "topk", "k": 500000}'

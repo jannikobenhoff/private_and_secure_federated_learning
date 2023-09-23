@@ -1,7 +1,8 @@
 {
   "lenet": {
     "sgd": {
-      "same2.0": 1e-05,
+      "same2.0": 0.0005,
+      "same2.0_old": 1e-05,
       "same0.125": 0.000006,
       "dirichlet2.0": 0.001,
       "dirichlet0.125": 0.000001

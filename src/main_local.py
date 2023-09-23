@@ -247,14 +247,21 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
 
             trainable_variables = model.trainable_variables
             for data, label in progress_bar:
+                epoch_start_time = time.time()
+
                 grads, loss_value = train_step(data, label, model, loss_func)
 
-                compressed_data = optimizer.compress(grads, model.trainable_variables)
+                c_time_start = time.time()
 
+                compressed_data = optimizer.compress(grads, model.trainable_variables)
+                c_time = time.time()
+                print("\nCompress time:", c_time - c_time_start)
                 if compressed_data["needs_decompress"]:
                     decompressed_grads = optimizer.decompress(compressed_data, model.trainable_variables)
                 else:
                     decompressed_grads = compressed_data["compressed_grads"]
+                print("Decompress time:", time.time() - c_time)
+
                 optimizer.apply_gradients(zip(decompressed_grads, model.trainable_variables))
 
                 # eucl = np.sum([np.linalg.norm(a - b) for a, b in zip(grads, decompressed_grads)])
@@ -274,6 +281,7 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
                                           "Training accuracy": f"{epoch_accuracy.result().numpy():.4f}",
                                           "Compression ratio": f"{np.mean(optimizer.compression_rates()):.2f}"})
 
+                print(time.time() - epoch_start_time)
             eucl_history = [np.mean(eucl_history)]
             mse_history = [np.mean(mse_history)]
             cos_history = [np.mean(cos_history)]
