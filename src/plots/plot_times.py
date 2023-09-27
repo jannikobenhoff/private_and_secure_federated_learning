@@ -239,8 +239,8 @@ def plot_com_decom(selected_model):
 if __name__ == "__main__":
     # plot_avg_times(["baseline_resnet"], True)
 
-    # plot_total_run_time()
+    plot_total_run_time()
 
-    plot_times("lenet")
+    # plot_times("lenet")
 
     # plot_com_decom("resnet")

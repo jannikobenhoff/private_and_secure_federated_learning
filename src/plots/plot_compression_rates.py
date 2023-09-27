@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import itertools
 
 import pandas as pd
+from matplotlib import gridspec
 
 from plot_utils import names, markers, colors
 
@@ -115,9 +116,19 @@ def plot_compression_metrics(title: str, parent_folder: str):
                 metrics[lean_strat_key][strat_key]["cr"] = np.mean([cr, metrics[lean_strat_key][strat_key]["cr"]])
                 metrics[lean_strat_key][strat_key]["max_val_acc"] = np.mean([
                     metrics[lean_strat_key][strat_key]["max_val_acc"], np.max(val_acc)])
+    gs = gridspec.GridSpec(3, 2)  # , height_ratios=[1, 1, 1])
 
-    fig, axes = plt.subplots(2, 3, figsize=(15, 8), gridspec_kw={'width_ratios': [1, 1, 1.3]})
-    axes = axes.flatten()
+    fig = plt.figure(figsize=(11, 12))
+
+    axes = [
+        fig.add_subplot(gs[0, 0]),
+        fig.add_subplot(gs[0, 1]),
+        fig.add_subplot(gs[1, 0]),
+        fig.add_subplot(gs[1, 1]),
+        fig.add_subplot(gs[2, :])  # This subplot spans both columns in the third row
+    ]
+
+    # axes = axes.flatten()
 
     table_data = []
     cs = iter(["g", "r", "y", "purple", "orange", "pink"])
@@ -128,7 +139,7 @@ def plot_compression_metrics(title: str, parent_folder: str):
             cr_acc_pairs.append((metrics[method][p]['cr'], metrics[method][p]['max_val_acc']))
 
         sorted_data = sorted(cr_acc_pairs, key=lambda x: x[0], reverse=True)
-        axes[2].plot([x[0] for x in sorted_data], [x[1] for x in sorted_data], color="black", alpha=0.2)
+        axes[4].plot([x[0] for x in sorted_data], [x[1] for x in sorted_data], color="black", alpha=0.2)
         for param in metrics[method]:
             met = metrics[method][param]
             param = ast.literal_eval(param)
@@ -174,7 +185,7 @@ def plot_compression_metrics(title: str, parent_folder: str):
             axes[1].fill_between(x_values, lower_bound, upper_bound, color=c, alpha=0.15)
             axes[1].plot(x_values, y_values, markersize=4, label=label_name, color=c)
 
-            axes[2].plot(met["cr"], met["max_val_acc"], marker=m, label=label_name, color=c,
+            axes[4].plot(met["cr"], met["max_val_acc"], marker=m, label=label_name, color=c,
                          markersize=4)
 
             axes[3].plot(np.arange(1, len(met["train_loss"]) + 1, 1), met["train_loss"],
@@ -190,66 +201,66 @@ def plot_compression_metrics(title: str, parent_folder: str):
             lower_bound = y_values - deviations
 
             # Plot the fill between
-            axes[4].fill_between(x_values, lower_bound, upper_bound, color=c, alpha=0.15)
-            axes[4].plot(x_values, y_values, markersize=4, label=label_name, color=c)
+            axes[2].fill_between(x_values, lower_bound, upper_bound, color=c, alpha=0.15)
+            axes[2].plot(x_values, y_values, markersize=4, label=label_name, color=c)
 
     axes[3].grid(alpha=0.2)
-    axes[3].set_title("Training Loss", fontsize=10, fontweight='bold')
+    axes[3].set_title("Training Loss", fontsize=12, fontweight='bold')
     # axes[3].legend(fontsize=8)
     axes[3].set_yscale('log')
-    axes[3].tick_params(axis='both', which='major', labelsize=8)
+    axes[3].tick_params(axis='both', which='major', labelsize=12)
 
     axes[1].grid(alpha=0.2)
-    axes[1].set_title("Test Accuracy", fontsize=10, fontweight='bold')
-    axes[1].tick_params(axis='both', which='major', labelsize=8)
-    axes[1].legend(fontsize=9)
+    axes[1].set_title("Test Accuracy", fontsize=12, fontweight='bold')
+    axes[1].tick_params(axis='both', which='major', labelsize=12)
+    axes[1].legend(fontsize=12)
 
-    axes[2].grid(alpha=0.2)
-    axes[2].set_title("Test Accuracy vs Overall Compression", fontsize=10, fontweight='bold')
+    axes[4].grid(alpha=0.2)
+    axes[4].set_title("Test Accuracy vs Overall Compression", fontsize=12, fontweight='bold')
     # axes[2].set_xlabel("Overall Compression", fontsize=8, fontweight='bold')
     # axes[2].set_ylabel("Test Accuracy", fontsize=8, fontweight='bold')
-    axes[2].legend(fontsize=7)  # , bbox_to_anchor=(0.75, 0.6))
-    axes[2].set_xscale('log')
-    axes[2].tick_params(axis='both', which='major', labelsize=8)
-    axes[2].set_xlim([0.9, 500])
-    axes[2].set_ylim([0.9, 1])
+    axes[4].legend(fontsize=12)  # , bbox_to_anchor=(0.75, 0.6))
+    axes[4].set_xscale('log')
+    axes[4].tick_params(axis='both', which='major', labelsize=12)
+    axes[4].set_xlim([0.9, 500])
+    axes[4].set_ylim([0.9, 1])
 
     axes[0].grid(alpha=0.2)
     axes[0].set_title("Training Accuracy", fontsize=10, fontweight='bold')
-    axes[0].legend(fontsize=8)
-    axes[0].tick_params(axis='both', which='major', labelsize=8)
+    axes[0].legend(fontsize=12)
+    axes[0].tick_params(axis='both', which='major', labelsize=12)
 
-    axes[4].grid(alpha=0.2)
-    axes[4].tick_params(axis='both', which='major', labelsize=8)
-    axes[4].set_title("Test Loss", fontsize=10, fontweight='bold')
-    axes[4].set_yscale('log')
+    axes[2].grid(alpha=0.2)
+    axes[2].tick_params(axis='both', which='major', labelsize=12)
+    axes[2].set_title("Test Loss", fontsize=12, fontweight='bold')
+    axes[2].set_yscale('log')
     # axes[4].legend(fontsize=10)
 
     table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
 
-    table = axes[5].table(cellText=table_data,
-                          colLabels=[f"Config", "Test Acc", "Compression Ratio"],
-                          cellLoc='center',
-                          loc='center')
+    # table = axes[5].table(cellText=table_data,
+    #                       colLabels=[f"Config", "Test Acc", "Compression Ratio"],
+    #                       cellLoc='center',
+    #                       loc='center')
+    #
+    # axes[5].axis('off')
+    #
+    # table.auto_set_font_size(False)
+    # table.set_fontsize(12)
+    # table.scale(1.1, 1.6)
+    #
+    # for (row, col), cell in table.get_celld().items():
+    #     if row == 0:
+    #         cell.set_fontsize(11)
+    #         cell._text.set_weight('bold')
+    #     if col == 0 and row > 0:
+    #         cell.set_fontsize(11)
+    # table.auto_set_column_width(col=list(range(3)))
 
-    axes[5].axis('off')
-
-    table.auto_set_font_size(False)
-    table.set_fontsize(10)
-    table.scale(1.1, 1.6)
-
-    for (row, col), cell in table.get_celld().items():
-        if row == 0:
-            cell.set_fontsize(9)
-            cell._text.set_weight('bold')
-        if col == 0 and row > 0:
-            cell.set_fontsize(8)
-    table.auto_set_column_width(col=list(range(3)))
-
-    plt.suptitle(names[title.lower()], fontsize=14, fontweight="bold")
+    # plt.suptitle(names[title.lower()], fontsize=14, fontweight="bold")
     plt.tight_layout()
     plt.savefig("../../figures/" + parent_folder + "_" + title + ".pdf", bbox_inches='tight')
-    plt.show()
+    # plt.show()
 
 
 def moving_average(data, window_size):
@@ -540,6 +551,7 @@ def plot_compare_all_selected(selected_method, parent_folder: str, bsgd: bool, e
     for method in metrics:
         label_name = names[method.lower().replace(" none", "")]
         if method.lower().replace(" none", "") not in selected_method and len(selected_method) > 0:
+            print("cont", method.lower().replace(" none", ""))
             continue
         cr_acc_pairs = []
         for p in metrics[method]:
@@ -549,8 +561,6 @@ def plot_compare_all_selected(selected_method, parent_folder: str, bsgd: bool, e
 
         m = markers[label_name]
         c = colors[label_name]
-        if "1" in label_name:
-            label_name = "SignSGD"
 
         table_data.append(
             [label_name, round(100 * best_param_metrics["max_val_acc"], 2), round(best_param_metrics["cr"], 1)])
@@ -598,47 +608,48 @@ def plot_compare_all_selected(selected_method, parent_folder: str, bsgd: bool, e
 
     if selected == 3:
         axes.grid(alpha=0.2)
-        axes.set_title("Training Loss", fontsize=10, fontweight='bold')
+        axes.set_title("Training Loss", fontsize=12, fontweight='bold')
         # axes[3].legend(fontsize=8)
         axes.set_yscale('log')
-        axes.tick_params(axis='both', which='major', labelsize=8)
-        axes.set_xlabel("Epochs", fontsize=8)
+        axes.tick_params(axis='both', which='major', labelsize=12)
+        axes.set_xlabel("Epochs", fontsize=12)
 
     if selected == 1:
         axes.grid(alpha=0.2)
-        axes.set_title("Test Accuracy", fontsize=10, fontweight='bold')
-        axes.tick_params(axis='both', which='major', labelsize=8)
-        axes.legend(fontsize=10)
-        axes.set_xlabel("Epochs", fontsize=8)
+        axes.set_title("Test Accuracy", fontsize=12, fontweight='bold')
+        axes.tick_params(axis='both', which='major', labelsize=12)
+        axes.legend(fontsize=12)
+        axes.set_xlabel("Epochs", fontsize=12)
+        axes.set_ylim([0.4, 0.8])
 
     if selected == 2:
         axes.grid(alpha=0.2)
-        axes.set_title("Test Accuracy vs Overall Compression", fontsize=10, fontweight='bold')
+        axes.set_title("Test Accuracy vs Overall Compression", fontsize=12, fontweight='bold')
         # axes[2].set_xlabel("Overall Compression", fontsize=8, fontweight='bold')
         # axes[2].set_ylabel("Test Accuracy", fontsize=8, fontweight='bold')
-        axes.legend(fontsize=10)  # , bbox_to_anchor=(0.75, 0.7))
+        axes.legend(fontsize=12)  # , bbox_to_anchor=(0.75, 0.7))
         axes.set_xscale('log')
-        axes.tick_params(axis='both', which='major', labelsize=8)
+        axes.tick_params(axis='both', which='major', labelsize=12)
         if "lenet" in parent_folder:
             axes.set_xlim([0.9, 500])
-            axes.set_ylim([0.93, 1])
+            axes.set_ylim([0.82, 1])
         else:
             axes.set_xlim([0.9, 1000])
             axes.set_ylim([0.5, 0.78])
     if selected == 0:
         axes.grid(alpha=0.2)
-        axes.set_title("Training Accuracy", fontsize=10, fontweight='bold')
-        axes.legend(fontsize=10)
-        axes.tick_params(axis='both', which='major', labelsize=8)
-        axes.set_xlabel("Epochs", fontsize=8)
+        axes.set_title("Training Accuracy", fontsize=12, fontweight='bold')
+        axes.legend(fontsize=12)
+        axes.tick_params(axis='both', which='major', labelsize=12)
+        axes.set_xlabel("Epochs", fontsize=12)
 
     if selected == 4:
         axes.grid(alpha=0.2)
-        axes.tick_params(axis='both', which='major', labelsize=8)
-        axes.set_title("Test Loss", fontsize=10, fontweight='bold')
+        axes.tick_params(axis='both', which='major', labelsize=12)
+        axes.set_title("Test Loss", fontsize=12, fontweight='bold')
         axes.set_yscale('log')
-        axes.legend(fontsize=10)
-        axes.set_xlabel("Epochs", fontsize=8)
+        axes.legend(fontsize=12)
+        axes.set_xlabel("Epochs", fontsize=12)
 
     table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
     if selected == 5:
@@ -1262,11 +1273,14 @@ def plot_compare_batches(parent_folders: list, epochs):
 if __name__ == "__main__":
     WINDOW_SIZE = 3
 
-    # plot_compression_metrics("ef_error", "efsignsgd")
+    # plot_compression_metrics("topk", "lenet_64")
 
-    plot_compare_all("lenet_batchdescent", True, 500, save=True)
+    # plot_compare_all("lenet_batchdescent", True, 500, save=True)
 
-    plot_compare_all_selected(["efsignsgd", "sgd", "sgd onebitsgd"], "ef_error", True, 500, save=True, selected=1)
+    plot_compare_all_selected(
+        ["sgd", "efsignsgd", "sgd onebitsgd", "sgd terngrad", "sgd naturalcompression"],
+        "resnet_500",
+        True, 500, save=True, selected=1)
 
     # plot_compression_rates()
 

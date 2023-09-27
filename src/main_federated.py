@@ -11,11 +11,8 @@ from skopt.utils import use_named_args, dump
 from main_local import strategy_factory, model_factory, get_l2_lambda
 from utilities.federator import *
 from utilities.parameters import get_parameters_federated
-from models.ResNet import resnet
 from utilities.datasets import load_dataset
-from utilities.client_data import client_datasets, stratified_sampling, label_splitter  # plot_client_distribution, \
-
-import matplotlib.pyplot as plt
+from utilities.client_data import client_datasets, stratified_sampling, label_splitter
 
 # initialize GPU usage
 # Restrict TensorFlow to only allocate 2GB of memory on GPUs
@@ -48,7 +45,6 @@ def fed_worker(args):
     strategy_params["learning_rate"] = learning_rate
     strategy = strategy_factory(**strategy_params)
     strategy.summary()
-    print(strategy_params)
 
     # Initialize Model and build if needed
     if args.bayesian_search:
@@ -60,7 +56,7 @@ def fed_worker(args):
     print("Using L2 lambda:", lambda_l2)
     model_client = model_factory(args.model.lower(), lambda_l2, input_shape, num_classes)
 
-    # Essential for ResNet -> If not disabled each client trains batch norm ind.
+    # Essential for ResNet -> If not disabled training bad
     for layer in model_client.layers:
         if isinstance(layer, tf.keras.layers.BatchNormalization):
             layer.trainable = False

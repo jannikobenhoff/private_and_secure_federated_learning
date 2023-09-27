@@ -1,3 +1,5 @@
 /code/datasets/mnist/
 /code/results/
 /src/fed_clone/
+/src/results/
+/src/results/*

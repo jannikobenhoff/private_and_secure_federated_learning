@@ -1,10 +1,10 @@
 #!/bin/bash
 
-sparsegradient='{ "compression": "sparsegradient", "drop_rate": DROP}'
+sparsegradient='{ "compression": "sparsegradient", "drop_rate": VAR}'
 
-vqsgd='{"compression": "vqsgd", "repetition": DROP}'  # 100 250 500
+vqsgd='{"compression": "vqsgd", "repetition": VAR}'
 
-gradientsparsification='{"compression": "gradientsparsification", "max_iter": 2, "k": DROP}'
+gradientsparsification='{"compression": "gradientsparsification", "max_iter": 2, "k": VAR}'
 
 atomo='{"compression": "atomo", "svd_rank": 1}'
 
@@ -19,39 +19,28 @@ onebitsgd='{ "compression": "onebitsgd"}'
 
 terngrad='{ "compression": "terngrad", "clip": 2.5}'
 
-topk='{"compression": "topk", "k": 6000}'  # 100 1000 6000
+topk='{"compression": "topk", "k": 6000}'
 
 naturalcompression='{"compression": "naturalcompression"}'
 
-memsgd='{"compression": "memsgd", "top_k": DROP, "rand_k": "None"}'
+memsgd='{"compression": "memsgd", "top_k": VAR, "rand_k": "None"}'
 
 sgdm='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
 
-base_strategy=$atomo
+base_strategy=$sparsegradient
 
-beta_values=(2)
-local_iter_types=(same)
+beta_values=(0.125 2)
+local_iter_types=(same dirichlet)
 
-drops=(1)
-# dirichlet 2    -> 700
-# dirichlet 0125 -> 850
-# same 2         -> 500
-# same 0125      -> 500
+vars=(90 95 99)
 
-for drop in "${drops[@]}"; do
-#   modified_strategy="${base_strategy//DROP/$drop}"
-   modified_strategy=$base_strategy
+
+for var in "${vars[@]}"; do
+   modified_strategy="${base_strategy//VAR/$var}"
   for beta in "${beta_values[@]}"; do
   for local_iter_type in "${local_iter_types[@]}"; do
-    max_iter=500
-#    if [[ "$beta" == "0.125" && "$local_iter_type" == "dirichlet" ]]; then
-#      max_iter=500
-#    fi
-#    if [[ "$beta" == "2" && "$local_iter_type" == "dirichlet" ]]; then
-#      max_iter=500
-#    fi
     python ../main_federated.py --model lenet --dataset mnist \
-      --max_iter=$max_iter \
+      --max_iter=500 \
       --gpu=1 \
       --fullset=100 \
       --batch_size=500 \
@@ -66,32 +55,3 @@ for drop in "${drops[@]}"; do
   done
 done
 done
-
-#python ../main_federated.py --model resnet --dataset cifar10 \
-#      --max_iter=1000 \
-#      --gpu=1 \
-#      --fullset=100 \
-#      --batch_size=500 \
-#      --learning_rate=0.001 \
-#      --stop_patience=7 \
-#      --beta="2" \
-#      --split_type=dirichlet \
-#      --const_local_iter=2 \
-#      --local_iter_type="same" \
-#      --number_clients=10 \
-#      --strategy='{"optimizer": "sgd", "compression": "memsgd", "top_k": 500000, "rand_k": "None"}'
-#
-#
-#python ../main_federated.py --model lenet --dataset mnist \
-#      --max_iter=10 \
-#      --gpu=0 \
-#      --fullset=100 \
-#      --batch_size=500 \
-#      --learning_rate=0.001 \
-#      --stop_patience=7 \
-#      --beta="2" \
-#      --split_type=dirichlet \
-#      --const_local_iter=2 \
-#      --local_iter_type="same" \
-#      --number_clients=10 \
-#      --strategy='{"optimizer": "sgd", "compression": "topk", "k": 500000}'
