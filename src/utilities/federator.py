@@ -4,9 +4,7 @@ import tensorflow as tf
 import numpy as np
 import time
 
-from keras.models import clone_model
 from tensorflow.python.keras.models import Model
-from tensorflow.python.keras.optimizer_v2.gradient_descent import SGD
 from tqdm import tqdm
 
 
@@ -63,9 +61,6 @@ def local_train_loop(trainset, model, number_of_batches, local_iter, loss_func, 
     epoch_accuracy = tf.keras.metrics.SparseCategoricalAccuracy()
     client_average_grads = [tf.zeros_like(var) for var in model.trainable_variables]
 
-    # client_model = clone_model(model)
-    # client_model.set_weights(model.get_weights())
-
     # local training
     for _ in tf.range(local_iter):  # wie oft updates
         trainable_variables = model.trainable_variables
@@ -89,11 +84,9 @@ def local_train_loop(trainset, model, number_of_batches, local_iter, loss_func, 
 
         optimizer.apply_gradients(zip(iter_avg_grads, model.trainable_variables))
 
-    # client_average_grads = [a - b for a, b in zip(client_model.trainable_variables, initial_weights)]
     # Normalize iterations
     if local_iter > 1:
         client_average_grads = tf.nest.map_structure(lambda x: x / local_iter, client_average_grads)
-    # print(tf.reduce_sum([tf.reduce_sum(a) for a in client_average_grads]))
 
     # Gradient Compression
     compressed_data = optimizer.compress(client_average_grads, model.trainable_variables, client_id,
@@ -153,7 +146,9 @@ def federator(active_clients: np.array, learning_rate: float, model: Model, trai
 
                 # prepare the data, shuffle, divide into batches
                 data = train_data[k]
-                size_of_batch = len(data)
+                # 0 indicates full batch for each client -> can speed up training
+                if batch_size == 0:
+                    size_of_batch = len(data)
 
                 label = train_label[k]
                 train_dataset = tf.data.Dataset.from_tensor_slices((data, label))

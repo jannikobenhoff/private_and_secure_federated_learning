@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import itertools
 
 import pandas as pd
+from matplotlib import gridspec
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
 import numpy as np
@@ -484,7 +485,10 @@ def plot_compare_to_diff_sets(parent_folders: list):
             metrics[lean_strat_key][strat_key]["max_val_acc"] = np.mean([
                 metrics[lean_strat_key][strat_key]["max_val_acc"], np.max(val_acc)])
 
-    fig, axes = plt.subplots(7, 2, figsize=(10, 10))
+    if len(parent_folders) == 4:
+        fig, axes = plt.subplots(7, 2, figsize=(10, 10))
+    else:
+        fig, axes = plt.subplots(5, 3, figsize=(8, 7))
     axes = axes.flatten()
 
     ax_index = 0
@@ -494,7 +498,7 @@ def plot_compare_to_diff_sets(parent_folders: list):
 
         setup_data = {"same": {
             "2.0": 0, "0.125": 0,
-        }, "dirichlet": {"2.0": 0, "0.125": 0, }}
+        }}  # , "dirichlet": {"2.0": 0, "0.125": 0, }}
         best_acc = 0
         for setup in metrics[method]:
             print(setup)
@@ -505,27 +509,30 @@ def plot_compare_to_diff_sets(parent_folders: list):
                 # best_acc = metrics[method][setup]["max_val_acc"]
 
         print(setup_data)
-        diff_matrix = np.zeros((4, 4))
+        diff_matrix = np.zeros((len(parent_folders), len(parent_folders)))
 
         # Getting the keys and values from your data dictionary
         keys = list(setup_data.keys())
         subkeys = list(setup_data[keys[0]].keys())
-        if len(keys) + len(subkeys) != 4:
-            print("BREAK")
-            continue
+        # if len(keys) + len(subkeys) != len(parent_folders):
+        #     print("BREAK")
+        #     continue
         # Calculating the differences between each pair of setups
         for i, key1 in enumerate(keys):
             for j, key2 in enumerate(subkeys):
                 for k, key3 in enumerate(keys):
                     for l, key4 in enumerate(subkeys):
-                        diff_matrix[i * len(subkeys) + j][k * len(subkeys) + l] = round(100 * (setup_data[key1][key2] - \
-                                                                                               setup_data[key3][key4]),
-                                                                                        2)
+                        diff_matrix[i * len(subkeys) + j][k * len(subkeys) + l] = round((setup_data[key1][key2] / \
+                                                                                         setup_data[key3][key4]),
+                                                                                        4)
 
         # Creating a list of labels for the table
         labels = [f'{key1}{key2}' for key1 in keys for key2 in subkeys]
         print(labels)
-        labels = ["Equal & 2", "Equal & 0.125", "Dirichlet & 2", "Dirichlet & 0.125"]
+        if len(parent_folders) == 4:
+            labels = ["Equal & 2", "Equal & 0.125", "Dirichlet & 2", "Dirichlet & 0.125"]
+        elif len(parent_folders) == 2:
+            labels = ["IID Data", "Non-IID Data"]
         # Creating a pandas DataFrame from the differences matrix
         df = pd.DataFrame(diff_matrix, columns=labels, index=labels)
 
@@ -543,7 +550,7 @@ def plot_compare_to_diff_sets(parent_folders: list):
 
         # Apply color map to the cells
         # norm = plt.cm.colors.Normalize(vmax=abs(diff_matrix).max(), vmin=-abs(diff_matrix).max())
-        norm = plt.cm.colors.Normalize(vmax=10, vmin=-10)
+        norm = plt.cm.colors.Normalize(vmax=7, vmin=-7)
         colors = plt.cm.RdBu_r(norm(diff_matrix))
         for i, label1 in enumerate(labels):
             for j, label2 in enumerate(labels):
@@ -556,21 +563,20 @@ def plot_compare_to_diff_sets(parent_folders: list):
                 # cell.set_fontsize(5)
                 cell._text.set_weight('bold')
             if col == 0 and row > 0:
-                cell.set_fontsize(8)
-        table.auto_set_column_width(col=list(range(4)))
+                cell.set_fontsize(11)
+        table.auto_set_column_width(col=list(range(len(parent_folders))))
 
         ax_index += 1
         print("i:", ax_index)
 
-    for i in range(13, 14):
+    for i in range(13, len(axes)):
         axes[i].axis('off')
     plt.tight_layout()
-    plt.show()
 
     # plt.suptitle(parent_folder.upper())
     # plt.tight_layout()
-    # plt.savefig(f"../../figures/{parent_folder}.pdf", bbox_inches='tight')
-    # plt.show()
+    plt.savefig(f"../../figures/diff_matrix.pdf", bbox_inches='tight')
+    plt.show()
 
 
 def plot_compare_all_selected(selected_method, parent_folder: str, bsgd: bool, epochs: int, save=False,
@@ -649,8 +655,6 @@ def plot_compare_all_selected(selected_method, parent_folder: str, bsgd: bool, e
 
         m = markers[label_name]
         c = colors[label_name]
-        if "1" in label_name:
-            label_name = "SignSGD"
 
         table_data.append(
             [label_name, round(100 * best_param_metrics["max_val_acc"], 2), round(best_param_metrics["cr"], 1)])
@@ -698,47 +702,48 @@ def plot_compare_all_selected(selected_method, parent_folder: str, bsgd: bool, e
 
     if selected == 3:
         axes.grid(alpha=0.2)
-        axes.set_title("Training Loss", fontsize=10, fontweight='bold')
+        axes.set_title("Training Loss", fontsize=12, fontweight='bold')
         # axes[3].legend(fontsize=8)
         axes.set_yscale('log')
-        axes.tick_params(axis='both', which='major', labelsize=8)
-        axes.set_xlabel("Epochs", fontsize=8)
+        axes.tick_params(axis='both', which='major', labelsize=12)
+        axes.set_xlabel("Iterations", fontsize=12)
 
     if selected == 1:
         axes.grid(alpha=0.2)
-        axes.set_title("Test Accuracy", fontsize=10, fontweight='bold')
-        axes.tick_params(axis='both', which='major', labelsize=8)
-        axes.legend(fontsize=10)
-        axes.set_xlabel("Epochs", fontsize=8)
+        axes.set_title("Test Accuracy", fontsize=12, fontweight='bold')
+        axes.tick_params(axis='both', which='major', labelsize=12)
+        axes.legend(fontsize=12)
+        axes.set_xlabel("Iterations", fontsize=12)
 
     if selected == 2:
         axes.grid(alpha=0.2)
-        axes.set_title("Test Accuracy vs Overall Compression", fontsize=10, fontweight='bold')
+        axes.set_title("Test Accuracy vs Overall Compression", fontsize=12, fontweight='bold')
         # axes[2].set_xlabel("Overall Compression", fontsize=8, fontweight='bold')
         # axes[2].set_ylabel("Test Accuracy", fontsize=8, fontweight='bold')
-        axes.legend(fontsize=10)  # , bbox_to_anchor=(0.75, 0.7))
+        axes.legend(fontsize=12)  # , bbox_to_anchor=(0.75, 0.7))
         axes.set_xscale('log')
-        axes.tick_params(axis='both', which='major', labelsize=8)
+        axes.set_xlabel('Compression rate', fontsize=12)
+        axes.tick_params(axis='both', which='major', labelsize=12)
         if "lenet" in parent_folder:
             axes.set_xlim([0.9, 500])
             axes.set_ylim([0.93, 1])
         else:
             axes.set_xlim([0.9, 2000])
-            axes.set_ylim([0.5, 0.65])
+            axes.set_ylim([0.0, 0.7])
     if selected == 0:
         axes.grid(alpha=0.2)
-        axes.set_title("Training Accuracy", fontsize=10, fontweight='bold')
-        axes.legend(fontsize=10)
-        axes.tick_params(axis='both', which='major', labelsize=8)
-        axes.set_xlabel("Epochs", fontsize=8)
+        axes.set_title("Training Accuracy", fontsize=12, fontweight='bold')
+        axes.legend(fontsize=12)
+        axes.tick_params(axis='both', which='major', labelsize=12)
+        axes.set_xlabel("Iterations", fontsize=12)
 
     if selected == 4:
         axes.grid(alpha=0.2)
-        axes.tick_params(axis='both', which='major', labelsize=8)
-        axes.set_title("Test Loss", fontsize=10, fontweight='bold')
+        axes.tick_params(axis='both', which='major', labelsize=12)
+        axes.set_title("Test Loss", fontsize=12, fontweight='bold')
         axes.set_yscale('log')
-        axes.legend(fontsize=10)
-        axes.set_xlabel("Epochs", fontsize=8)
+        axes.legend(fontsize=12)
+        axes.set_xlabel("Iterations", fontsize=12)
 
     table_data = sorted(table_data, key=lambda x: x[1], reverse=True)
     if selected == 5:
@@ -750,15 +755,15 @@ def plot_compare_all_selected(selected_method, parent_folder: str, bsgd: bool, e
         axes.axis('off')
 
         table.auto_set_font_size(False)
-        table.set_fontsize(10)
+        table.set_fontsize(12)
         table.scale(1.1, 1.6)
 
         for (row, col), cell in table.get_celld().items():
             if row == 0:
-                cell.set_fontsize(9)
+                cell.set_fontsize(11)
                 cell._text.set_weight('bold')
             if col == 0 and row > 0:
-                cell.set_fontsize(8)
+                cell.set_fontsize(11)
         table.auto_set_column_width(col=list(range(3)))
 
     if not save:
@@ -769,17 +774,185 @@ def plot_compare_all_selected(selected_method, parent_folder: str, bsgd: bool, e
     plt.show()
 
 
+def plot_compression_metrics2(title: str, parent_folder: str):
+    directory_path = '../results/federated/' + parent_folder
+    all_files = get_all_files_in_directory(directory_path)
+    metrics = {}
+
+    for file_path in all_files:
+        if "DS" in file_path:
+            continue
+
+        file = open(file_path, "r")
+        file = json.load(file)
+        strat = ast.literal_eval(file["args"]["strategy"])
+
+        if (title in strat["compression"].lower()) or (
+                strat["compression"].lower() == "none"):
+            print(strat)
+
+            strat_key = f"{strat}"
+            # strat = ast.literal_eval(file["args"]["strategy"])
+            if "optimizer" in strat:
+                if strat["optimizer"] == "sgd" and strat["compression"] == "none":
+                    lean_strat_key = "sgd"
+                elif strat["optimizer"] == "sgdm":
+                    lean_strat_key = "sgdm"
+                elif strat["optimizer"] == "fetchsgd":
+                    lean_strat_key = "fetchsgd"
+                elif strat["optimizer"] == "memsgd":
+                    lean_strat_key = "memsgd"
+                elif strat["optimizer"] == "efsignsgd":
+                    lean_strat_key = "efsignsgd"
+                else:
+                    lean_strat_key = f"{strat['compression']}"
+            else:
+                lean_strat_key = f"{strat['compression']}"
+
+            val_acc = np.array(ast.literal_eval(file["test_acc"]))
+            val_loss = np.array(ast.literal_eval(file["test_loss"]))
+            print(len(val_loss))
+            cr = file["compression_rates"][0]
+
+            if lean_strat_key not in metrics:
+                metrics[lean_strat_key] = {}
+
+            if strat_key not in metrics[lean_strat_key]:
+                metrics[lean_strat_key][strat_key] = {}
+                metrics[lean_strat_key][strat_key]["val_acc"] = val_acc
+                metrics[lean_strat_key][strat_key]["val_loss"] = val_loss
+                metrics[lean_strat_key][strat_key]["cr"] = cr
+                metrics[lean_strat_key][strat_key]["max_val_acc"] = np.max(val_acc)
+
+            else:
+                metrics[lean_strat_key][strat_key]["val_acc"] = mean_of_arrays_with_padding(val_acc,
+                                                                                            metrics[lean_strat_key][
+                                                                                                strat_key]["val_acc"])
+                metrics[lean_strat_key][strat_key]["val_loss"] = mean_of_arrays_with_padding(val_loss,
+                                                                                             metrics[lean_strat_key][
+                                                                                                 strat_key]["val_loss"])
+                metrics[lean_strat_key][strat_key]["cr"] = np.mean([cr, metrics[lean_strat_key][strat_key]["cr"]])
+                metrics[lean_strat_key][strat_key]["max_val_acc"] = np.mean([
+                    metrics[lean_strat_key][strat_key]["max_val_acc"], np.max(val_acc)])
+    gs = gridspec.GridSpec(3, 1)  # , height_ratios=[1, 1, 1])
+
+    fig = plt.figure(figsize=(5, 11))
+
+    axes = [
+        fig.add_subplot(gs[0, 0]),
+        fig.add_subplot(gs[1, 0]),
+        fig.add_subplot(gs[2, :])  # This subplot spans both columns in the third row
+    ]
+
+    # axes = axes.flatten()
+
+    table_data = []
+    cs = iter(["g", "r", "y", "purple", "orange", "pink"])
+
+    for method in metrics:
+        cr_acc_pairs = []
+        for p in metrics[method]:
+            cr_acc_pairs.append((metrics[method][p]['cr'], metrics[method][p]['max_val_acc']))
+
+        sorted_data = sorted(cr_acc_pairs, key=lambda x: x[0], reverse=True)
+        axes[2].plot([x[0] for x in sorted_data], [x[1] for x in sorted_data], color="black", alpha=0.2)
+        for param in metrics[method]:
+            met = metrics[method][param]
+            param = ast.literal_eval(param)
+            param.pop("compression")
+            if "optimizer" in param:
+                param.pop("optimizer")
+            if "momentum" in param:
+                param.pop("momentum")
+            if param == {}:
+                label_name = names[method.replace(" none", "")]
+            elif method == "sgd terngrad" or method == "terngrad":
+                label_name = "TernGrad"
+            else:
+                label_name = ', '.join(
+                    f"{key}: {value}" for key, value in param.items() if
+                    value != "None")
+
+            table_data.append(
+                [label_name, round(100 * met["max_val_acc"], 2), round(met["cr"], 1)])
+
+            if label_name.lower() == "sgd":
+                m = markers[label_name]
+                c = colors[label_name]
+            elif len(metrics[method]) == 1:
+                m = markers[label_name]
+                c = colors[label_name]
+            else:
+                m = markers[names[title.lower()]]
+                c = next(cs)  # colors[names[title.lower()]]
+
+            x_values = np.arange(1, len(met["val_acc"]) + 1, 1)
+            y_values = list(moving_average(met["val_acc"], WINDOW_SIZE))
+            deviations = np.array(met["val_acc"]) - np.array(y_values)
+
+            # Compute the upper and lower bounds
+            upper_bound = y_values + deviations
+            lower_bound = y_values - deviations
+
+            # Plot the fill between
+            axes[0].fill_between(x_values, lower_bound, upper_bound, color=c, alpha=0.15)
+            axes[0].plot(x_values, y_values, markersize=4, label=label_name, color=c)
+
+            axes[2].plot(met["cr"], met["max_val_acc"], marker=m, label=label_name, color=c,
+                         markersize=4)
+
+            x_values = np.arange(1, len(met["val_loss"]) + 1, 1)
+            y_values = list(moving_average(met["val_loss"], WINDOW_SIZE))
+            deviations = np.array(met["val_loss"]) - np.array(y_values)
+
+            # Compute the upper and lower bounds
+            upper_bound = y_values + deviations
+            lower_bound = y_values - deviations
+
+            # Plot the fill between
+            axes[1].fill_between(x_values, lower_bound, upper_bound, color=c, alpha=0.15)
+            axes[1].plot(x_values, y_values, markersize=4, label=label_name, color=c)
+
+    axes[0].grid(alpha=0.2)
+    axes[0].set_title("Test Accuracy", fontsize=12, fontweight='bold')
+    axes[0].tick_params(axis='both', which='major', labelsize=12)
+    axes[0].legend(fontsize=12)
+    axes[0].set_ylim([0.1, 0.8])
+
+    axes[2].grid(alpha=0.2)
+    axes[2].set_title("Test Accuracy vs Overall Compression", fontsize=12, fontweight='bold')
+    # axes[2].set_xlabel("Overall Compression", fontsize=8, fontweight='bold')
+    # axes[2].set_ylabel("Test Accuracy", fontsize=8, fontweight='bold')
+    axes[2].legend(fontsize=12)  # , bbox_to_anchor=(0.75, 0.6))
+    axes[2].set_xscale('log')
+    axes[2].tick_params(axis='both', which='major', labelsize=12)
+    axes[2].set_xlim([0.9, 1000])
+    axes[2].set_ylim([0.55, 0.8])
+
+    axes[1].grid(alpha=0.2)
+    axes[1].tick_params(axis='both', which='major', labelsize=12)
+    axes[1].set_title("Test Loss", fontsize=12, fontweight='bold')
+    axes[1].set_yscale('log')
+    axes[1].set_ylim([0.8, 2.5])
+
+    plt.tight_layout()
+    plt.savefig("../../figures/" + parent_folder + "_" + title + ".pdf", bbox_inches='tight')
+    # plt.show()
+
+
 if __name__ == "__main__":
-    WINDOW_SIZE = 5
+    WINDOW_SIZE = 1
+    plot_compression_metrics2("sparsegradient", "resnet_same2")
+
     # plot_compression_metrics("gradientsparsification", ["lenet_same0125"], save=False)
 
-    # plot_compare_all("resnet_same2", [0.4, 1], save=False)
+    # plot_compare_all("resnet_same2", [0.55, 0.82], save=True)  #
 
-    plot_compare_all_selected(["sgd", "memsgd", "gradientsparsification", "vqsgd", "topk", "sparsegradient"],
-                              "resnet_same2",
-                              False, 1000, save=True, selected=2)
+    # plot_compare_all_selected(
+    #     ["sgd", "memsgd", "topk", "gradientsparsification", "sparsegradient", "vqsgd"], "resnet_same2",
+    #     False, 1000, save=True, selected=2)
 
-    # plot_compare_to_diff_sets(["lenet_same2", "lenet_same0125", "lenet_dirichlet0125", "lenet_dirichlet2", ])
+    # plot_compare_to_diff_sets(["lenet_same2", "lenet_same0125"])  # , "lenet_dirichlet0125", "lenet_dirichlet2", ])
 
     # lambda_search("n")
 

@@ -41,13 +41,13 @@ from compressions.vqSGD import vqSGD
 def model_factory(model_name, lambda_l2, input_shape, num_classes):
     print(f'==> Building {model_name.upper()} model..')
     if model_name == "lenet":
-        model = LeNet(input_shape=input_shape, num_classes=num_classes, l2_lambda=lambda_l2)
+        # model = LeNet(input_shape=input_shape, num_classes=num_classes, l2_lambda=lambda_l2)
         model = LeNet5(input_shape=input_shape, l2_lambda=lambda_l2)
         model.build(input_shape=input_shape)
         return model
     elif "resnet" in model_name:
-        model = ResNet("resnet18", num_classes, lambda_l2=lambda_l2)
-        model = resnet(num_filters=64, size=18, input_shape=(32, 32, 3), lambda_l2=lambda_l2)
+        # model = ResNet("resnet18", num_classes, lambda_l2=lambda_l2)
+        # model = resnet(num_filters=64, size=18, input_shape=(32, 32, 3), lambda_l2=lambda_l2)
         model = resnet50v2(input_shape=input_shape, lambda_l2=lambda_l2)
         return model
     elif model_name == "mobilenet":
@@ -247,20 +247,20 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
 
             trainable_variables = model.trainable_variables
             for data, label in progress_bar:
-                epoch_start_time = time.time()
+                # epoch_start_time = time.time()
 
                 grads, loss_value = train_step(data, label, model, loss_func)
 
-                c_time_start = time.time()
+                # c_time_start = time.time()
 
                 compressed_data = optimizer.compress(grads, model.trainable_variables)
-                c_time = time.time()
-                print("\nCompress time:", c_time - c_time_start)
+                # c_time = time.time()
+                # print("\nCompress time:", c_time - c_time_start)
                 if compressed_data["needs_decompress"]:
                     decompressed_grads = optimizer.decompress(compressed_data, model.trainable_variables)
                 else:
                     decompressed_grads = compressed_data["compressed_grads"]
-                print("Decompress time:", time.time() - c_time)
+                # print("Decompress time:", time.time() - c_time)
 
                 optimizer.apply_gradients(zip(decompressed_grads, model.trainable_variables))
 
@@ -425,13 +425,10 @@ def worker(args):
             train_loss.append(training_losses_per_epoch)
             val_loss.append(validation_losses_per_epoch)
 
+            # minus because we want to minimize
             return -np.mean(all_scores)
-            # return np.mean(all_scores)
 
-        result = gp_minimize(objective, search_space, n_calls=args.n_calls,  # acq_func='EI',
-                             # x0=[[1e-6], [1e-4], [1e-2]],
-                             # n_random_starts=3,
-                             # n_jobs=3,
+        result = gp_minimize(objective, search_space, n_calls=args.n_calls,
                              random_state=45
                              )
 
@@ -516,7 +513,7 @@ def worker(args):
             "args": vars(args),
             "compression_rates": compression_rates,
             "setup": train_metrics,
-            "time_per_epoch": time_history  # .epoch_times,
+            "time_per_epoch": time_history
         }
         if interrupt:
             file = open('../results/compression/interrupted_training_{}_{}_'

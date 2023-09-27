@@ -11,6 +11,7 @@ names = {
     "gradientsparsification": "Gradient Sparsification",
     "memsgd": "Sparsified SGD with Memory",
     "sgd memsgd": "Sparsified SGD with Memory",
+    # "sgd signsgd": "SignSGD",
     "memsgd none": "Sparsified SGD with Memory",
     "memsgd ": "Sparsified SGD with Memory",
     "atomo": "Atomic Sparsification",
@@ -40,7 +41,8 @@ colors = {
     "SGD": 'b', 'SGD with Momentum': "darkgreen",
     "BucketSGD": 'g', "vqSGD": "#32CD32", "Top-K": 'y',
     "EF-SignSGD": 'm', "FetchSGD": 'c', "Atomic Sparsification": 'grey', "Sparsified SGD with Memory": 'orange',
-    "Natural Compression": 'pink', "Gradient Sparsification": "#D2691E", "1-Bit SGD": 'r', "TernGrad": "#FFD700",
+    "Natural Compression": 'pink', "Gradient Sparsification": "#D2691E", "1-Bit SGD": 'r', "SignSGD": 'r',
+    "TernGrad": "#FFD700",
     "Sparse Gradient": "#a6bddb"
 }
 
@@ -57,6 +59,7 @@ markers = {
     "Natural Compression": '8',  # octagon
     "Gradient Sparsification": 'P',  # plus (filled)
     "1-Bit SGD": 'X',  # x (filled)
+    "SignSGD": 'X',  # x (filled)
     "TernGrad": 'v',  # triangle down
     "Sparse Gradient": "s"
 }
