@@ -24,4 +24,3 @@ Using Conda (for Apple M1/M2):
 - Sparse Gradient
 - TopK
 - vqSGD
-- BucketSGD
