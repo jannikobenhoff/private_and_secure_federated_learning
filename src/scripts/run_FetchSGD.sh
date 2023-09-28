@@ -10,17 +10,17 @@ DEFAULT_MODE="baseline_l2_resnet18"
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
 
-base_strategy='{"optimizer": "sgd", "compression": "fetchsgd", "learning_rate": 0.1, "c": C_VALUE, "r": 1,
+base_strategy='{"compression": "fetchsgd", "c": C_VALUE, "r": 1,
                 "topk": K_VALUE, "momentum": 0.9}'
 
-base_strategy_resnet='{"optimizer": "sgd", "compression": "fetchsgd", "learning_rate": 0.001, "c": C_VALUE, "r": 1,
+base_strategy_resnet='{"compression": "fetchsgd", "c": C_VALUE, "r": 1,
                       "topk": K_VALUE, "momentum": 0.4}'
 
-base_strategy_vgg11='{"optimizer": "sgd", "compression": "fetchsgd", "learning_rate": 0.05, "c": C_VALUE, "r": 1,
+base_strategy_vgg11='{"compression": "fetchsgd", "c": C_VALUE, "r": 1,
                       "topk": K_VALUE, "momentum": 0.9}'
 
-counters=(10000 20000) # 2000 5000)
-counters_resnet=( 10000000) #2000000 1000000
+counters=(10000 20000)
+counters_resnet=(2000000 1000000 10000000)
 counters_vgg11=(1000000)
 
 parallel=0

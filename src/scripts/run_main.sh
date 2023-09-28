@@ -14,6 +14,10 @@ case $mode in
           --fullset=100 \
           --stop_patience=20 \
           --bayesian_search \
+          --batch_size=0 \
+          --lr_drop_factor=1 \
+          --lr_drop_epochs=[] \
+          --lr=0.1 \
           --log=1 \
           --strategy="$compression_strategy"
         ;;
@@ -40,6 +44,10 @@ case $mode in
           --fullset=100 \
           --stop_patience=7 \
           --bayesian_search \
+          --lr_drop_epochs = [15, 30] \
+          --lr = 0.01 \
+          --batch_size=128 \
+          --lr_drop_factor=0.2 \
           --log=1 \
           --strategy="$compression_strategy"
         ;;
@@ -50,7 +58,10 @@ case $mode in
             --k_fold=1 \
             --fullset=100 \
             --stop_patience=10 \
-            --lr_decay=3 \
+            --batch_size=0 \
+            --lr_drop_factor=1 \
+            --lr_drop_epochs=[] \
+            --lr=0.1 \
             --log=1 \
             --train_on_baseline=2 \
             --strategy="$compression_strategy"
@@ -63,7 +74,10 @@ case $mode in
             --fullset=100 \
             --stop_patience=20 \
             --train_on_baseline=1 \
-            --lr_decay=3 \
+            --batch_size=0 \
+            --lr_drop_factor=1 \
+            --lr_drop_epochs=[] \
+            --lr=0.1 \
             --gpu=0 \
             --log=1 \
             --strategy="$compression_strategy"
@@ -77,7 +91,10 @@ case $mode in
             --fullset=100 \
             --stop_patience=15 \
             --train_on_baseline=1 \
-            --lr_decay=3 \
+            --batch_size=500 \
+            --lr_drop_factor=0.1 \
+            --lr_drop_epochs=[40] \
+            --lr=0.001 \
             --log=1 \
             --strategy="$compression_strategy"
         ;;
@@ -90,7 +107,10 @@ case $mode in
             --fullset=100 \
             --stop_patience=20 \
             --train_on_baseline=1 \
-            --lr_decay=3 \
+            --lr_drop_epochs = [15, 30] \
+            --lr = 0.01 \
+            --batch_size=128 \
+            --lr_drop_factor=0.2 \
             --log=1 \
             --strategy="$compression_strategy"
         ;;
@@ -103,7 +123,10 @@ case $mode in
             --fullset=100 \
             --stop_patience=15 \
             --train_on_baseline=0 \
-            --lr_decay=3 \
+            --lr_drop_epochs = [15, 30] \
+            --lr = 0.01 \
+            --batch_size=128 \
+            --lr_drop_factor=0.2 \
             --log=1 \
             --strategy="$compression_strategy"
         ;;
@@ -115,7 +138,10 @@ case $mode in
             --fullset=100 \
             --stop_patience=10 \
             --train_on_baseline=0 \
-            --lr_decay=3 \
+            --batch_size=0 \
+            --lr_drop_factor=1 \
+            --lr_drop_epochs=[] \
+            --lr=0.1 \
             --log=1 \
             --strategy="$compression_strategy"
         ;;
@@ -127,7 +153,10 @@ case $mode in
             --fullset=100 \
             --stop_patience=10 \
             --train_on_baseline=0 \
-            --lr_decay=3 \
+            --batch_size=500 \
+            --lr_drop_factor=0.1 \
+            --lr_drop_epochs=[40] \
+            --lr=0.001 \
             --log=1 \
             --strategy="$compression_strategy"
         ;;

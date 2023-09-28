@@ -10,9 +10,9 @@ DEFAULT_MODE="baseline_l2_resnet18"
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
 
-base_strategy='{"optimizer": "sgd", "compression": "sparsegradient", "learning_rate": 0.01, "drop_rate": K_VALUE}'
-base_strategy_resnet='{"optimizer": "sgd", "compression": "sparsegradient", "learning_rate": 0.001, "drop_rate": K_VALUE}'
-base_strategy_vgg11='{"optimizer": "sgd", "compression": "sparsegradient", "learning_rate": 0.05, "drop_rate": K_VALUE}'
+base_strategy='{"compression": "sparsegradient", "drop_rate": K_VALUE}'
+base_strategy_resnet='{"compression": "sparsegradient", "drop_rate": K_VALUE}'
+base_strategy_vgg11='{"compression": "sparsegradient",  "drop_rate": K_VALUE}'
 
 #drop_rates=(85 89 95 99) #89
 drop_rates=(90)

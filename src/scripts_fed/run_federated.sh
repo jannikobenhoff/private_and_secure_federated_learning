@@ -45,7 +45,6 @@ for var in "${vars[@]}"; do
       --fullset=100 \
       --batch_size=500 \
       --learning_rate=0.05 \
-      --stop_patience=7 \
       --beta="$beta" \
       --split_type=dirichlet \
       --const_local_iter=2 \

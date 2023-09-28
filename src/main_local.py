@@ -64,56 +64,56 @@ def model_factory(model_name, lambda_l2, input_shape, num_classes):
         raise ValueError(f"Invalid model name: {model_name}")
 
 
-def strategy_factory(**params) -> Strategy:
+def strategy_factory(args, **params) -> Strategy:
     if params["compression"].lower() == "terngrad":
-        return Strategy(learning_rate=params["learning_rate"], params=params,
+        return Strategy(learning_rate=args.lr, params=params,
                         compression=TernGrad(params["clip"]))
     elif params["compression"].lower() == "bsgd":
-        return Strategy(learning_rate=params["learning_rate"], params=params,
+        return Strategy(learning_rate=args.lr, params=params,
                         compression=bSGD(buckets=params["buckets"], sparse_buckets=params["sparse_buckets"]))
     elif params["compression"].lower() == "naturalcompression":
-        return Strategy(learning_rate=params["learning_rate"], params=params,
+        return Strategy(learning_rate=args.lr, params=params,
                         compression=NaturalCompression())
     elif params["compression"].lower() == "gradientsparsification":
-        return Strategy(learning_rate=params["learning_rate"], params=params,
+        return Strategy(learning_rate=args.lr, params=params,
                         compression=GradientSparsification(max_iter=params["max_iter"], k=params["k"]))
     elif params["compression"].lower() == "onebitsgd":
-        return Strategy(learning_rate=params["learning_rate"], params=params,
+        return Strategy(learning_rate=args.lr, params=params,
                         compression=OneBitSGD())
     elif params["compression"].lower() == "sparsegradient":
-        return Strategy(learning_rate=params["learning_rate"], params=params,
+        return Strategy(learning_rate=args.lr, params=params,
                         compression=SparseGradient(drop_rate=params["drop_rate"]))
     elif params["compression"].lower() == "topk":
-        return Strategy(learning_rate=params["learning_rate"], params=params,
+        return Strategy(learning_rate=args.lr, params=params,
                         compression=TopK(k=params["k"]))
     elif params["compression"].lower() == "vqsgd":
-        return Strategy(learning_rate=params["learning_rate"], params=params,
+        return Strategy(learning_rate=args.lr, params=params,
                         compression=vqSGD(repetition=params["repetition"]))
     elif params["compression"].lower() == "atomo":
-        return Strategy(learning_rate=params["learning_rate"], params=params,
+        return Strategy(learning_rate=args.lr, params=params,
                         compression=Atomo(svd_rank=params["svd_rank"]))
     elif params["compression"].lower() == "efsignsgd":
-        compression = EFsignSGD(learning_rate=params["learning_rate"])
-        return Strategy(learning_rate=params["learning_rate"], params=params,
+        compression = EFsignSGD(learning_rate=args.lr)
+        return Strategy(learning_rate=args.lr, params=params,
                         compression=compression)
     elif params["compression"].lower() == "fetchsgd":
-        compression = FetchSGD(learning_rate=params["learning_rate"], c=params["c"], r=params["r"],
+        compression = FetchSGD(learning_rate=args.lr, c=params["c"], r=params["r"],
                                momentum=params["momentum"], topk=params["topk"])
-        return Strategy(learning_rate=params["learning_rate"], params=params,
+        return Strategy(learning_rate=args.lr, params=params,
                         compression=compression)
     elif params["compression"].lower() == "memsgd":
         if params["top_k"] == "None":
-            compression = MemSGD(learning_rate=params["learning_rate"], rand_k=params["rand_k"])
+            compression = MemSGD(learning_rate=args.lr, rand_k=params["rand_k"])
         else:
-            compression = MemSGD(learning_rate=params["learning_rate"], top_k=params["top_k"])
+            compression = MemSGD(learning_rate=args.lr, top_k=params["top_k"])
 
-        return Strategy(learning_rate=params["learning_rate"], params=params,
+        return Strategy(learning_rate=args.lr, params=params,
                         compression=compression)
     elif params["optimizer"].lower() == "sgdm":
-        return Strategy(learning_rate=params["learning_rate"], params=params,
+        return Strategy(learning_rate=args.lr, params=params,
                         compression=None, optimizer="sgd", momentum=params["momentum"])
     elif params["compression"].lower() == "none":
-        return Strategy(learning_rate=params["learning_rate"], params=params,
+        return Strategy(learning_rate=args.lr, params=params,
                         compression=None, optimizer=params["optimizer"].lower())
 
 
@@ -193,37 +193,24 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
             layer.trainable = False
             layer._per_input_updates = {}
 
-    strategy = strategy_factory(**strategy_params)
+    strategy = strategy_factory(args, **strategy_params)
     strategy.summary()
 
-    BATCH_SIZE = train_images.shape[0]  # 32
-    initial_lr = strategy_params["learning_rate"]
-    drop_factor = 0.1
-    drop_epochs = []
-    min_lr = initial_lr * 0.1 * 0.1
+    min_lr = args.lr * 0.1 * 0.1
 
-    if args.dataset == "cifar10" and args.model.lower() == "resnet18":
-        BATCH_SIZE = 500  # 128
-        initial_lr = strategy_params["learning_rate"]
-        drop_factor = 0.1
-        drop_epochs = [40]  # [15]
-        min_lr = initial_lr * 0.1 * 0.1
-
-    elif args.dataset == "cifar10" and args.model.lower() == "vgg11":
-        BATCH_SIZE = 128
-        initial_lr = strategy_params["learning_rate"]
-        drop_factor = 0.2
-        drop_epochs = [15, 30]
-        min_lr = initial_lr * 0.1 * 0.1
-
-    print("BATCH SIZE:", BATCH_SIZE)
     optimizer = strategy
     optimizer.build(model.trainable_variables)
     loss_func = tf.keras.losses.SparseCategoricalCrossentropy()
-
-    train_dataset = tf.data.Dataset.from_tensor_slices((train_images, train_labels)).batch(BATCH_SIZE).shuffle(
-        len(train_images))
-    test_dataset = tf.data.Dataset.from_tensor_slices((val_images, val_labels)).batch(BATCH_SIZE)
+    if args.batch_size == 0:
+        """ Batch Gradient Descent"""
+        BATCH_SIZE = train_images.shape[0]
+        train_dataset = tf.data.Dataset.from_tensor_slices((train_images, train_labels)).batch(BATCH_SIZE).shuffle(
+            len(train_images))
+        test_dataset = tf.data.Dataset.from_tensor_slices((val_images, val_labels)).batch(BATCH_SIZE)
+    else:
+        train_dataset = tf.data.Dataset.from_tensor_slices((train_images, train_labels)).batch(args.batch_size).shuffle(
+            len(train_images))
+        test_dataset = tf.data.Dataset.from_tensor_slices((val_images, val_labels)).batch(args.batch_size)
 
     train_loss_results = []
     train_accuracy_results = []
@@ -324,8 +311,8 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
                     break
 
             # Adjust learning rate
-            lr_scheduler(optimizer=optimizer, epoch=epoch, drop_epochs=drop_epochs,
-                         drop_factor=drop_factor, min_lr=min_lr)
+            lr_scheduler(optimizer=optimizer, epoch=epoch, drop_epochs=args.lr_drop_epochs,
+                         drop_factor=args.lr_drop_factor, min_lr=min_lr)
             interrupt = False
     except KeyboardInterrupt:
         print('Interrupting..')
@@ -337,7 +324,7 @@ def train_model(train_images, train_labels, val_images, val_labels, lambda_l2, i
             'val_loss': val_loss_results,
             'val_accuracy': val_accuracy_results
         }
-        train_metrics = {"batch_size": BATCH_SIZE, "lr_decay": drop_epochs, "drop_factor": drop_factor,
+        train_metrics = {"lr_decay": args.lr_drop_epochs, "drop_factor": args.lr_drop_factor,
                          "min_lr": min_lr, "euclid": str(np.mean(eucl_history)), "cosine": str(np.mean(cos_history)),
                          "mse": str(np.mean(mse_history))}
     return history, strategy, time_history, train_metrics, interrupt
@@ -365,7 +352,7 @@ def worker(args):
     img_train, label_train, img_test, label_test, input_shape, num_classes = load_dataset(args.dataset,
                                                                                           fullset=args.fullset)
     strategy_params = json.loads(args.strategy)
-    strategy = strategy_factory(**strategy_params)
+    strategy = strategy_factory(args, **strategy_params)
 
     if args.bayesian_search:
         print("--- Bayesian Search ---")

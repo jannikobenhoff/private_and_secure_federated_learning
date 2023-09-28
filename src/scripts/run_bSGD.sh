@@ -10,9 +10,9 @@ DEFAULT_MODE="baseline_l2_vgg11"
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
 
-base_strategy='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.01, "buckets": 5000, "sparse_buckets": 4999}'
-base_strategy_resnet='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.01, "buckets": 10000, "sparse_buckets": 1}'
-base_strategy_vgg11='{"optimizer": "sgd", "compression": "bsgd", "learning_rate": 0.05, "buckets": 10000, "sparse_buckets": 1}'
+base_strategy='{"compression": "bsgd", "buckets": 5000, "sparse_buckets": 4999}'
+base_strategy_resnet='{"compression": "bsgd", "buckets": 10000, "sparse_buckets": 1}'
+base_strategy_vgg11='{"compression": "bsgd", "buckets": 10000, "sparse_buckets": 1}'
 
 # LeNet
 #buckets=(       1000)

@@ -10,9 +10,9 @@ DEFAULT_MODE="baseline_l2_lenet"
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
 
-base_strategy='{"optimizer": "sgd", "compression": "none", "learning_rate": 0.1}'
-base_strategy_resnet='{"optimizer": "sgd", "compression": "none", "learning_rate": 0.01}'
-base_strategy_vgg11='{"optimizer": "sgd", "compression": "none", "learning_rate": 0.05}'
+base_strategy='{"optimizer": "sgd", "compression": "none"}'
+base_strategy_resnet='{"optimizer": "sgd", "compression": "none"}'
+base_strategy_vgg11='{"optimizer": "sgd", "compression": "none"}'
 
 # TODO check lambda vgg11
 

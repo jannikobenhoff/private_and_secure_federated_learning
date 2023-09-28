@@ -10,9 +10,9 @@ DEFAULT_MODE="baseline_l2_lenet"
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
 
-base_strategy='{"optimizer": "sgdm", "compression": "none", "learning_rate": 0.1, "momentum": 0.9}'
-base_strategy_resnet='{"optimizer": "sgdm", "compression": "none", "learning_rate": 0.001, "momentum": 0.1}'
-base_strategy_vgg11='{"optimizer": "sgdm", "compression": "none", "learning_rate": 0.01, "momentum": 0.9}'
+base_strategy='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
+base_strategy_resnet='{"optimizer": "sgdm", "compression": "none", "momentum": 0.1}'
+base_strategy_vgg11='{"optimizer": "sgdm", "compression": "none", "momentum": 0.9}'
 
 runs=1
 for ((i=1; i<=runs; i++))

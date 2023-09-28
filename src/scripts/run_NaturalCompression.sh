@@ -10,24 +10,20 @@ DEFAULT_MODE="baseline_l2_lenet"
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
 
-base_strategy='{"optimizer": "sgd", "compression": "naturalcompression", "learning_rate": 0.1}'
-base_strategy_resnet='{"optimizer": "sgd", "compression": "naturalcompression", "learning_rate": 0.001}'
-base_strategy_vgg11='{"optimizer": "sgd", "compression": "naturalcompression", "learning_rate": 0.01}'
-
 runs=1
 for ((i=1; i<=runs; i++))
 do
     case $mode in
         "search_lenet"|"l2_lenet"|"baseline_l2_lenet"|"no_l2_lenet")
-            ./run_main.sh "$base_strategy" "$mode"
+            ./run_main.sh '{"compression": "naturalcompression"}' "$mode"
         ;;
 
         "search_resnet18"|"no_l2_resnet18"|"baseline_l2_resnet18")
-            ./run_main.sh "$base_strategy_resnet" "$mode"
+            ./run_main.sh '{"compression": "naturalcompression"}' "$mode"
         ;;
 
         "baseline_l2_vgg11")
-            ./run_main.sh "$base_strategy_vgg11" "$mode"
+            ./run_main.sh '{"compression": "naturalcompression"}' "$mode"
         ;;
         *)
             echo "Invalid mode provided."

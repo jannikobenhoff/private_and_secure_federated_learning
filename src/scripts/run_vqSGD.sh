@@ -10,9 +10,9 @@ DEFAULT_MODE="baseline_l2_resnet18"
 # If an argument is provided, use it. Otherwise, use the default.
 mode=${1:-$DEFAULT_MODE}
 
-base_strategy='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.1, "repetition": K_VALUE}'
-base_strategy_resnet='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.001, "repetition": K_VALUE}'
-base_strategy_vgg11='{"optimizer": "sgd", "compression": "vqsgd", "learning_rate": 0.01, "repetition": K_VALUE}'
+base_strategy='{"compression": "vqsgd", "repetition": K_VALUE}'
+base_strategy_resnet='{"compression": "vqsgd", "repetition": K_VALUE}'
+base_strategy_vgg11='{"compression": "vqsgd", "repetition": K_VALUE}'
 
 repetitions=(250 500 1000 1500)
 repetitions_vgg11=(30000)
