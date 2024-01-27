@@ -1,0 +1,18 @@
+{
+  "lenet": {
+    "sgd": {
+      "same2.0": 0.0005,
+      "same0.125": 0.000006,
+      "dirichlet2.0": 0.0005,
+      "dirichlet0.125": 0.000001
+    }
+  },
+  "resnet": {
+    "sgd": {
+      "same2.0": 0.06,
+      "same0125": 0.06,
+      "dirichlet2": 0.06,
+      "dirichlet0125": 0.06
+    }
+  }
+}
